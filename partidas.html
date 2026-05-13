@@ -206,7 +206,7 @@
     </div>
     <div class="session-id-box" id="sessionIdBox">—</div>
     <button class="btn-copy" id="btnCopy" onclick="copyLink()">Copiar enlace</button>
-    <a class="nav-link" id="linkGastos" href="billar.html">← Gastos</a>
+    <a class="nav-link" id="linkGastos" href="index.html">← Gastos</a>
   </div>
 
   <!-- LEADERBOARD -->
@@ -239,7 +239,7 @@ if (!sessionId) {
   history.replaceState(null,'','#'+sessionId);
 }
 document.getElementById('sessionIdBox').textContent = sessionId;
-document.getElementById('linkGastos').href = `billar.html#${sessionId}`;
+document.getElementById('linkGastos').href = `index.html#${sessionId}`;
 
 const isLocal = localStorage.getItem('ps-mode') === 'local';
 
