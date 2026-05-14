@@ -239,7 +239,7 @@ if (!sessionId) {
   history.replaceState(null,'','#'+sessionId);
 }
 document.getElementById('sessionIdBox').textContent = sessionId;
-document.getElementById('linkGastos').href = `index.html#${sessionId}`;
+document.getElementById('linkGastos').href = `billar.html#${sessionId}`;
 
 const isLocal = localStorage.getItem('ps-mode') === 'local';
 
@@ -309,8 +309,14 @@ if (!isLocal) {
       delete matches[id];
       document.getElementById(`match-${id}`)?.remove();
     } else {
-      matches[id] = data;
-      renderMatchCard(id, data);
+      // No reconstruir si el usuario está escribiendo en esta tarjeta
+      const card = document.getElementById(`match-${id}`);
+      if (card && card.contains(document.activeElement)) {
+        matches[id] = deserializeMatch(data); // actualizar datos sin tocar el DOM
+      } else {
+        matches[id] = deserializeMatch(data);
+        renderMatchCard(id, data);
+      }
     }
     renderLeaderboard();
   });
@@ -398,6 +404,7 @@ function onPlayerName(id, team, idx, val) {
   const m = matches[id];
   if (!m) return;
   if (team==='A') m.teamA[idx]=val; else m.teamB[idx]=val;
+  // Solo guardamos — NO reconstruimos el card para no perder el foco del teclado
   saveMatch(id);
   renderLeaderboard();
 }
@@ -406,6 +413,7 @@ function onMesaInput(id, val) {
   const m = matches[id];
   if (!m) return;
   m.mesa = val;
+  // Solo guardamos — NO reconstruimos
   saveMatch(id);
 }
 
