@@ -280,6 +280,7 @@ function setStatus(on) {
 ═══════════════════════════════════════════ */
 let matches = {}; // id → {mesa, format, teamA[], teamB[], winner, date}
 let matchCount = 0;
+let lastLocalUpdate = {}; // id → timestamp, para evitar que Gun sobreescriba cambios locales
 
 /* ═══════════════════════════════════════════
    LOCAL STORAGE
@@ -309,13 +310,15 @@ if (!isLocal) {
       delete matches[id];
       document.getElementById(`match-${id}`)?.remove();
     } else {
-      // No reconstruir si el usuario está escribiendo en esta tarjeta
+      // Ignorar si acabamos de guardar localmente (evita el echo de Gun)
+      const justSaved = lastLocalUpdate[id] && (Date.now() - lastLocalUpdate[id] < 800);
       const card = document.getElementById(`match-${id}`);
-      if (card && card.contains(document.activeElement)) {
-        matches[id] = deserializeMatch(data); // actualizar datos sin tocar el DOM
-      } else {
+      const hasFocus = card && card.contains(document.activeElement);
+      if (!justSaved && !hasFocus) {
         matches[id] = deserializeMatch(data);
         renderMatchCard(id, data);
+      } else if (!matches[id]) {
+        matches[id] = deserializeMatch(data);
       }
     }
     renderLeaderboard();
@@ -427,6 +430,7 @@ function setWinner(id, team) {
 }
 
 function saveMatch(id) {
+  lastLocalUpdate[id] = Date.now();
   if (isLocal) localSave();
   else matchesRef.get(id).put(serializeMatch(matches[id]));
 }
@@ -452,31 +456,33 @@ function rebuildMatchCard(id) {
   const m  = matches[id];
   const el = document.getElementById(`match-${id}`);
   if (!m || !el) return;
-  const [sA, sB] = FORMAT_SIZES[m.format||'1v1'];
+
+  const fmt        = m.format || '1v1';
+  const [sA, sB]   = FORMAT_SIZES[fmt];
+  // Asegurar que los arrays tienen el tamaño correcto
+  m.teamA = adjustArray(m.teamA, sA);
+  m.teamB = adjustArray(m.teamB, sB);
 
   el.className = 'match-card'+(m.winner?' has-winner':'');
 
-  const fmts = ['1v1','2v1','2v2'];
+  const fmts    = ['1v1','2v1','2v2'];
   const fmtBtns = fmts.map(f=>
-    `<button class="fmt-btn${m.format===f?' active':''}" onclick="setFormat('${id}','${f}')">${f}</button>`
+    `<button class="fmt-btn${fmt===f?' active':''}" onclick="setFormat('${id}','${f}')">${f}</button>`
   ).join('');
 
-  const teamARows = (m.teamA||['']).map((p,i)=>`
+  const teamARows = m.teamA.map((p,i)=>`
     <div class="player-input-row">
-      <input type="text" value="${p||''}" placeholder="Jugador ${i+1}"
+      <input type="text" value="${(p||'').replace(/"/g,'&quot;')}" placeholder="Jugador ${i+1}"
         oninput="onPlayerName('${id}','A',${i},this.value)">
-      ${m.teamA.length>1?`<button class="btn-remove" onclick="removePlayer('${id}','A',${i})">×</button>`:''}
+      ${sA > 1 && m.teamA.length > 1 ? `<button class="btn-remove" onclick="removePlayer('${id}','A',${i})">×</button>` : ''}
     </div>`).join('');
 
-  const teamBRows = (m.teamB||['']).map((p,i)=>`
+  const teamBRows = m.teamB.map((p,i)=>`
     <div class="player-input-row">
-      <input type="text" value="${p||''}" placeholder="Jugador ${i+1}"
+      <input type="text" value="${(p||'').replace(/"/g,'&quot;')}" placeholder="Jugador ${i+1}"
         oninput="onPlayerName('${id}','B',${i},this.value)">
-      ${m.teamB.length>1?`<button class="btn-remove" onclick="removePlayer('${id}','B',${i})">×</button>`:''}
+      ${sB > 1 && m.teamB.length > 1 ? `<button class="btn-remove" onclick="removePlayer('${id}','B',${i})">×</button>` : ''}
     </div>`).join('');
-
-  const addA = m.teamA.length < sA ? `<button class="btn-add-player" onclick="addPlayer('${id}','A')">+ jugador</button>` : '';
-  const addB = m.teamB.length < sB ? `<button class="btn-add-player" onclick="addPlayer('${id}','B')">+ jugador</button>` : '';
 
   const winnerLabel = m.winner
     ? `<span class="winner-badge">🏆 Gana Equipo ${m.winner}</span>` : '';
@@ -484,8 +490,8 @@ function rebuildMatchCard(id) {
   el.innerHTML = `
     <div class="match-header">
       <span class="match-num">#${Object.keys(matches).indexOf(id)+1}</span>
-      <input type="text" value="${m.mesa||''}" placeholder="Nombre de la mesa…"
-        style="flex:1;min-width:120px;background:rgba(0,0,0,.2);border-color:rgba(59,130,246,.15);font-family:'Barlow',sans-serif;font-size:.9rem;padding:.35rem .55rem;"
+      <input type="text" value="${(m.mesa||'').replace(/"/g,'&quot;')}" placeholder="Mesa…"
+        style="flex:1;min-width:100px;background:rgba(0,0,0,.2);border-color:rgba(59,130,246,.15);font-family:'Barlow',sans-serif;font-size:.9rem;padding:.35rem .55rem;"
         oninput="onMesaInput('${id}',this.value)">
       <div class="format-toggle">${fmtBtns}</div>
       <button class="btn-remove" onclick="removeMatch('${id}')">×</button>
@@ -494,12 +500,12 @@ function rebuildMatchCard(id) {
     <div class="teams-grid">
       <div class="team-col">
         <div class="team-label a">Equipo A</div>
-        ${teamARows}${addA}
+        ${teamARows}
       </div>
       <div class="vs-col"><span class="vs-badge">VS</span></div>
       <div class="team-col">
         <div class="team-label b">Equipo B</div>
-        ${teamBRows}${addB}
+        ${teamBRows}
       </div>
     </div>
 
