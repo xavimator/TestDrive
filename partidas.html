@@ -185,6 +185,35 @@
     .card { padding:1rem; }
     .teams-grid { grid-template-columns:1fr 30px 1fr; }
   }
+  /* STATS */
+  .stat-row { display:flex;align-items:center;gap:.75rem;padding:.5rem .6rem;border-radius:4px;transition:background .15s; }
+  .stat-row:hover { background:rgba(59,130,246,.05); }
+  .stat-pos { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;width:26px;text-align:center;flex-shrink:0; }
+  .stat-pos.gold   { color:#fbbf24; }
+  .stat-pos.silver { color:#94a3b8; }
+  .stat-pos.bronze { color:#b45309; }
+  .stat-pos.other  { color:rgba(59,130,246,.35); }
+  .stat-name { flex:1;font-size:.92rem;color:var(--silver); }
+  .stat-bars { flex:2;display:flex;flex-direction:column;gap:3px; }
+  .stat-bar-row { display:flex;align-items:center;gap:.4rem; }
+  .stat-bar-label { font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--silver-dark);width:38px;text-align:right;flex-shrink:0; }
+  .stat-bar-track { flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden; }
+  .stat-bar-fill-win  { height:100%;background:linear-gradient(90deg,var(--blue-b),var(--cyan));border-radius:3px;transition:width .4s; }
+  .stat-bar-fill-play { height:100%;background:rgba(148,163,184,.25);border-radius:3px;transition:width .4s; }
+  .stat-nums { font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--cyan);min-width:70px;text-align:right;flex-shrink:0; }
+  .stat-rate { font-size:.65rem;color:var(--silver-dark); }
+
+  .history-session { background:var(--felt-mid);border:1px solid rgba(59,130,246,.14);border-radius:5px;padding:.8rem 1rem;margin-bottom:.6rem;cursor:pointer;transition:border-color .2s; }
+  .history-session:hover { border-color:rgba(59,130,246,.35); }
+  .history-session-header { display:flex;align-items:center;gap:.75rem;flex-wrap:wrap; }
+  .history-date { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;color:var(--cyan);letter-spacing:.06em; }
+  .history-meta { font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--silver-dark);flex:1; }
+  .history-top  { font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--green); }
+  .history-del  { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:3px;color:#f87171;font-size:.72rem;padding:.15rem .45rem;cursor:pointer;flex-shrink:0; }
+  .history-matches { margin-top:.7rem;display:flex;flex-direction:column;gap:.3rem;display:none; }
+  .history-match-row { font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--silver-dim);padding:.2rem .4rem;background:rgba(0,0,0,.15);border-radius:3px; }
+  .history-match-row .winner-tag { color:var(--green); }
+
 </style>
 </head>
 <body>
@@ -195,6 +224,37 @@
     <h1>PARTI<span>DAS</span></h1>
     <p class="tagline">// contador de partidas &amp; clasificación //</p>
   </header>
+
+  <!-- DATE + NAV BAR -->
+  <div class="session-bar" style="justify-content:space-between;flex-wrap:wrap;gap:.6rem;">
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <label style="font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--silver-dim);margin:0">Fecha</label>
+      <input type="date" id="sessionDate"
+        style="background:var(--navy);border:1px solid rgba(59,130,246,.25);border-radius:4px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:.35rem .6rem;outline:none;"
+        oninput="saveDate()">
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="saveSession()">💾 Guardar sesión</button>
+      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="toggleStats()">📊 Estadísticas</button>
+    </div>
+  </div>
+
+  <!-- STATS PANEL (hidden by default) -->
+  <div id="statsPanel" style="display:none;">
+
+    <!-- ALL-TIME RANKING -->
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Ranking histórico — Todos los tiempos</div>
+      <div id="statsRanking"><div class="lb-empty">Guarda sesiones para ver el ranking histórico</div></div>
+    </div>
+
+    <!-- SESSION HISTORY -->
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Historial de sesiones</div>
+      <div id="statsHistory"><div class="lb-empty">No hay sesiones guardadas todavía</div></div>
+    </div>
+
+  </div>
 
   <!-- SESSION BAR -->
   <div class="session-bar">
@@ -591,7 +651,154 @@ function clearAll() {
 /* ═══════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════ */
-if (isLocal) localLoad();
+/* ═══════════════════════════════════════════
+   DATE & SESSION SAVE
+═══════════════════════════════════════════ */
+function saveDate() {
+  localStorage.setItem(`ps-pdate-${sessionId}`, document.getElementById('sessionDate').value);
+}
+function loadDate() {
+  const saved = localStorage.getItem(`ps-pdate-${sessionId}`);
+  document.getElementById('sessionDate').value = saved || new Date().toISOString().slice(0,10);
+}
+
+function saveSession() {
+  const date = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
+  const sessionMatches = Object.values(matches).filter(m => m && !m._del);
+  if (sessionMatches.length === 0) { alert('No hay partidas para guardar.'); return; }
+
+  const snapshot = sessionMatches.map(m => ({
+    format : m.format || '1v1',
+    mesa   : m.mesa   || '',
+    teamA  : (m.teamA || []).filter(p => p?.trim()),
+    teamB  : (m.teamB || []).filter(p => p?.trim()),
+    winner : m.winner || null
+  }));
+
+  const history = JSON.parse(localStorage.getItem('ps-match-history') || '[]');
+  history.unshift({ date, sessionId, matches: snapshot });
+  localStorage.setItem('ps-match-history', JSON.stringify(history.slice(0, 100)));
+  alert(`✓ Sesión del ${date} guardada — ${snapshot.length} partida${snapshot.length !== 1 ? 's' : ''}.`);
+  if (document.getElementById('statsPanel').style.display !== 'none') renderStats();
+}
+
+/* ═══════════════════════════════════════════
+   STATS PANEL
+═══════════════════════════════════════════ */
+function toggleStats() {
+  const panel = document.getElementById('statsPanel');
+  if (panel.style.display === 'none') {
+    renderStats();
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function renderStats() {
+  const history = JSON.parse(localStorage.getItem('ps-match-history') || '[]');
+  renderAllTimeRanking(history);
+  renderSessionHistory(history);
+}
+
+function renderAllTimeRanking(history) {
+  const wins   = {};
+  const played = {};
+
+  history.forEach(session => {
+    (session.matches || []).forEach(m => {
+      const all     = [...(m.teamA||[]), ...(m.teamB||[])];
+      const winners = m.winner === 'A' ? (m.teamA||[]) : m.winner === 'B' ? (m.teamB||[]) : [];
+      all.forEach(p => { p = p?.trim(); if (p) played[p] = (played[p]||0) + 1; });
+      winners.forEach(p => { p = p?.trim(); if (p) wins[p] = (wins[p]||0) + 1; });
+    });
+  });
+
+  const players = [...new Set([...Object.keys(wins), ...Object.keys(played)])]
+    .filter(Boolean)
+    .map(p => ({ name:p, wins:wins[p]||0, played:played[p]||0 }))
+    .sort((a,b) => b.wins - a.wins || b.played - a.played);
+
+  const el = document.getElementById('statsRanking');
+  if (!players.length) { el.innerHTML = '<div class="lb-empty">Guarda sesiones para ver el ranking histórico</div>'; return; }
+
+  const maxWins   = players[0].wins   || 1;
+  const maxPlayed = Math.max(...players.map(p=>p.played)) || 1;
+  const medals    = ['gold','silver','bronze'];
+
+  el.innerHTML = players.map((p, i) => {
+    const rate = p.played ? Math.round((p.wins/p.played)*100) : 0;
+    return `<div class="stat-row">
+      <span class="stat-pos ${medals[i]||'other'}">${i+1}</span>
+      <span class="stat-name">${p.name}</span>
+      <div class="stat-bars">
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">victorias</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-win" style="width:${(p.wins/maxWins)*100}%"></div></div>
+        </div>
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">partidas</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-play" style="width:${(p.played/maxPlayed)*100}%"></div></div>
+        </div>
+      </div>
+      <div class="stat-nums">${p.wins} vic.<br><span class="stat-rate">${p.played} jug. · ${rate}%</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSessionHistory(history) {
+  const el = document.getElementById('statsHistory');
+  if (!history.length) { el.innerHTML = '<div class="lb-empty">No hay sesiones guardadas todavía</div>'; return; }
+
+  el.innerHTML = history.map((s, idx) => {
+    const wins = {};
+    (s.matches||[]).forEach(m => {
+      const winners = m.winner==='A'?(m.teamA||[]):m.winner==='B'?(m.teamB||[]):[];
+      winners.forEach(p => { p=p?.trim(); if(p) wins[p]=(wins[p]||0)+1; });
+    });
+    const top = Object.entries(wins).sort((a,b)=>b[1]-a[1])[0];
+    const topStr = top ? `🏆 ${top[0]} (${top[1]} vic.)` : 'Sin resultados';
+    const matchCount = (s.matches||[]).length;
+
+    const matchRows = (s.matches||[]).map(m => {
+      const a = (m.teamA||[]).filter(p=>p?.trim()).join(' & ') || '—';
+      const b = (m.teamB||[]).filter(p=>p?.trim()).join(' & ') || '—';
+      const fmt = m.format || '1v1';
+      const result = m.winner
+        ? `<span class="winner-tag">Gana: ${m.winner==='A'?a:b}</span>`
+        : '<span style="color:var(--silver-dark)">Sin resultado</span>';
+      return `<div class="history-match-row">${fmt} · ${m.mesa||'Mesa'} · ${a} vs ${b} · ${result}</div>`;
+    }).join('');
+
+    return `<div class="history-session" onclick="toggleSessionDetail(${idx})">
+      <div class="history-session-header">
+        <span class="history-date">${s.date}</span>
+        <span class="history-meta">${matchCount} partida${matchCount!==1?'s':''}</span>
+        <span class="history-top">${topStr}</span>
+        <button class="history-del" onclick="event.stopPropagation();deleteSession(${idx})">Borrar</button>
+      </div>
+      <div class="history-matches" id="hist-detail-${idx}">${matchRows}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSessionDetail(idx) {
+  const el = document.getElementById(`hist-detail-${idx}`);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' || !el.style.display ? 'flex' : 'none';
+  el.style.flexDirection = 'column';
+}
+
+function deleteSession(idx) {
+  if (!confirm('¿Borrar esta sesión del historial?')) return;
+  const history = JSON.parse(localStorage.getItem('ps-match-history') || '[]');
+  history.splice(idx, 1);
+  localStorage.setItem('ps-match-history', JSON.stringify(history));
+  renderStats();
+}
+
+loadDate();
 </script>
 </body>
 </html>
