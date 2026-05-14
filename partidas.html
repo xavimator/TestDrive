@@ -239,7 +239,7 @@ if (!sessionId) {
   history.replaceState(null,'','#'+sessionId);
 }
 document.getElementById('sessionIdBox').textContent = sessionId;
-document.getElementById('linkGastos').href = `billar.html#${sessionId}`;
+document.getElementById('linkGastos').href = `index.html#${sessionId}`;
 
 const isLocal = localStorage.getItem('ps-mode') === 'local';
 
