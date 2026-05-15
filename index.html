@@ -549,6 +549,8 @@
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
       <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="saveSession()">💾 Guardar sesión</button>
       <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="toggleHistory()">📋 Historial</button>
+      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <label class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;cursor:pointer;">⬆ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
       <a href="partidas.html#<%= sessionId %>" id="linkPartidas" style="font-family:'Barlow Condensed',sans-serif;font-size:.88rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan-dim);padding:.35rem 1rem;border:1px solid rgba(56,189,248,.25);border-radius:4px;text-decoration:none;transition:all .2s;" onmouseover="this.style.color='var(--white)'" onmouseout="this.style.color='var(--cyan-dim)'">🎱 Partidas →</a>
     </div>
   </div>
@@ -1226,6 +1228,159 @@ function deleteHistory(idx) {
   history.splice(idx, 1);
   localStorage.setItem('ps-history', JSON.stringify(history));
   renderHistory();
+}
+
+/* ═══════════════════════════════════════════
+   CSV — UTILIDADES
+═══════════════════════════════════════════ */
+function downloadCSV(content, filename) {
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') { if (inQ && line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
+    else if (line[i]===',' && !inQ) { result.push(cur); cur=''; }
+    else cur += line[i];
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l=>l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]).map(h=>h.trim());
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj  = {};
+    headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
+    return obj;
+  });
+}
+
+/* ═══════════════════════════════════════════
+   CSV — EXPORTAR SESIÓN ACTUAL (billar)
+═══════════════════════════════════════════ */
+function exportCSV() {
+  const date = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
+
+  // Calcular costes (misma lógica que recalculate)
+  const tableCost = {};
+  Object.entries(tablesData).forEach(([key,d]) => {
+    if (!d||d._del) return;
+    tableCost[key] = ((d.mins||0)/60)*(d.ph||0);
+  });
+  const tablePlayerMins = {};
+  for (let i=1;i<=NUM_PLAYERS;i++) {
+    (playerRows[`p${i}`]||[]).forEach(row => {
+      if (!row.mesa||row.mins<=0) return;
+      tablePlayerMins[row.mesa]=(tablePlayerMins[row.mesa]||0)+row.mins;
+    });
+  }
+
+  const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const rows = ['tipo,nombre,precio_hora,minutos,coste_mesa,mesas_jugador,total_jugador,fecha'];
+
+  // Mesas
+  Object.values(tablesData).filter(d=>d&&!d._del).forEach(d => {
+    const cost = ((d.mins||0)/60)*(d.ph||0);
+    rows.push([`mesa`,esc(d.name),d.ph||0,d.mins||0,cost.toFixed(2),'','',date].join(','));
+  });
+
+  // Jugadores
+  for (let i=1;i<=NUM_PLAYERS;i++) {
+    const name = document.getElementById(`pname${i}`)?.value.trim();
+    if (!name) continue;
+    const prows = (playerRows[`p${i}`]||[]).filter(r=>r.mesa&&r.mins>0);
+    if (!prows.length) continue;
+    let total=0;
+    prows.forEach(row=>{
+      const mc=tableCost[row.mesa]||0, mtm=tablePlayerMins[row.mesa]||0;
+      if (mc>0&&mtm>0) total+=(row.mins/mtm)*mc;
+    });
+    const mesaNombres = prows.map(r=>tablesData[r.mesa]?.name||r.mesa).join(';');
+    const totalMins   = prows.reduce((s,r)=>s+(r.mins||0),0);
+    rows.push([`jugador`,esc(name),'',totalMins,'',esc(mesaNombres),total.toFixed(2),date].join(','));
+  }
+
+  downloadCSV(rows.join('\n'), `poolsplitter-gastos-${date}.csv`);
+}
+
+/* ═══════════════════════════════════════════
+   CSV — IMPORTAR SESIÓN (billar)
+═══════════════════════════════════════════ */
+function importCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = parseCSV(e.target.result);
+    if (!data.length) { alert('CSV vacío o formato incorrecto.'); return; }
+
+    const mesas    = data.filter(r=>r.tipo==='mesa');
+    const jugadores= data.filter(r=>r.tipo==='jugador');
+    if (!mesas.length && !jugadores.length) { alert('No se encontraron filas de tipo "mesa" o "jugador".'); return; }
+
+    if (!confirm(`Importar ${mesas.length} mesa(s) y ${jugadores.length} jugador(es)? Se reemplazará la sesión actual.`)) { input.value=''; return; }
+
+    // Limpiar sesión actual
+    if (!isLocal) Object.keys(tablesData).forEach(key=>tablesRef.get(key).put({_del:true}));
+    tablesData = {};
+    document.getElementById('tablesList').innerHTML='';
+
+    // Crear mesas
+    const mesaNameToKey = {};
+    mesas.forEach(row => {
+      const key  = 't'+Date.now()+Math.random().toString(36).slice(2,5);
+      const d    = { name:row.nombre||'Mesa', ph:parseFloat(row.precio_hora)||0, mins:parseFloat(row.minutos)||0, order:Date.now(), _del:false };
+      tablesData[key] = d;
+      mesaNameToKey[row.nombre] = key;
+      patchTableRow(key, d);
+      if (!isLocal) tablesRef.get(key).put(d);
+    });
+    updateMesaSelectors();
+
+    // Limpiar jugadores
+    for (let i=1;i<=NUM_PLAYERS;i++) {
+      playerRows[`p${i}`]=[];
+      if (!isLocal) playersRef.get(`p${i}`).put({name:'',rowsJson:'[]'});
+      const ne=document.getElementById(`pname${i}`); if(ne) ne.value='';
+      const ce=document.getElementById(`pmrows${i}`); if(ce) ce.innerHTML='';
+      const te=document.getElementById(`ptotal${i}`); if(te){te.textContent='—';te.className='player-total';}
+    }
+
+    // Restaurar jugadores
+    jugadores.slice(0, NUM_PLAYERS).forEach((row, i) => {
+      const idx = i+1;
+      const ne  = document.getElementById(`pname${idx}`);
+      if (ne) ne.value = row.nombre||'';
+      // Asignar mesas (pueden ser múltiples separadas por ;)
+      const mesaNombres = (row.mesas_jugador||'').split(';').map(s=>s.trim()).filter(Boolean);
+      const mins = parseFloat(row.minutos)||0;
+      const minsPerMesa = mesaNombres.length ? Math.round(mins/mesaNombres.length) : mins;
+      const newRows = mesaNombres.map(mn=>({ mesa: mesaNameToKey[mn]||'', mins: minsPerMesa }));
+      if (!newRows.length && mins>0) newRows.push({ mesa:'', mins });
+      playerRows[`p${idx}`] = newRows;
+      rebuildMesaRows(idx, newRows);
+      syncPlayer(idx);
+    });
+
+    if (isLocal) localSave();
+
+    // Restaurar fecha si está en el CSV
+    const fecha = data.find(r=>r.fecha)?.fecha;
+    if (fecha) { document.getElementById('sessionDate').value=fecha; saveDate(); }
+
+    recalculate();
+    alert('✓ CSV importado correctamente.');
+  };
+  reader.readAsText(file);
+  input.value='';
 }
 
 loadDate();

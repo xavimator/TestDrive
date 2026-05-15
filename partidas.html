@@ -236,6 +236,8 @@
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
       <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="saveSession()">💾 Guardar sesión</button>
       <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="toggleStats()">📊 Estadísticas</button>
+      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <label class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;cursor:pointer;">⬆ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
     </div>
   </div>
 
@@ -796,6 +798,147 @@ function deleteSession(idx) {
   history.splice(idx, 1);
   localStorage.setItem('ps-match-history', JSON.stringify(history));
   renderStats();
+}
+
+/* ═══════════════════════════════════════════
+   CSV — UTILIDADES
+═══════════════════════════════════════════ */
+function downloadCSV(content, filename) {
+  const blob = new Blob(['\ufeff'+content], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSVLine(line) {
+  const result=[]; let cur=''; let inQ=false;
+  for (let i=0;i<line.length;i++) {
+    if (line[i]==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if (line[i]===','&&!inQ){result.push(cur);cur='';}
+    else cur+=line[i];
+  }
+  result.push(cur); return result;
+}
+
+function parseCSV(text) {
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  if (lines.length<2) return [];
+  const headers=parseCSVLine(lines[0]).map(h=>h.trim());
+  return lines.slice(1).map(line=>{
+    const vals=parseCSVLine(line); const obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||'').trim());
+    return obj;
+  });
+}
+
+/* ═══════════════════════════════════════════
+   CSV — EXPORTAR (partidas)
+   Exporta las partidas de la sesión actual
+   + el historial completo de estadísticas
+═══════════════════════════════════════════ */
+function exportCSV() {
+  const date = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
+  const esc  = v => `"${String(v||'').replace(/"/g,'""')}"`;
+
+  // Sesión actual
+  const rows = ['seccion,fecha,mesa,formato,equipo_a,equipo_b,ganador'];
+  Object.values(matches).filter(m=>m&&!m._del).forEach(m=>{
+    const a = (m.teamA||[]).filter(p=>p?.trim()).join(';');
+    const b = (m.teamB||[]).filter(p=>p?.trim()).join(';');
+    rows.push([`sesion_actual`,date,esc(m.mesa||''),m.format||'1v1',esc(a),esc(b),m.winner||''].join(','));
+  });
+
+  // Historial completo
+  const history = JSON.parse(localStorage.getItem('ps-match-history')||'[]');
+  history.forEach(s=>{
+    (s.matches||[]).forEach(m=>{
+      const a=(m.teamA||[]).filter(p=>p?.trim()).join(';');
+      const b=(m.teamB||[]).filter(p=>p?.trim()).join(';');
+      rows.push([`historial`,s.date,esc(m.mesa||''),m.format||'1v1',esc(a),esc(b),m.winner||''].join(','));
+    });
+  });
+
+  downloadCSV(rows.join('\n'), `poolsplitter-partidas-${date}.csv`);
+}
+
+/* ═══════════════════════════════════════════
+   CSV — IMPORTAR (partidas)
+   Importa historial de estadísticas
+═══════════════════════════════════════════ */
+function importCSV(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const data=parseCSV(e.target.result);
+    if (!data.length){alert('CSV vacío o formato incorrecto.');return;}
+
+    // Separar sesión actual e historial
+    const histRows   = data.filter(r=>r.seccion==='historial');
+    const sesionRows = data.filter(r=>r.seccion==='sesion_actual');
+
+    if (!histRows.length && !sesionRows.length){
+      alert('No se encontraron filas de tipo "historial" o "sesion_actual".');
+      input.value=''; return;
+    }
+
+    // Agrupar historial por fecha
+    if (histRows.length>0) {
+      const byDate={};
+      histRows.forEach(r=>{
+        if(!byDate[r.fecha]) byDate[r.fecha]=[];
+        byDate[r.fecha].push({
+          mesa:r.mesa, format:r.formato,
+          teamA:(r.equipo_a||'').split(';').filter(Boolean),
+          teamB:(r.equipo_b||'').split(';').filter(Boolean),
+          winner:r.ganador||null
+        });
+      });
+      const existing=JSON.parse(localStorage.getItem('ps-match-history')||'[]');
+      const existingDates=new Set(existing.map(s=>s.date));
+      const toAdd=Object.entries(byDate)
+        .filter(([d])=>!existingDates.has(d))
+        .map(([date,matches])=>({date,sessionId:'imported',matches}));
+      const merged=[...existing,...toAdd].sort((a,b)=>b.date.localeCompare(a.date));
+      localStorage.setItem('ps-match-history',JSON.stringify(merged));
+    }
+
+    // Restaurar partidas de sesión actual
+    if (sesionRows.length>0 && confirm(`¿Restaurar también ${sesionRows.length} partida(s) de la sesión actual? Se borrarán las actuales.`)) {
+      // Limpiar partidas actuales
+      if(!isLocal) Object.keys(matches).forEach(id=>matchesRef.get(id).put({_del:true}));
+      matches={};
+      document.getElementById('matchesList').innerHTML='';
+
+      sesionRows.forEach(r=>{
+        const id='m'+Date.now()+Math.random().toString(36).slice(2,5);
+        const d={
+          mesa:r.mesa, format:r.formato||'1v1',
+          teamA:(r.equipo_a||'').split(';').filter(Boolean)||[''],
+          teamB:(r.equipo_b||'').split(';').filter(Boolean)||[''],
+          winner:r.ganador||null, date:Date.now(), _del:false
+        };
+        if(!d.teamA.length) d.teamA=[''];
+        if(!d.teamB.length) d.teamB=[''];
+        matches[id]=d;
+        renderMatchCard(id,d);
+        if(!isLocal) matchesRef.get(id).put(serializeMatch(d));
+      });
+      if(isLocal) localSave();
+
+      // Fecha del CSV
+      if(sesionRows[0]?.fecha){
+        document.getElementById('sessionDate').value=sesionRows[0].fecha;
+        saveDate();
+      }
+    }
+
+    renderLeaderboard();
+    if(document.getElementById('statsPanel').style.display!=='none') renderStats();
+    alert('✓ CSV importado correctamente.');
+  };
+  reader.readAsText(file);
+  input.value='';
 }
 
 loadDate();
