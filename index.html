@@ -479,25 +479,35 @@
 
       const handleNew = async () => {
         if (!nameOk) return;
-        setLoading(true);
-        const code = genCode();
-        localStorage.setItem('rr-player-name', name.trim());
-        await window.__fbJoinGame?.(code);
-        window.rrShuffle?.();
-        onJoin(name.trim(), code);
-        setLoading(false);
+        setLoading(true); setError('');
+        try {
+          const code = genCode();
+          localStorage.setItem('rr-player-name', name.trim());
+          await window.__fbJoinGame?.(code);
+          window.rrShuffle?.();
+          onJoin(name.trim(), code);
+        } catch(e) {
+          console.error('handleNew error:', e);
+          setError('Error al crear la partida. Comprueba tu conexión.');
+          setLoading(false);
+        }
       };
 
       const handleJoin = async () => {
         const code = joinCode.trim().toUpperCase();
         if (code.length !== 4) { setError('El código debe tener 4 caracteres'); return; }
         setLoading(true); setError('');
-        const exists = await window.__fbGameExists?.(code);
-        if (!exists) { setError('Partida no encontrada. Comprueba el código.'); setLoading(false); return; }
-        localStorage.setItem('rr-player-name', name.trim());
-        await window.__fbJoinGame?.(code);
-        onJoin(name.trim(), code);
-        setLoading(false);
+        try {
+          const exists = await window.__fbGameExists?.(code);
+          if (!exists) { setError('Partida no encontrada. Comprueba el código.'); setLoading(false); return; }
+          localStorage.setItem('rr-player-name', name.trim());
+          await window.__fbJoinGame?.(code);
+          onJoin(name.trim(), code);
+        } catch(e) {
+          console.error('handleJoin error:', e);
+          setError('Error al unirse. Comprueba tu conexión.');
+          setLoading(false);
+        }
       };
 
       return (
