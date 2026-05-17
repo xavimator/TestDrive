@@ -92,6 +92,12 @@
       });
     };
 
+    // ── Real connection state via .info/connected ──
+    const connectedRef = ref(db, '.info/connected');
+    onValue(connectedRef, (snap) => {
+      window.__fbConnectionState(!!snap.val());
+    });
+
     window.__fbReady = true;
     window.dispatchEvent(new Event('fbReady'));
   </script>
@@ -507,14 +513,13 @@
       document.getElementById('rr-shuffle').disabled = false;
     }
 
-    setTimeout(() => {
-      if (!fbConnected) {
-        document.getElementById('rr-status-text').textContent = '⚠ Firebase no configurado';
-        document.getElementById('rr-status-text').style.color = 'rgba(245,158,11,.8)';
-        document.getElementById('rr-shuffle').disabled = false;
-        rrApplyPattern(rrGenPattern());
+    window.__fbConnectionState = function(connected) {
+      setConnected(connected);
+      if (connected && window.rrPattern.length === 0) {
+        // First connection and no pattern yet — generate one
+        rrShuffle();
       }
-    }, 3500);
+    };
   </script>
 
   <!-- ══ React puzzle ══ -->
