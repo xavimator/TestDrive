@@ -594,14 +594,20 @@
         }
       }, []);
 
-      useEffect(() => {
-        if (playerName.trim()) {
-          sendPresence(playerName);
-          clearInterval(presenceRef.current);
-          presenceRef.current = setInterval(() => sendPresence(playerName), 8000);
+      // Presence heartbeat — only starts after name is confirmed
+      const startPresenceHeartbeat = useCallback((name) => {
+        clearInterval(presenceRef.current);
+        if (name.trim()) {
+          sendPresence(name);
+          presenceRef.current = setInterval(() => sendPresence(name), 8000);
         }
+      }, [sendPresence]);
+
+      // Restart heartbeat on page load if name already saved
+      useEffect(() => {
+        if (playerName.trim()) startPresenceHeartbeat(playerName);
         return () => clearInterval(presenceRef.current);
-      }, [playerName]);
+      }, []);
 
       // Sync active players from Firebase
       useEffect(() => {
@@ -690,6 +696,11 @@
         const v = e.target.value;
         setPlayerName(v);
         localStorage.setItem('rr-player-name', v);
+        // Do NOT send presence here — wait for blur or Enter
+      };
+
+      const handleNameConfirm = (name) => {
+        if (name.trim()) startPresenceHeartbeat(name);
       };
 
       const ei = tiles.indexOf(null);
@@ -741,6 +752,8 @@
               placeholder="Tu nombre…"
               value={playerName}
               onChange={handleNameChange}
+              onBlur={(e) => handleNameConfirm(e.target.value)}
+              onKeyDown={(e) => { if (e.key==='Enter') { e.target.blur(); handleNameConfirm(e.target.value); } }}
             />
           </div>
 
