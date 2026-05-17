@@ -1,1392 +1,839 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PoolSplitter — Sala en directo</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --navy:        #060d1a;
-    --felt:        #0b1a35;
-    --felt-mid:    #102245;
-    --felt-light:  #183060;
-    --blue:        #1d4ed8;
-    --blue-b:      #3b82f6;
-    --cyan:        #38bdf8;
-    --cyan-dim:    #7dd3fc;
-    --silver:      #e2e8f0;
-    --silver-dim:  #94a3b8;
-    --silver-dark: #475569;
-    --white:       #f8fafc;
-    --red:         #ef4444;
-    --green:       #34d399;
-    --amber:       #fbbf24;
-    --shadow:      rgba(0,0,0,0.65);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0818" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>RubikRace</title>
 
-  body {
-    background: var(--navy);
-    background-image:
-      radial-gradient(ellipse 90% 50% at 50% -5%, rgba(29,78,216,0.22) 0%, transparent 65%),
-      repeating-linear-gradient(0deg,  transparent, transparent 47px, rgba(255,255,255,0.012) 47px, rgba(255,255,255,0.012) 48px),
-      repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(255,255,255,0.012) 47px, rgba(255,255,255,0.012) 48px);
-    min-height: 100vh;
-    font-family: 'Barlow', sans-serif;
-    color: var(--silver);
-    padding: 2rem 1rem 5rem;
-  }
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
 
-  .container { max-width: 980px; margin: 0 auto; }
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 
-  /* ── HEADER ── */
-  header { text-align: center; margin-bottom: 2.5rem; }
-  .header-rule { display: flex; align-items: center; gap: 1rem; justify-content: center; margin-bottom: 0.6rem; }
-  .header-rule span { width: 70px; height: 1px; }
-  .header-rule span:first-child { background: linear-gradient(90deg, transparent, var(--blue-b)); }
-  .header-rule span:last-child  { background: linear-gradient(90deg, var(--blue-b), transparent); }
-  .header-rule .ball { width: 9px; height: 9px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
-  header h1 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: clamp(2.8rem, 9vw, 5.5rem);
-    letter-spacing: 0.1em;
-    color: var(--white);
-    text-transform: uppercase;
-    line-height: 1;
-    text-shadow: 0 0 40px rgba(59,130,246,0.45), 0 4px 24px rgba(0,0,0,0.7);
-  }
-  header h1 span { color: var(--cyan); }
-  header .tagline {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--silver-dim);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-top: 0.4rem;
-  }
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp }                                       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, onChildAdded, query, orderByChild, startAfter }
+                                                                   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  /* ── SESSION BAR ── */
-  .session-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: var(--felt-mid);
-    border: 1px solid rgba(59,130,246,0.2);
-    border-radius: 6px;
-    padding: 0.75rem 1.1rem;
-    margin-bottom: 1.25rem;
-    flex-wrap: wrap;
-  }
-  .live-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--silver-dark);
-    flex-shrink: 0;
-    transition: background 0.3s, box-shadow 0.3s;
-  }
-  .live-dot.on  { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-  .live-dot.off { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+    const firebaseConfig = {
+      apiKey:            "AIzaSyAKAk1w50OFDGXC02V0lcxMvoFcBQ1wPho",
+      authDomain:        "rubikrace-online.firebaseapp.com",
+      databaseURL:       "https://rubikrace-online-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:         "rubikrace-online",
+      storageBucket:     "rubikrace-online.firebasestorage.app",
+      messagingSenderId: "233953330878",
+      appId:             "1:233953330878:web:6c7dd9dc53a2134d5b80ef",
+      measurementId:     "G-69HDDQG5BB"
+    };
 
-  .conn-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--silver-dim);
-    margin-right: 0.5rem;
-  }
-  .session-id-box {
-    background: var(--navy);
-    border: 1px solid rgba(59,130,246,0.25);
-    border-radius: 4px;
-    padding: 0.3rem 0.75rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--cyan);
-    letter-spacing: 0.12em;
-  }
-  .btn-copy {
-    background: rgba(59,130,246,0.1);
-    border: 1px solid rgba(59,130,246,0.3);
-    border-radius: 4px;
-    color: var(--blue-b);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.88rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-copy:hover { background: rgba(59,130,246,0.22); color: var(--white); }
-  .btn-copy.copied { color: var(--green); border-color: rgba(52,211,153,0.4); }
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
 
-  .mode-toggle {
-    display: flex; gap: 0; border-radius: 4px; overflow: hidden;
-    border: 1px solid rgba(59,130,246,0.25); flex-shrink: 0;
-  }
-  .mode-btn {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 0.3rem 0.7rem; border: none; cursor: pointer;
-    transition: all 0.18s; background: transparent; color: var(--silver-dark);
-  }
-  .mode-btn.active-live  { background: rgba(59,130,246,0.25); color: var(--cyan); }
-  .mode-btn.active-local { background: rgba(251,191,36,0.18); color: var(--amber); }
-  .mode-btn:hover:not(.active-live):not(.active-local) { background: rgba(255,255,255,0.05); color: var(--silver); }
+    // ── Pattern sync ──
+    const patternRef = ref(db, 'rubitrack/pattern');
+    onValue(patternRef, (snap) => {
+      const data = snap.val();
+      if (data && Array.isArray(data)) window.__fbPatternReceived(data);
+    });
+    window.__fbSetPattern = (pattern) => set(patternRef, pattern);
 
-  .session-hint {
-    font-size: 0.75rem; color: var(--silver-dark); margin-left: auto;
-  }
+    // ── Game reset sync ──
+    const resetRef = ref(db, 'rubitrack/reset');
+    onValue(resetRef, (snap) => {
+      const val = snap.val();
+      if (val && val.ts) window.__fbResetReceived(val.ts);
+    });
+    window.__fbSendReset = () => set(resetRef, { ts: Date.now() });
 
+    // ── Finish notifications ──
+    const notifRef   = ref(db, 'rubitrack/notifications');
+    const notifQuery = query(notifRef, orderByChild('ts'), startAfter(Date.now()));
+    onChildAdded(notifQuery, (snap) => {
+      const item = snap.val();
+      if (item) window.__fbNotifReceived(item);
+    });
+    window.__fbSendFinish = (name, time, moves) => {
+      push(notifRef, { name, time, moves, ts: Date.now() });
+    };
 
+    // ── Presence: active players ──
+    const presenceRef = ref(db, 'rubitrack/presence');
+    onValue(presenceRef, (snap) => {
+      const now = Date.now();
+      const players = [];
+      snap.forEach(child => {
+        const v = child.val();
+        if (v && v.name && (now - v.ts) < 15000) {
+          players.push({
+            name:     v.name,
+            moving:   v.moving && (now - (v.lastMove||0)) < 4000,
+            finished: !!v.finished,
+            time:     v.finishTime  || null,
+            moves:    v.finishMoves || null,
+          });
+        }
+      });
+      window.__fbPresenceReceived(players);
+    });
+    window.__fbUpdatePresence = (uid, name, moving=false) => {
+      const data = { name, ts: Date.now(), moving };
+      if (moving) data.lastMove = Date.now();
+      set(ref(db, 'rubitrack/presence/' + uid), data);
+    };
+    window.__fbUpdateFinishPresence = (uid, name, finishTime, finishMoves) => {
+      set(ref(db, 'rubitrack/presence/' + uid), {
+        name, ts: Date.now(), moving: false,
+        finished: true, finishTime, finishMoves,
+      });
+    };
 
-  /* ── CARD ── */
-  .card {
-    background: var(--felt);
-    border: 1px solid rgba(59,130,246,0.18);
-    border-radius: 6px;
-    padding: 1.5rem 1.75rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 10px 36px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.03);
-    position: relative;
-    overflow: hidden;
-  }
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--blue-b), transparent);
-    opacity: 0.5;
-  }
-  .card-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600;
-    font-size: 0.95rem;
-    letter-spacing: 0.18em;
-    color: var(--cyan);
-    text-transform: uppercase;
-    margin-bottom: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-  .card-title::after { content: ''; flex: 1; height: 1px; background: rgba(59,130,246,0.18); }
-  .card-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); flex-shrink: 0; }
+    window.__fbReady = true;
+    window.dispatchEvent(new Event('fbReady'));
+  </script>
 
-  /* ── INPUTS ── */
-  label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--silver-dim);
-    display: block;
-    margin-bottom: 0.28rem;
-  }
-  input[type="number"], input[type="text"], select {
-    background: var(--navy);
-    border: 1px solid rgba(59,130,246,0.22);
-    border-radius: 4px;
-    color: var(--white);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.88rem;
-    padding: 0.48rem 0.7rem;
-    width: 100%;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    -webkit-appearance: none;
-  }
-  select { cursor: pointer; }
-  input:focus, select:focus { border-color: var(--blue-b); box-shadow: 0 0 0 2px rgba(59,130,246,0.18); }
-  input::placeholder { color: var(--silver-dark); }
-  input[type="number"]::-webkit-inner-spin-button { opacity: 0.3; }
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #0a0818; }
+    body { overflow-x: hidden; }
+    #root { min-height: 100vh; }
+    :root { --tile: clamp(50px, calc((100vw - 64px) / 5), 62px); }
 
-  .info-pill {
-    background: rgba(56,189,248,0.08);
-    border: 1px solid rgba(56,189,248,0.22);
-    border-radius: 4px;
-    padding: 0.48rem 0.7rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.88rem;
-    color: var(--cyan);
-    min-height: 2.25rem;
-    display: flex;
-    align-items: center;
-  }
+    @keyframes pulse      { 0%,100%{opacity:.2} 50%{opacity:.8} }
+    @keyframes slideIn    { from{transform:translateY(-30px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes shimmer    { 0%{background-position:200% center} 100%{background-position:-200% center} }
+    @keyframes tileSlide  { from{transform:scale(0.92)} to{transform:scale(1)} }
+    @keyframes widgetIn   { from{transform:translateY(-14px) scale(.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+    @keyframes panelIn    { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes finishPop  { 0%{transform:scale(0.5) rotate(-8deg);opacity:0} 70%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+    @keyframes frameIn    { from{opacity:0} to{opacity:1} }
+    @keyframes glowPulse  { 0%,100%{text-shadow:0 0 20px rgba(255,220,100,.6),0 0 40px rgba(255,150,50,.4)} 50%{text-shadow:0 0 40px rgba(255,220,100,.9),0 0 80px rgba(255,150,50,.7),0 0 120px rgba(255,100,50,.5)} }
+    @keyframes syncPulse  { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+    @keyframes toastIn    { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes toastOut   { from{transform:translateX(0);opacity:1} to{transform:translateX(120%);opacity:0} }
+    @keyframes playerIn   { from{transform:translateY(-6px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes movingPulse{ 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
 
-  /* ── TABLES LIST ── */
-  #tablesList { display: flex; flex-direction: column; gap: 0.65rem; }
+    .tile-btn  { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+    .tile-btn:hover  { transform:scale(1.06) !important; filter:brightness(1.25) !important; }
+    .tile-btn:active { transform:scale(0.95) !important; }
+    .reset-btn:hover  { background:#2a1f5e !important; transform:translateY(-1px); }
+    .reset-btn:active { transform:translateY(1px); }
 
-  .table-row {
-    display: grid;
-    grid-template-columns: 1fr 100px 100px 100px 34px;
-    gap: 0.55rem;
-    align-items: end;
-    background: var(--felt-mid);
-    border: 1px solid rgba(59,130,246,0.12);
-    border-radius: 5px;
-    padding: 0.8rem 0.9rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    animation: rowIn 0.22s ease;
-  }
-  .table-row:hover { border-color: rgba(59,130,246,0.28); }
-  @keyframes rowIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+    /* ══ Widget toggle button ══ */
+    #rr-widget {
+      position:fixed; top:14px; right:14px; z-index:300;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      animation:widgetIn .5s cubic-bezier(.34,1.4,.64,1);
+    }
+    #rr-toggle {
+      display:flex; align-items:center; gap:10px;
+      background:rgba(10,8,24,0.9);
+      border:1.5px solid rgba(156,90,255,0.45); border-radius:14px;
+      padding:8px 14px 8px 10px;
+      cursor:pointer; color:#c89fff;
+      font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+      backdrop-filter:blur(14px);
+      transition:background .2s,border-color .2s,box-shadow .2s;
+      user-select:none; white-space:nowrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.4);
+    }
+    #rr-toggle:hover { background:rgba(124,58,237,.3); border-color:rgba(156,90,255,.8); }
+    .rr-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; width:36px; }
+    .rr-preview span {
+      display:block; width:10px; height:10px; border-radius:2px;
+      border:1.5px solid #444; transition:background .4s,border-color .4s;
+    }
+    #rr-sync-dot {
+      width:7px; height:7px; border-radius:50%; background:#444; flex-shrink:0; transition:background .4s;
+    }
+    #rr-sync-dot.connected    { background:#22c55e; animation:syncPulse 2s ease-in-out infinite; }
+    #rr-sync-dot.disconnected { background:#ef4444; }
+    #rr-sync-dot.connecting   { background:#f59e0b; animation:syncPulse .8s ease-in-out infinite; }
 
-  .cost-val {
-    background: rgba(56,189,248,0.07);
-    border: 1px solid rgba(56,189,248,0.18);
-    border-radius: 4px;
-    padding: 0.48rem 0.7rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: var(--cyan);
-    min-height: 2.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-  }
+    /* ══ Panel — 25% smaller than original ══ */
+    #rr-panel {
+      position:absolute; top:calc(100% + 8px); right:0;
+      width:min(405px, 92vw);           /* 540 × 0.75 */
+      background:rgba(6,4,20,0.97);
+      border:1.5px solid rgba(156,90,255,0.35); border-radius:18px;
+      padding:20px 20px 16px;           /* 28/28/22 × 0.75 */
+      backdrop-filter:blur(18px);
+      box-shadow:0 24px 60px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);
+      animation:panelIn .22s ease;
+    }
+    #rr-panel.hidden { display:none; }
+    #rr-panel-header { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:2px; }
+    #rr-panel h3 { color:#fff; font-size:16px; font-weight:700; letter-spacing:.05em; }
+    .rr-tm { color:#9b59b6; font-size:9px; letter-spacing:4px; text-transform:uppercase; text-align:center; margin-bottom:13px; }
+    #rr-status-text { text-align:center; font-size:10px; color:rgba(255,255,255,.3); margin-bottom:10px; letter-spacing:.08em; min-height:14px; }
 
-  .btn-remove {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.22);
-    border-radius: 4px;
-    color: #f87171;
-    font-size: 1.1rem;
-    width: 34px; height: 34px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    line-height: 1;
-  }
-  .btn-remove:hover { background: rgba(239,68,68,0.25); border-color: var(--red); color: var(--white); }
+    /* Active players list */
+    #rr-players {
+      margin-bottom:12px; min-height:20px;
+      display:flex; flex-wrap:wrap; gap:5px; justify-content:center;
+    }
+    .rr-player-chip {
+      display:flex; align-items:center; gap:5px;
+      background:rgba(255,255,255,.07); border:1px solid rgba(156,90,255,.25);
+      border-radius:20px; padding:4px 10px;
+      font-size:10px; color:#c89fff; font-weight:600;
+      animation:playerIn .3s ease; flex-direction:column; align-items:flex-start;
+      min-width:80px;
+    }
+    .rr-player-chip-row { display:flex; align-items:center; gap:5px; width:100%; }
+    .rr-player-chip .dot { width:5px; height:5px; border-radius:50%; background:#22c55e; flex-shrink:0; }
+    .rr-player-chip .dot.moving { background:#60a5fa; animation:movingPulse .8s ease-in-out infinite; }
+    .rr-player-chip .dot.finished { background:#FFE566; }
+    .rr-chip-name { flex:1; }
+    .rr-chip-status { font-size:9px; color:rgba(255,255,255,.35); letter-spacing:.04em; padding-left:10px; }
+    .rr-chip-time   { font-size:9px; color:#FFE566; font-weight:700; letter-spacing:.04em; padding-left:10px; }
 
-  .btn-add-table {
-    background: rgba(59,130,246,0.07);
-    border: 1px dashed rgba(59,130,246,0.32);
-    border-radius: 5px;
-    padding: 0.6rem 1.2rem;
-    color: var(--blue-b);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.92rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: 100%;
-    margin-top: 0.2rem;
-  }
-  .btn-add-table:hover { background: rgba(59,130,246,0.16); border-color: var(--blue-b); color: var(--white); }
+    #rr-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:13px; }
+    .rrcell {
+      height:99px;                      /* 132 × 0.75 */
+      border-radius:9px; border:2px solid #333;
+      transition:background .4s ease,border-color .4s ease;
+      position:relative; overflow:hidden;
+    }
+    .rrcell::after {
+      content:''; position:absolute; top:0; left:0; right:0; height:40%;
+      background:linear-gradient(to bottom,rgba(255,255,255,.18),transparent);
+      border-radius:9px 9px 50% 50%; pointer-events:none;
+    }
+    #rr-shuffle {
+      width:100%; padding:10px;
+      background:#7c3aed; color:#fff; border:none;
+      border-radius:9px; font-size:12px; font-weight:700;
+      cursor:pointer; transition:background .2s,transform .1s,opacity .2s;
+      letter-spacing:.05em;
+    }
+    #rr-shuffle:hover   { background:#6d28d9; }
+    #rr-shuffle:active  { transform:scale(0.97); }
+    #rr-shuffle:disabled{ opacity:.4; cursor:not-allowed; }
 
-  .formula-box {
-    margin-top: 1.1rem;
-    background: rgba(56,189,248,0.04);
-    border: 1px solid rgba(56,189,248,0.13);
-    border-radius: 4px;
-    padding: 0.65rem 1rem;
-    font-size: 0.77rem;
-    color: var(--silver-dim);
-    line-height: 1.7;
-  }
-  .formula-box code { font-family: 'JetBrains Mono', monospace; color: var(--cyan-dim); font-size: 0.73rem; }
+    /* ══ Finished overlay ══ */
+    .finished-frame {
+      position:absolute; inset:0; border-radius:16px;
+      box-shadow:inset 0 0 0 calc(12px + var(--tile) + 5px) rgba(0,0,0,0.91);
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none; z-index:20; animation:frameIn .3s ease;
+    }
+    .finished-text {
+      font-family:'Pacifico',cursive;
+      font-size:clamp(28px,7vw,44px);
+      background:linear-gradient(135deg,#FFE566 0%,#FFA85C 50%,#F57A7A 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      animation:finishPop .65s cubic-bezier(.34,1.56,.64,1), glowPulse 2s ease-in-out 1s infinite;
+      filter:drop-shadow(0 3px 10px rgba(0,0,0,.9));
+      text-align:center; line-height:1.1; padding:8px 16px;
+    }
 
-  /* ── PLAYERS TABLE ── */
-  .players-table { width: 100%; border-collapse: collapse; }
-  .players-table thead th {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--silver-dim);
-    font-weight: 400;
-    padding: 0 0.45rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid rgba(59,130,246,0.14);
-  }
-  .players-table thead th.right  { text-align: right; }
-  .players-table thead th.center { text-align: center; }
-  .players-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.035); transition: background 0.15s; }
-  .players-table tbody tr:hover { background: rgba(59,130,246,0.04); }
-  .players-table tbody tr.flash-row { animation: flashUpdate 0.6s ease; }
-  @keyframes flashUpdate { 0%,100%{ background:transparent; } 30%{ background:rgba(56,189,248,0.1); } }
-  .players-table td { padding: 0.35rem 0.45rem; vertical-align: middle; }
+    /* ══ Discrete connection toasts ══ */
+    .toast-discrete {
+      background:rgba(6,4,20,0.88);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:10px; padding:8px 14px;
+      backdrop-filter:blur(12px);
+      font-size:11px; color:rgba(255,255,255,.5);
+      animation:toastIn .3s cubic-bezier(.34,1.4,.64,1); pointer-events:auto;
+      display:flex; align-items:center; gap:7px;
+    }
+    .toast-discrete.out { animation:toastOut .3s ease forwards; }
+    .toast-discrete .td-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
-  .player-num {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    color: rgba(59,130,246,0.32);
-    width: 24px;
-    text-align: center;
-    padding-left: 0;
-  }
-  .players-table input[type="text"] {
-    background: transparent; border-color: rgba(59,130,246,0.1);
-    padding: 0.32rem 0.52rem; font-family:'Barlow',sans-serif; font-size:0.87rem;
-  }
-  .players-table input[type="number"] {
-    background: transparent; border-color: rgba(59,130,246,0.1);
-    padding: 0.32rem 0.52rem; font-size: 0.87rem; width: 80px;
-  }
-  .players-table select {
-    background: transparent; border-color: rgba(59,130,246,0.1);
-    padding: 0.32rem 0.52rem; font-size: 0.83rem; width: 120px;
-    color: var(--silver-dim);
-  }
-  .players-table select#pmins, .players-table select[id^="pmins"] {
-    width: 100px;
-    color: var(--silver);
-  }
-  .players-table select.selected { color: var(--cyan-dim); }
-  .players-table input:focus, .players-table select:focus {
-    background: var(--navy) !important; border-color: var(--blue-b) !important;
-  }
+    /* ══ Toast notifications ══ */
+    #toast-container {
+      position:fixed; bottom:24px; right:16px;
+      display:flex; flex-direction:column; gap:10px;
+      z-index:500; pointer-events:none; max-width:min(320px,90vw);
+    }
+    .toast {
+      background:rgba(6,4,20,0.96); border:1.5px solid rgba(34,197,94,.4);
+      border-radius:16px; padding:14px 18px; backdrop-filter:blur(16px);
+      box-shadow:0 8px 32px rgba(0,0,0,.6);
+      animation:toastIn .4s cubic-bezier(.34,1.4,.64,1); pointer-events:auto;
+    }
+    .toast.out { animation:toastOut .4s ease forwards; }
+    .toast-row { display:flex; align-items:flex-start; gap:12px; }
+    .toast-emoji { font-size:22px; flex-shrink:0; }
+    .toast-body { flex:1; }
+    .toast-title {
+      font-family:'Pacifico',cursive; font-size:14px;
+      background:linear-gradient(90deg,#FFE566,#FFA85C);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      line-height:1.2; margin-bottom:3px;
+    }
+    .toast-msg  { font-size:12px; color:rgba(255,255,255,.55); }
+    .toast-meta { font-size:11px; color:rgba(255,255,255,.3); margin-top:4px; }
 
-  .pct-cell {
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.76rem;
-    color: var(--cyan-dim);
-    width: 80px;
-  }
-  .bar-track {
-    width: 48px; height: 3px;
-    background: rgba(255,255,255,0.07);
-    border-radius: 2px;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 4px;
-  }
-  .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--blue-b), var(--cyan));
-    border-radius: 2px;
-    transition: width 0.4s ease;
-  }
-  .result-cell { text-align: right; min-width: 95px; }
-  .result-amount { font-family:'JetBrains Mono',monospace; font-size:0.95rem; color:var(--cyan); font-weight:500; }
-  .result-mins   { font-family:'JetBrains Mono',monospace; font-size:0.63rem; color:var(--silver-dark); }
-  .result-empty  { color:rgba(255,255,255,0.11); font-size:0.8rem; }
+    /* ══ Confirmation modal ══ */
+    @keyframes modalIn  { from{transform:scale(0.85);opacity:0} 70%{transform:scale(1.03)} to{transform:scale(1);opacity:1} }
+    .confirm-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,.7);
+      display:flex; align-items:center; justify-content:center;
+      z-index:400; backdrop-filter:blur(6px);
+      animation:frameIn .2s ease;
+    }
+    .confirm-box {
+      background:linear-gradient(145deg,#12103a,#0a0818);
+      border:1.5px solid rgba(156,90,255,.35); border-radius:20px;
+      padding:28px 28px 22px; text-align:center;
+      box-shadow:0 24px 60px rgba(0,0,0,.7);
+      animation:modalIn .35s cubic-bezier(.34,1.4,.64,1);
+      max-width:300px; width:90%;
+    }
+    .confirm-box .icon  { font-size:36px; margin-bottom:10px; }
+    .confirm-box h4     { color:#fff; font-size:16px; font-weight:800; margin-bottom:6px; letter-spacing:.04em; }
+    .confirm-box p      { color:rgba(255,255,255,.45); font-size:12px; line-height:1.5; margin-bottom:20px; }
+    .confirm-btns       { display:flex; gap:10px; justify-content:center; }
+    .confirm-btn-yes {
+      flex:1; padding:10px; border-radius:10px; border:none;
+      background:linear-gradient(135deg,#7c3aed,#4f1fbf);
+      color:#fff; font-size:13px; font-weight:700; cursor:pointer;
+      transition:filter .2s; letter-spacing:.05em;
+    }
+    .confirm-btn-yes:hover { filter:brightness(1.2); }
+    .confirm-btn-no {
+      flex:1; padding:10px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.07);
+      color:rgba(255,255,255,.6); font-size:13px; font-weight:600; cursor:pointer;
+      transition:background .2s;
+    }
+    .confirm-btn-no:hover { background:rgba(255,255,255,.13); }
 
-  /* ── TOTALS ── */
-  .totals-bar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-    gap: 1px;
-    background: rgba(59,130,246,0.14);
-    border: 1px solid rgba(59,130,246,0.22);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 8px 30px var(--shadow);
-  }
-  .total-item { background:var(--felt-mid); padding:1rem 1.3rem; display:flex; flex-direction:column; gap:0.18rem; }
-  .total-label { font-family:'JetBrains Mono',monospace; font-size:0.6rem; letter-spacing:0.13em; text-transform:uppercase; color:var(--silver-dim); }
-  .total-value { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1.9rem; line-height:1; color:var(--cyan); letter-spacing:0.02em; }
-  .total-value.warn { color:var(--red); }
-  .total-value.ok   { color:var(--green); }
-  .total-value.dim  { color:var(--silver); }
-  .total-sub { font-family:'JetBrains Mono',monospace; font-size:0.63rem; color:var(--silver-dark); margin-top:2px; }
-
-  /* ── MESA HEADER ROW ── */
-  .mesa-header-row td {
-    padding: 0.9rem 0.45rem 0.3rem;
-    display: flex; align-items: baseline; gap: 0.6rem;
-  }
-  .mesa-tag {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600; font-size: 0.8rem;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--cyan); background: rgba(56,189,248,0.1);
-    border: 1px solid rgba(56,189,248,0.25);
-    border-radius: 3px; padding: 0.1rem 0.5rem;
-  }
-  .mesa-tag-sub {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.66rem; color: var(--silver-dark);
-  }
-
-  /* ── SUMMARY CARD ── */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 0.75rem;
-  }
-  .summary-player {
-    background: var(--felt-mid);
-    border: 1px solid rgba(59,130,246,0.18);
-    border-radius: 5px;
-    padding: 0.9rem 1rem;
-    display: flex; flex-direction: column; gap: 0.25rem;
-    transition: border-color 0.2s;
-  }
-  .summary-player:hover { border-color: rgba(56,189,248,0.4); }
-  .summary-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 600; font-size: 1.05rem;
-    letter-spacing: 0.06em; color: var(--silver);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .summary-amount {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.55rem; font-weight: 500;
-    color: var(--cyan); line-height: 1.1;
-  }
-  .summary-detail {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem; color: var(--silver-dark);
-    line-height: 1.5; margin-top: 0.1rem;
-  }
-  .summary-empty {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem; color: var(--silver-dark);
-    text-align: center; padding: 0.5rem;
-    grid-column: 1/-1;
-  }
-
-  /* ── PLAYER CARDS ── */
-  #playerCards { display: flex; flex-direction: column; gap: 0.55rem; }
-
-  .player-card {
-    background: var(--felt-mid);
-    border: 1px solid rgba(59,130,246,0.14);
-    border-radius: 5px;
-    padding: 0.7rem 0.9rem;
-    transition: border-color 0.2s;
-  }
-  .player-card:hover { border-color: rgba(59,130,246,0.3); }
-  .player-card.flash-row { animation: flashUpdate 0.5s ease; }
-
-  .player-header {
-    display: flex; align-items: center; gap: 0.55rem;
-    margin-bottom: 0.45rem;
-  }
-  .pnum {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
-    font-size: 1rem; color: rgba(59,130,246,0.32);
-    width: 20px; text-align: center; flex-shrink: 0;
-  }
-  .player-header input[type="text"] {
-    flex: 1; background: var(--navy);
-    border-color: rgba(59,130,246,0.2);
-    padding: 0.35rem 0.6rem;
-    font-family: 'Barlow', sans-serif; font-size: 0.9rem;
-  }
-  .player-total {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
-    color: var(--silver-dark); min-width: 68px; text-align: right; flex-shrink: 0;
-  }
-  .player-total.has-value { color: var(--cyan); font-size: 1rem; font-weight: 500; }
-
-  .pmrows { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.38rem; }
-  .pmrow  { display: flex; gap: 0.4rem; align-items: center; }
-  .pmrow select {
-    background: var(--navy); border-color: rgba(59,130,246,0.14);
-    padding: 0.3rem 0.5rem; font-size: 0.82rem;
-  }
-  .pmrow select:first-child { flex: 1; }
-  .pmrow select:nth-child(2) { width: 98px; flex-shrink: 0; }
-
-  .btn-remove-row {
-    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-    border-radius: 3px; color: #f87171; font-size: 1rem;
-    width: 27px; height: 27px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.18s; flex-shrink: 0; line-height: 1;
-  }
-  .btn-remove-row:hover { background: rgba(239,68,68,0.22); color: var(--white); }
-
-  .btn-add-mesa-row {
-    background: rgba(59,130,246,0.06); border: 1px dashed rgba(59,130,246,0.24);
-    border-radius: 3px; color: var(--blue-b);
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 0.26rem 0.65rem; cursor: pointer; transition: all 0.18s; width: 100%;
-  }
-  .btn-add-mesa-row:hover { background: rgba(59,130,246,0.14); color: var(--white); }
-
-  /* ── ACTIONS ── */
-  .actions { display:flex; gap:0.7rem; flex-wrap:wrap; justify-content:flex-end; }
-  button.btn-primary, button.btn-ghost {
-    font-family:'Barlow Condensed',sans-serif; font-weight:600;
-    letter-spacing:0.13em; font-size:0.98rem; text-transform:uppercase;
-    padding:0.58rem 1.6rem; border-radius:4px; cursor:pointer; transition:all 0.2s;
-  }
-  .btn-primary { background:var(--blue); border:1px solid var(--blue-b); color:var(--white); box-shadow:0 0 18px rgba(29,78,216,0.38); }
-  .btn-primary:hover { background:var(--blue-b); transform:translateY(-1px); box-shadow:0 4px 18px rgba(59,130,246,0.45); }
-  .btn-ghost { background:transparent; border:1px solid rgba(255,255,255,0.11); color:var(--silver-dim); }
-  .btn-ghost:hover { border-color:rgba(255,255,255,0.28); color:var(--silver); }
-
-  @media (max-width:640px) {
-    .card { padding:1rem; }
-    .table-row { grid-template-columns:1fr 1fr; grid-template-rows:auto auto auto; }
-    .table-row > div:first-child { grid-column:1/-1; }
-    .bar-track { display:none; }
-    .players-table select { width:95px; }
-    .players-table input[type="number"] { width:66px; }
-    .session-hint { display:none; }
-  }
-</style>
+    /* ══ Name input (main UI) ══ */
+    .name-input-wrap {
+      display:flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,.05); border-radius:12px;
+      padding:10px 16px; border:1px solid rgba(255,255,255,.1);
+      width:100%; max-width:340px;
+    }
+    .name-input-wrap label { font-size:11px; color:rgba(255,255,255,.4); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+    .name-input-wrap input {
+      flex:1; background:transparent; border:none; outline:none;
+      color:#fff; font-size:15px; font-weight:600;
+      font-family:'Trebuchet MS','Segoe UI',sans-serif;
+    }
+    .name-input-wrap input::placeholder { color:rgba(255,255,255,.2); }
+  </style>
 </head>
 <body>
-<div class="container">
+  <div id="root"></div>
+  <div id="toast-container"></div>
 
-  <header>
-    <div class="header-rule"><span></span><div class="ball"></div><span></span></div>
-    <h1>Pool<span>Splitter</span></h1>
-    <p class="tagline">// sala en directo — tiempo real //</p>
-  </header>
-
-  <!-- DATE + NAV BAR -->
-  <div class="session-bar" style="justify-content:space-between;flex-wrap:wrap;gap:.6rem;">
-    <div style="display:flex;align-items:center;gap:.6rem;">
-      <label style="font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--silver-dim);margin:0">Fecha de juego</label>
-      <input type="date" id="sessionDate" style="background:var(--navy);border:1px solid rgba(59,130,246,.25);border-radius:4px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:.35rem .6rem;outline:none;" oninput="saveDate()">
+  <!-- ══ Pattern Widget ══ -->
+  <div id="rr-widget">
+    <div id="rr-toggle" onclick="rrToggle()">
+      <div class="rr-preview" id="rr-preview">
+        <span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+      </div>
+      Pattern
+      <div id="rr-sync-dot" class="connecting"></div>
     </div>
-    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
-      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="saveSession()">💾 Guardar sesión</button>
-      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="toggleHistory()">📋 Historial</button>
-      <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;" onclick="exportCSV()">⬇ Exportar CSV</button>
-      <label class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;cursor:pointer;">⬆ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
-      <a href="partidas.html#<%= sessionId %>" id="linkPartidas" style="font-family:'Barlow Condensed',sans-serif;font-size:.88rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan-dim);padding:.35rem 1rem;border:1px solid rgba(56,189,248,.25);border-radius:4px;text-decoration:none;transition:all .2s;" onmouseover="this.style.color='var(--white)'" onmouseout="this.style.color='var(--cyan-dim)'">🎱 Partidas →</a>
-    </div>
-  </div>
-
-  <!-- HISTORY PANEL -->
-  <div id="historyPanel" style="display:none;" class="card">
-    <div class="card-title"><div class="dot"></div>Historial de sesiones</div>
-    <div id="historyList"></div>
-  </div>
-
-  <!-- SESSION BAR -->
-  <div class="session-bar">
-    <div class="live-dot" id="liveDot"></div>
-    <span class="conn-label" id="connLabel">Conectando…</span>
-    <div class="mode-toggle">
-      <button class="mode-btn" id="btnLive"  onclick="setMode('live')">En directo</button>
-      <button class="mode-btn" id="btnLocal" onclick="setMode('local')">Solo local</button>
-    </div>
-    <div class="session-id-box" id="sessionIdBox">—</div>
-    <button class="btn-copy" id="btnCopy" onclick="copyLink()">Copiar enlace</button>
-    <span class="session-hint" id="sessionHint">Comparte el enlace con los jugadores</span>
-  </div>
-
-  <!-- SUMMARY BY PLAYER (first) -->
-  <div class="card">
-    <div class="card-title"><div class="dot"></div>Resumen — Total por jugador</div>
-    <div class="summary-grid" id="summaryGrid">
-      <div class="summary-empty">Introduce jugadores y mesas para ver el resumen</div>
+    <div id="rr-panel" class="hidden">
+      <div id="rr-panel-header">
+        <h3>Pattern</h3>
+        <div id="rr-sync-dot-panel" style="width:7px;height:7px;border-radius:50%;background:#444;transition:background .4s;"></div>
+      </div>
+      <p class="rr-tm">Xavimator™</p>
+      <div id="rr-status-text">Conectando…</div>
+      <div id="rr-players"></div>
+      <div id="rr-grid"></div>
+      <button id="rr-shuffle" onclick="rrShuffle()" disabled>Shuffle</button>
     </div>
   </div>
 
-  <!-- TABLES -->
-  <div class="card">
-    <div class="card-title"><div class="dot"></div>Mesas de la sesión</div>
-    <div id="tablesList"></div>
-    <button class="btn-add-table" onclick="addTable()">+ Añadir mesa</button>
-    <div class="formula-box">
-      <strong style="color:var(--cyan-dim)">Reparto por mesa:</strong>
-      cada mesa se divide <strong style="color:var(--silver)">solo</strong> entre los jugadores que la usaron, proporcional a sus minutos.<br>
-      <code>pago = (tus_minutos ÷ Σ minutos_de_tu_mesa) × coste_de_tu_mesa</code>
-    </div>
-  </div>
+  <script>
+    const RR_COLORS = [
+      { bg:'#C8C8D8', border:'#8888A0', puzzleId:'white'  },
+      { bg:'#1b5e20', border:'#0a3d0a', puzzleId:'green'  },
+      { bg:'#ffeb3b', border:'#f9a825', puzzleId:'yellow' },
+      { bg:'#0d47a1', border:'#092f6b', puzzleId:'blue'   },
+      { bg:'#f44336', border:'#b71c1c', puzzleId:'red'    },
+      { bg:'#ff9800', border:'#e65100', puzzleId:'orange' },
+    ];
 
-  <!-- PLAYERS -->
-  <div class="card">
-    <div class="card-title"><div class="dot"></div>Jugadores</div>
-    <div id="playerCards"></div>
-  </div>
+    let rrOpen = false;
+    let fbConnected = false;
+    window.rrPattern = [];
 
-  <!-- TOTALS -->
-  <div class="totals-bar">
-    <div class="total-item">
-      <span class="total-label">Coste total sesión</span>
-      <span class="total-value" id="totCosto">—</span>
-      <span class="total-sub"  id="totCostoSub"></span>
-    </div>
-    <div class="total-item">
-      <span class="total-label">Mesas activas</span>
-      <span class="total-value dim" id="totMesas">0</span>
-      <span class="total-sub"      id="totMesasSub"></span>
-    </div>
-    <div class="total-item">
-      <span class="total-label">Min. registrados</span>
-      <span class="total-value ok" id="totJugados">0</span>
-      <span class="total-sub"     id="totDiff"></span>
-    </div>
-    <div class="total-item">
-      <span class="total-label">Total cobrado</span>
-      <span class="total-value" id="totCobrado">—</span>
-      <span class="total-sub"   id="totRestante"></span>
-    </div>
-  </div>
+    // Build grid cells
+    (function rrInit() {
+      const grid = document.getElementById('rr-grid');
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'rrcell'; grid.appendChild(cell);
+      }
+    })();
 
-  <div class="actions">
-    <button class="btn-ghost" onclick="clearAll()">Limpiar todo</button>
-    <button class="btn-primary" onclick="recalculate()">Recalcular</button>
-  </div>
-
-</div>
-
-<!-- Gun.js -->
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-<script>
-/* ═══════════════════════════════════════════
-   SESSION & MODE SETUP
-═══════════════════════════════════════════ */
-let sessionId = location.hash.slice(1).replace(/[^a-zA-Z0-9]/g, '');
-if (!sessionId) {
-  sessionId = Math.random().toString(36).slice(2,8).toUpperCase();
-  history.replaceState(null, '', '#' + sessionId);
-}
-document.getElementById('sessionIdBox').textContent = sessionId;
-
-const isLocal = localStorage.getItem('ps-mode') === 'local';
-
-function setMode(mode) {
-  localStorage.setItem('ps-mode', mode);
-  location.reload();
-}
-
-// Apply mode UI
-document.getElementById('btnLive').className  = 'mode-btn' + (!isLocal ? ' active-live'  : '');
-document.getElementById('btnLocal').className = 'mode-btn' + ( isLocal ? ' active-local' : '');
-if (isLocal) {
-  document.getElementById('sessionIdBox').style.display = 'none';
-  document.getElementById('btnCopy').style.display      = 'none';
-  document.getElementById('sessionHint').style.display  = 'none';
-  document.getElementById('connLabel').textContent      = 'Solo local';
-  document.getElementById('liveDot').className          = 'live-dot off';
-}
-
-/* ═══════════════════════════════════════════
-   GUN SETUP
-═══════════════════════════════════════════ */
-const gun = isLocal
-  ? Gun({ localStorage: true })   // sin peers → nunca sincroniza
-  : Gun({
-      peers: [
-        'https://gun.eco/gun',
-        'wss://gun-us.herokuapp.com/gun',
-        'https://gundb-relay-mlmbl.ondigitalocean.app/gun'
-      ],
-      localStorage: true
-    });
-
-const root       = gun.get('billar-rc1').get(sessionId);
-const tablesRef  = root.get('tables');
-const playersRef = root.get('players');
-
-// Connection status (solo en modo live)
-let peerCount = 0;
-if (!isLocal) {
-  gun.on('hi',  () => { peerCount++; setStatus(true); });
-  gun.on('bye', () => { peerCount = Math.max(0, peerCount - 1); if (!peerCount) setStatus(false); });
-  setTimeout(() => { if (!peerCount) setStatus(false); }, 5000);
-}
-
-function setStatus(online) {
-  document.getElementById('liveDot').className          = 'live-dot ' + (online ? 'on' : 'off');
-  document.getElementById('connLabel').textContent      = online ? 'En directo' : 'Solo local (sin sync)';
-}
-
-/* ═══════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════ */
-const NUM_PLAYERS = 10;
-let tablesData  = {};   // key → {name, ph, mins, order}
-let playersData = {};   // "p1"…"p10" → {name, mesa, mins}
-let suppressSync = false; // prevent echo loops
-
-/* ═══════════════════════════════════════════
-   PLAYER STATE & CARD BUILD
-═══════════════════════════════════════════ */
-let playerRows = {}; // "p1"…"p10" → [{mesa, mins}, ...]
-
-const playerCardsEl = document.getElementById('playerCards');
-for (let i = 1; i <= NUM_PLAYERS; i++) {
-  const card = document.createElement('div');
-  card.className = 'player-card';
-  card.id = `pcard${i}`;
-  card.innerHTML = `
-    <div class="player-header">
-      <span class="pnum">${i}</span>
-      <input type="text" id="pname${i}" placeholder="Jugador ${i}" oninput="onPlayerChange(${i})">
-      <span class="player-total" id="ptotal${i}">—</span>
-    </div>
-    <div class="pmrows" id="pmrows${i}"></div>
-    <button class="btn-add-mesa-row" onclick="addMesaRow(${i})">+ añadir mesa</button>
-  `;
-  playerCardsEl.appendChild(card);
-  playerRows[`p${i}`] = [];
-}
-
-/* ═══════════════════════════════════════════
-   GUN → PLAYERS LISTENERS (solo modo live)
-═══════════════════════════════════════════ */
-if (!isLocal) {
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    const key = `p${i}`;
-    playersRef.get(key).on((data) => {
-      if (!data) return;
-      playersData[key] = data;
-      suppressSync = true;
-      renderPlayerCard(i, data);
-      suppressSync = false;
-      recalculate();
-    });
-  }
-}
-
-function renderPlayerCard(i, data) {
-  const nameEl = document.getElementById(`pname${i}`);
-  if (document.activeElement !== nameEl) nameEl.value = data.name || '';
-
-  let rows = [];
-  try { rows = JSON.parse(data.rowsJson || '[]'); } catch(e) {}
-  // backwards-compat: old single-mesa format
-  if (!data.rowsJson && data.mesa) rows = [{ mesa: data.mesa, mins: data.mins || 0 }];
-
-  playerRows[`p${i}`] = rows;
-  rebuildMesaRows(i, rows);
-
-  const card = document.getElementById(`pcard${i}`);
-  card.classList.remove('flash-row');
-  void card.offsetWidth;
-  card.classList.add('flash-row');
-}
-
-function rebuildMesaRows(i, rows) {
-  const container = document.getElementById(`pmrows${i}`);
-  if (!container) return;
-  if (container.contains(document.activeElement)) return; // don't disrupt focus
-  container.innerHTML = '';
-  rows.forEach((row, idx) => container.appendChild(buildMesaRowEl(i, idx, row.mesa||'', row.mins||0)));
-}
-
-function buildMesaRowEl(i, idx, mesaVal, minsVal) {
-  const div = document.createElement('div');
-  div.className = 'pmrow';
-  div.id = `pmrow${i}-${idx}`;
-
-  const activeKeys = Object.entries(tablesData)
-    .filter(([,d]) => d && !d._del)
-    .sort(([,a],[,b]) => (a.order||0)-(b.order||0));
-
-  const mesaOpts = `<option value="">— Mesa —</option>` +
-    activeKeys.map(([key,d]) =>
-      `<option value="${key}"${key===mesaVal?' selected':''}>${d.name||key}</option>`
-    ).join('');
-
-  const minsOpts_ = Array.from({length:21},(_,k)=>k*15)
-    .map(m=>`<option value="${m}"${m==minsVal?' selected':''}>${m===0?'— min —':m+' min'}</option>`)
-    .join('');
-
-  div.innerHTML = `
-    <select id="pmesa${i}-${idx}" onchange="onPlayerChange(${i})">${mesaOpts}</select>
-    <select id="pmins${i}-${idx}" onchange="onPlayerChange(${i})">${minsOpts_}</select>
-    <button class="btn-remove-row" onclick="removeMesaRow(${i},${idx})">×</button>
-  `;
-  return div;
-}
-
-function addMesaRow(i) {
-  const key  = `p${i}`;
-  const rows = [...(playerRows[key]||[]), { mesa:'', mins:0 }];
-  playerRows[key] = rows;
-  document.getElementById(`pmrows${i}`).appendChild(buildMesaRowEl(i, rows.length-1, '', 0));
-  syncPlayer(i);
-}
-
-function removeMesaRow(i, idx) {
-  const key  = `p${i}`;
-  const rows = [...(playerRows[key]||[])];
-  rows.splice(idx, 1);
-  playerRows[key] = rows;
-  rebuildMesaRows(i, rows);
-  syncPlayer(i);
-  recalculate();
-}
-
-function onPlayerChange(i) {
-  if (suppressSync) return;
-  readPlayerRows(i);
-  syncPlayer(i);
-  recalculate();
-}
-
-function readPlayerRows(i) {
-  const container = document.getElementById(`pmrows${i}`);
-  if (!container) return;
-  const rows = [];
-  container.querySelectorAll('.pmrow').forEach((el, idx) => {
-    const mesaEl = document.getElementById(`pmesa${i}-${idx}`);
-    const minsEl = document.getElementById(`pmins${i}-${idx}`);
-    if (mesaEl && minsEl) rows.push({ mesa: mesaEl.value, mins: parseFloat(minsEl.value)||0 });
-  });
-  playerRows[`p${i}`] = rows;
-}
-
-function syncPlayer(i) {
-  if (suppressSync) return;
-  const data = {
-    name: document.getElementById(`pname${i}`)?.value || '',
-    rowsJson: JSON.stringify(playerRows[`p${i}`]||[])
-  };
-  if (isLocal) { localSave(); } else { playersRef.get(`p${i}`).put(data); }
-}
-
-/* ═══════════════════════════════════════════
-   MESA SELECTORS — refresh all player dropdowns
-═══════════════════════════════════════════ */
-function updateMesaSelectors() {
-  const activeKeys = Object.entries(tablesData)
-    .filter(([,d]) => d && !d._del)
-    .sort(([,a],[,b]) => (a.order||0)-(b.order||0));
-
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    const container = document.getElementById(`pmrows${i}`);
-    if (!container) continue;
-    container.querySelectorAll('select[id^="pmesa"]').forEach(sel => {
-      if (document.activeElement === sel) return;
-      const cur = sel.value;
-      sel.innerHTML = `<option value="">— Mesa —</option>` +
-        activeKeys.map(([key,d]) =>
-          `<option value="${key}"${key===cur?' selected':''}>${d.name||key}</option>`
-        ).join('');
-      sel.value = cur;
-    });
-  }
-}
-
-/* ═══════════════════════════════════════════
-   CALCULATION
-   Cada mesa se reparte SOLO entre sus jugadores.
-═══════════════════════════════════════════ */
-function recalculate() {
-  // 1. Table costs
-  const tableCost = {};
-  let costoTotal = 0, mesasActivas = 0;
-  Object.entries(tablesData).forEach(([key,d]) => {
-    if (!d || d._del) return;
-    const cost = ((d.mins||0)/60)*(d.ph||0);
-    tableCost[key] = cost;
-    if (cost > 0) { costoTotal += cost; mesasActivas++; }
-  });
-
-  // 2. Sum player-mins per table
-  const tablePlayerMins = {};
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    (playerRows[`p${i}`]||[]).forEach(row => {
-      if (!row.mesa || row.mins<=0) return;
-      tablePlayerMins[row.mesa] = (tablePlayerMins[row.mesa]||0) + row.mins;
-    });
-  }
-
-  // 3. Compute each player's cost across all their mesa-rows
-  const playerPago     = {};
-  const playerDetalles = {};
-  let totalJugados = 0, totalCobrado = 0;
-
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    let playerTotal = 0;
-    const detalles  = [];
-    (playerRows[`p${i}`]||[]).forEach(row => {
-      if (!row.mesa || row.mins<=0) return;
-      totalJugados += row.mins;
-      const mc  = tableCost[row.mesa]    || 0;
-      const mtm = tablePlayerMins[row.mesa] || 0;
-      if (mc > 0 && mtm > 0) {
-        const pago = (row.mins / mtm) * mc;
-        playerTotal += pago;
-        detalles.push({ mesaNombre: tablesData[row.mesa]?.name||row.mesa, mins: row.mins, pago });
-      } else if (mc === 0) {
-        detalles.push({ mesaNombre: tablesData[row.mesa]?.name||row.mesa, mins: row.mins, pago: -1 });
+    // Toggle panel
+    function rrToggle() {
+      rrOpen = !rrOpen;
+      document.getElementById('rr-panel').classList.toggle('hidden', !rrOpen);
+    }
+    document.addEventListener('click', (e) => {
+      if (rrOpen && !document.getElementById('rr-widget').contains(e.target)) {
+        rrOpen = false;
+        document.getElementById('rr-panel').classList.add('hidden');
       }
     });
-    playerPago[i]     = playerTotal;
-    playerDetalles[i] = detalles;
-    totalCobrado     += playerTotal;
-  }
 
-  // 4. Render totals on each player card
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    const totalEl = document.getElementById(`ptotal${i}`);
-    if (!totalEl) continue;
-    const total = playerPago[i] || 0;
-    if (total > 0) {
-      totalEl.textContent = `€${total.toFixed(2)}`;
-      totalEl.className   = 'player-total has-value';
-    } else {
-      totalEl.textContent = '—';
-      totalEl.className   = 'player-total';
+    // Apply pattern to DOM + notify React
+    function rrApplyPattern(pattern) {
+      window.rrPattern = pattern;
+      document.querySelectorAll('.rrcell').forEach((cell, i) => {
+        cell.style.background  = RR_COLORS[pattern[i]].bg;
+        cell.style.borderColor = RR_COLORS[pattern[i]].border;
+      });
+      document.querySelectorAll('#rr-preview span').forEach((dot, i) => {
+        dot.style.background  = RR_COLORS[pattern[i]].bg;
+        dot.style.borderColor = RR_COLORS[pattern[i]].border;
+      });
+      window.dispatchEvent(new CustomEvent('rrPatternChange', { detail: pattern }));
     }
-  }
 
-  // 5. Summary by name
-  const byName = {};
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    const name = document.getElementById(`pname${i}`)?.value.trim();
-    if (!name) continue;
-    const detalles = (playerDetalles[i]||[]).filter(d=>d.pago>0);
-    if (!detalles.length) continue;
-    if (!byName[name]) byName[name] = { total:0, detalles:[] };
-    byName[name].total += playerPago[i]||0;
-    detalles.forEach(d => byName[name].detalles.push(`${d.mesaNombre}: ${d.mins} min`));
-  }
-
-  const grid  = document.getElementById('summaryGrid');
-  const names = Object.keys(byName);
-  grid.innerHTML = names.length === 0
-    ? '<div class="summary-empty">Introduce jugadores y mesas para ver el resumen</div>'
-    : names.sort().map(name => {
-        const { total, detalles } = byName[name];
-        return `<div class="summary-player">
-          <div class="summary-name">${name}</div>
-          <div class="summary-amount">€${total.toFixed(2)}</div>
-          <div class="summary-detail">${detalles.join('<br>')}</div>
-        </div>`;
-      }).join('');
-
-  // 6. Totals bar
-  const tC=document.getElementById('totCosto'), tCS=document.getElementById('totCostoSub');
-  if (costoTotal>0){tC.textContent=`€${costoTotal.toFixed(2)}`;tCS.textContent=`${mesasActivas} mesa${mesasActivas!==1?'s':''} activas`;}
-  else{tC.textContent='—';tCS.textContent='';}
-
-  document.getElementById('totMesas').textContent    = Object.values(tablesData).filter(d=>d&&!d._del).length;
-  document.getElementById('totMesasSub').textContent = mesasActivas>0?`${mesasActivas} con precio`:'ninguna con precio';
-
-  const tJ=document.getElementById('totJugados'),tD=document.getElementById('totDiff');
-  tJ.textContent=`${totalJugados} min`;tJ.className='total-value ok';tD.textContent='';
-
-  const tCob=document.getElementById('totCobrado'),tR=document.getElementById('totRestante');
-  if (totalCobrado>0){
-    tCob.textContent=`€${totalCobrado.toFixed(2)}`;
-    const r=costoTotal-totalCobrado;
-    tR.textContent=r>0.005?`Faltan €${r.toFixed(2)}`:(r<-0.005?`⚠ exceso €${Math.abs(r).toFixed(2)}`:'✓ cubierto al 100%');
-  }else{tCob.textContent='—';tR.textContent='';}
-}
-
-/* ═══════════════════════════════════════════
-   COPY LINK
-═══════════════════════════════════════════ */
-function copyLink() {
-  const url = location.href;
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById('btnCopy');
-    btn.textContent='✓ Copiado'; btn.className='btn-copy copied';
-    setTimeout(()=>{btn.textContent='Copiar enlace';btn.className='btn-copy';},2000);
-  }).catch(()=>{ prompt('Copia este enlace:', url); });
-}
-
-/* ═══════════════════════════════════════════
-   LOCAL STORAGE HELPERS
-═══════════════════════════════════════════ */
-function localSave() {
-  localStorage.setItem(`ps-t-${sessionId}`, JSON.stringify(tablesData));
-  const pd = {};
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    pd[`p${i}`] = {
-      name: document.getElementById(`pname${i}`)?.value || '',
-      rowsJson: JSON.stringify(playerRows[`p${i}`] || [])
+    window.__fbPatternReceived = function(pattern) {
+      rrApplyPattern(pattern); setConnected(true);
     };
-  }
-  localStorage.setItem(`ps-p-${sessionId}`, JSON.stringify(pd));
-}
 
-function localLoad() {
-  try {
-    const tables = JSON.parse(localStorage.getItem(`ps-t-${sessionId}`) || '{}');
-    Object.entries(tables).forEach(([key, data]) => {
-      if (!data || data._del) return;
-      tablesData[key] = data;
-      patchTableRow(key, data);
-    });
-    updateMesaSelectors();
-  } catch(e) {}
-  try {
-    const players = JSON.parse(localStorage.getItem(`ps-p-${sessionId}`) || '{}');
-    Object.entries(players).forEach(([key, data]) => {
-      const i = parseInt(key.slice(1));
-      if (!i) return;
-      playersData[key] = data;
-      suppressSync = true;
-      renderPlayerCard(i, data);
-      suppressSync = false;
-    });
-  } catch(e) {}
-  recalculate();
-}
+    // Active players display
+    let _prevPlayerNames = new Set();
 
-/* ═══════════════════════════════════════════
-   GUN → TABLES LISTENER (solo modo live)
-═══════════════════════════════════════════ */
-if (!isLocal) {
-  tablesRef.map().on((data, key) => {
-    if (!data || data._del) {
-      delete tablesData[key];
-      const row = document.getElementById(`trow-${key}`);
-      if (row) row.remove();
-    } else {
-      tablesData[key] = data;
-      patchTableRow(key, data);
-    }
-    updateMesaSelectors();
-    recalculate();
-  });
-}
-
-/* ═══════════════════════════════════════════
-   TABLE ROW DOM
-═══════════════════════════════════════════ */
-function minsOpts(sel=0) {
-  return Array.from({length:21},(_,k)=>k*15)
-    .map(m=>`<option value="${m}"${m==sel?' selected':''}>${m===0?'— min —':m+' min'}</option>`).join('');
-}
-function phOpts(sel=0) {
-  return Array.from({length:101},(_,k)=>k)
-    .map(p=>`<option value="${p}"${p==sel?' selected':''}>${p===0?'— €/h —':p+' €/h'}</option>`).join('');
-}
-
-function patchTableRow(key, data) {
-  let row = document.getElementById(`trow-${key}`);
-  if (!row) {
-    row = document.createElement('div');
-    row.className = 'table-row';
-    row.id = `trow-${key}`;
-    row.setAttribute('data-key', key);
-    row.innerHTML = `
-      <div>
-        <label>Nombre de la mesa</label>
-        <input type="text" id="tname-${key}" placeholder="Mesa" oninput="onTableInput('${key}')">
-      </div>
-      <div>
-        <label>€ / hora</label>
-        <select id="tph-${key}" onchange="onTableInput('${key}')">${phOpts(data.ph||0)}</select>
-      </div>
-      <div>
-        <label>Minutos usados</label>
-        <select id="tmins-${key}" onchange="onTableInput('${key}')">${minsOpts(data.mins||0)}</select>
-      </div>
-      <div>
-        <label>Coste mesa</label>
-        <div class="cost-val" id="tcost-${key}">—</div>
-      </div>
-      <button class="btn-remove" onclick="removeTable('${key}')" title="Eliminar mesa">×</button>
-    `;
-    const list    = document.getElementById('tablesList');
-    const allRows = [...list.querySelectorAll('[data-key]')];
-    const inserted = allRows.find(r => (tablesData[r.dataset.key]?.order || 0) > (data.order || 0));
-    inserted ? list.insertBefore(row, inserted) : list.appendChild(row);
-  }
-  const nameEl = document.getElementById(`tname-${key}`);
-  const phEl   = document.getElementById(`tph-${key}`);
-  const minsEl = document.getElementById(`tmins-${key}`);
-  const costEl = document.getElementById(`tcost-${key}`);
-  suppressSync = true;
-  if (nameEl && document.activeElement !== nameEl) nameEl.value = data.name || '';
-  if (phEl   && document.activeElement !== phEl)   phEl.value   = data.ph   >= 0 ? data.ph   : 0;
-  if (minsEl && document.activeElement !== minsEl) minsEl.value = data.mins >= 0 ? data.mins : 0;
-  suppressSync = false;
-  if (costEl) {
-    const cost = ((data.mins||0)/60)*(data.ph||0);
-    costEl.textContent = cost > 0 ? `€${cost.toFixed(2)}` : '—';
-  }
-}
-
-function onTableInput(key) {
-  if (suppressSync) return;
-  const ph   = parseFloat(document.getElementById(`tph-${key}`)?.value)   || 0;
-  const mins = parseFloat(document.getElementById(`tmins-${key}`)?.value) || 0;
-  const name = document.getElementById(`tname-${key}`)?.value || '';
-  const costEl = document.getElementById(`tcost-${key}`);
-  if (costEl) costEl.textContent = (mins/60)*ph > 0 ? `€${((mins/60)*ph).toFixed(2)}` : '—';
-  const data = { name, ph, mins, order: tablesData[key]?.order || Date.now(), _del: false };
-  tablesData[key] = data;
-  if (isLocal) { localSave(); } else { tablesRef.get(key).put(data); }
-  updateMesaSelectors();
-  recalculate();
-}
-
-function addTable() {
-  const key  = 't' + Date.now();
-  const data = { name: `Mesa ${Object.values(tablesData).filter(d=>d&&!d._del).length + 1}`, ph: 0, mins: 0, order: Date.now(), _del: false };
-  tablesData[key] = data;
-  patchTableRow(key, data);
-  updateMesaSelectors();
-  recalculate();
-  if (isLocal) { localSave(); } else { tablesRef.get(key).put(data); }
-}
-
-function removeTable(key) {
-  const row = document.getElementById(`trow-${key}`);
-  if (row) { row.style.opacity='0'; row.style.transform='translateY(-4px)'; row.style.transition='all 0.2s'; setTimeout(()=>row.remove(),200); }
-  delete tablesData[key];
-  if (isLocal) { localSave(); } else { tablesRef.get(key).put({ _del: true }); }
-  updateMesaSelectors();
-  recalculate();
-}
-
-/* ═══════════════════════════════════════════
-   CLEAR ALL
-═══════════════════════════════════════════ */
-function clearAll() {
-  if (!confirm('¿Seguro que quieres limpiar toda la sesión?')) return;
-  if (!isLocal) Object.keys(tablesData).forEach(key => tablesRef.get(key).put({ _del:true }));
-  tablesData = {};
-  document.getElementById('tablesList').innerHTML = '';
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    playerRows[`p${i}`] = [];
-    if (!isLocal) playersRef.get(`p${i}`).put({ name:'', rowsJson:'[]' });
-    const nameEl = document.getElementById(`pname${i}`);
-    if (nameEl) nameEl.value = '';
-    const cont = document.getElementById(`pmrows${i}`);
-    if (cont) cont.innerHTML = '';
-    const tot = document.getElementById(`ptotal${i}`);
-    if (tot) { tot.textContent='—'; tot.className='player-total'; }
-  }
-  if (isLocal) localSave();
-  updateMesaSelectors();
-  recalculate();
-}
-
-/* ═══════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════ */
-if (isLocal) {
-  localLoad();
-} else {
-  // Live mode: add 2 default tables only if session is empty
-  setTimeout(() => {
-    if (Object.keys(tablesData).length === 0) { addTable(); addTable(); }
-  }, 800);
-}
-/* ═══════════════════════════════════════════
-   DATE & HISTORY
-═══════════════════════════════════════════ */
-function saveDate() {
-  localStorage.setItem(`ps-date-${sessionId}`, document.getElementById('sessionDate').value);
-}
-function loadDate() {
-  const d = localStorage.getItem(`ps-date-${sessionId}`);
-  const el = document.getElementById('sessionDate');
-  el.value = d || new Date().toISOString().slice(0,10);
-  // Fix the partidas link with real session id
-  document.getElementById('linkPartidas').href = `partidas.html#${sessionId}`;
-}
-
-function saveSession() {
-  const date = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
-  const history = JSON.parse(localStorage.getItem('ps-history') || '[]');
-  const summary = [];
-  for (let i = 1; i <= NUM_PLAYERS; i++) {
-    const name = document.getElementById(`pname${i}`)?.value.trim();
-    const tot  = document.getElementById(`ptotal${i}`)?.textContent;
-    if (name && tot && tot !== '—') summary.push({ name, total: tot });
-  }
-  if (summary.length === 0) { alert('No hay jugadores con datos para guardar.'); return; }
-  history.unshift({ sessionId, date, summary, tables: Object.values(tablesData).filter(d=>d&&!d._del).map(d=>d.name) });
-  localStorage.setItem('ps-history', JSON.stringify(history.slice(0,50)));
-  alert('✓ Sesión guardada en el historial.');
-}
-
-function toggleHistory() {
-  const panel = document.getElementById('historyPanel');
-  if (panel.style.display === 'none') {
-    renderHistory();
-    panel.style.display = 'block';
-  } else {
-    panel.style.display = 'none';
-  }
-}
-
-function renderHistory() {
-  const history = JSON.parse(localStorage.getItem('ps-history') || '[]');
-  const list = document.getElementById('historyList');
-  if (history.length === 0) {
-    list.innerHTML = '<p style="color:var(--silver-dark);font-size:.85rem;padding:.5rem 0">No hay sesiones guardadas todavía.</p>';
-    return;
-  }
-  list.innerHTML = history.map((s, idx) => `
-    <div style="background:var(--felt-mid);border:1px solid rgba(59,130,246,.14);border-radius:5px;padding:.9rem 1.1rem;margin-bottom:.65rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.55rem;flex-wrap:wrap;gap:.4rem;">
-        <span style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:1rem;color:var(--cyan);letter-spacing:.06em;">${s.date}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--silver-dark)">${s.tables?.join(', ')||'—'}</span>
-        <button onclick="deleteHistory(${idx})" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:3px;color:#f87171;font-size:.75rem;padding:.18rem .5rem;cursor:pointer;">Borrar</button>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
-        ${s.summary.map(p=>`<span style="background:var(--navy);border:1px solid rgba(59,130,246,.2);border-radius:3px;padding:.2rem .6rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--silver);">${p.name} <strong style="color:var(--cyan)">${p.total}</strong></span>`).join('')}
-      </div>
-    </div>`).join('');
-}
-
-function deleteHistory(idx) {
-  const history = JSON.parse(localStorage.getItem('ps-history') || '[]');
-  history.splice(idx, 1);
-  localStorage.setItem('ps-history', JSON.stringify(history));
-  renderHistory();
-}
-
-/* ═══════════════════════════════════════════
-   CSV — UTILIDADES
-═══════════════════════════════════════════ */
-function downloadCSV(content, filename) {
-  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-function parseCSVLine(line) {
-  const result = []; let cur = ''; let inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    if (line[i] === '"') { if (inQ && line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
-    else if (line[i]===',' && !inQ) { result.push(cur); cur=''; }
-    else cur += line[i];
-  }
-  result.push(cur);
-  return result;
-}
-
-function parseCSV(text) {
-  const lines = text.trim().split('\n').filter(l=>l.trim());
-  if (lines.length < 2) return [];
-  const headers = parseCSVLine(lines[0]).map(h=>h.trim());
-  return lines.slice(1).map(line => {
-    const vals = parseCSVLine(line);
-    const obj  = {};
-    headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
-    return obj;
-  });
-}
-
-/* ═══════════════════════════════════════════
-   CSV — EXPORTAR SESIÓN ACTUAL (billar)
-═══════════════════════════════════════════ */
-function exportCSV() {
-  const date = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
-
-  // Calcular costes (misma lógica que recalculate)
-  const tableCost = {};
-  Object.entries(tablesData).forEach(([key,d]) => {
-    if (!d||d._del) return;
-    tableCost[key] = ((d.mins||0)/60)*(d.ph||0);
-  });
-  const tablePlayerMins = {};
-  for (let i=1;i<=NUM_PLAYERS;i++) {
-    (playerRows[`p${i}`]||[]).forEach(row => {
-      if (!row.mesa||row.mins<=0) return;
-      tablePlayerMins[row.mesa]=(tablePlayerMins[row.mesa]||0)+row.mins;
-    });
-  }
-
-  const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
-  const rows = ['tipo,nombre,precio_hora,minutos,coste_mesa,mesas_jugador,total_jugador,fecha'];
-
-  // Mesas
-  Object.values(tablesData).filter(d=>d&&!d._del).forEach(d => {
-    const cost = ((d.mins||0)/60)*(d.ph||0);
-    rows.push([`mesa`,esc(d.name),d.ph||0,d.mins||0,cost.toFixed(2),'','',date].join(','));
-  });
-
-  // Jugadores
-  for (let i=1;i<=NUM_PLAYERS;i++) {
-    const name = document.getElementById(`pname${i}`)?.value.trim();
-    if (!name) continue;
-    const prows = (playerRows[`p${i}`]||[]).filter(r=>r.mesa&&r.mins>0);
-    if (!prows.length) continue;
-    let total=0;
-    prows.forEach(row=>{
-      const mc=tableCost[row.mesa]||0, mtm=tablePlayerMins[row.mesa]||0;
-      if (mc>0&&mtm>0) total+=(row.mins/mtm)*mc;
-    });
-    const mesaNombres = prows.map(r=>tablesData[r.mesa]?.name||r.mesa).join(';');
-    const totalMins   = prows.reduce((s,r)=>s+(r.mins||0),0);
-    rows.push([`jugador`,esc(name),'',totalMins,'',esc(mesaNombres),total.toFixed(2),date].join(','));
-  }
-
-  downloadCSV(rows.join('\n'), `poolsplitter-gastos-${date}.csv`);
-}
-
-/* ═══════════════════════════════════════════
-   CSV — IMPORTAR SESIÓN (billar)
-═══════════════════════════════════════════ */
-function importCSV(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = parseCSV(e.target.result);
-    if (!data.length) { alert('CSV vacío o formato incorrecto.'); return; }
-
-    const mesas    = data.filter(r=>r.tipo==='mesa');
-    const jugadores= data.filter(r=>r.tipo==='jugador');
-    if (!mesas.length && !jugadores.length) { alert('No se encontraron filas de tipo "mesa" o "jugador".'); return; }
-
-    if (!confirm(`Importar ${mesas.length} mesa(s) y ${jugadores.length} jugador(es)? Se reemplazará la sesión actual.`)) { input.value=''; return; }
-
-    // Limpiar sesión actual
-    if (!isLocal) Object.keys(tablesData).forEach(key=>tablesRef.get(key).put({_del:true}));
-    tablesData = {};
-    document.getElementById('tablesList').innerHTML='';
-
-    // Crear mesas
-    const mesaNameToKey = {};
-    mesas.forEach(row => {
-      const key  = 't'+Date.now()+Math.random().toString(36).slice(2,5);
-      const d    = { name:row.nombre||'Mesa', ph:parseFloat(row.precio_hora)||0, mins:parseFloat(row.minutos)||0, order:Date.now(), _del:false };
-      tablesData[key] = d;
-      mesaNameToKey[row.nombre] = key;
-      patchTableRow(key, d);
-      if (!isLocal) tablesRef.get(key).put(d);
-    });
-    updateMesaSelectors();
-
-    // Limpiar jugadores
-    for (let i=1;i<=NUM_PLAYERS;i++) {
-      playerRows[`p${i}`]=[];
-      if (!isLocal) playersRef.get(`p${i}`).put({name:'',rowsJson:'[]'});
-      const ne=document.getElementById(`pname${i}`); if(ne) ne.value='';
-      const ce=document.getElementById(`pmrows${i}`); if(ce) ce.innerHTML='';
-      const te=document.getElementById(`ptotal${i}`); if(te){te.textContent='—';te.className='player-total';}
+    function showDiscreteToast(emoji, msg, dotColor) {
+      const el = document.createElement('div');
+      el.className = 'toast-discrete';
+      el.innerHTML = `<span class="td-dot" style="background:${dotColor}"></span>${emoji} ${msg}`;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => { el.classList.add('out'); setTimeout(()=>el.remove(),300); }, 3000);
     }
 
-    // Restaurar jugadores
-    jugadores.slice(0, NUM_PLAYERS).forEach((row, i) => {
-      const idx = i+1;
-      const ne  = document.getElementById(`pname${idx}`);
-      if (ne) ne.value = row.nombre||'';
-      // Asignar mesas (pueden ser múltiples separadas por ;)
-      const mesaNombres = (row.mesas_jugador||'').split(';').map(s=>s.trim()).filter(Boolean);
-      const mins = parseFloat(row.minutos)||0;
-      const minsPerMesa = mesaNombres.length ? Math.round(mins/mesaNombres.length) : mins;
-      const newRows = mesaNombres.map(mn=>({ mesa: mesaNameToKey[mn]||'', mins: minsPerMesa }));
-      if (!newRows.length && mins>0) newRows.push({ mesa:'', mins });
-      playerRows[`p${idx}`] = newRows;
-      rebuildMesaRows(idx, newRows);
-      syncPlayer(idx);
-    });
+    window.__fbPresenceReceived = function(players) {
+      const container = document.getElementById('rr-players');
 
-    if (isLocal) localSave();
+      // Detect connects / disconnects
+      const currentNames = new Set(players.map(p => p.name));
+      currentNames.forEach(name => {
+        if (!_prevPlayerNames.has(name) && _prevPlayerNames.size > 0)
+          showDiscreteToast('🟢', `${name} se ha conectado`, '#22c55e');
+      });
+      _prevPlayerNames.forEach(name => {
+        if (!currentNames.has(name))
+          showDiscreteToast('⚪', `${name} se ha desconectado`, '#6b7280');
+      });
+      _prevPlayerNames = currentNames;
 
-    // Restaurar fecha si está en el CSV
-    const fecha = data.find(r=>r.fecha)?.fecha;
-    if (fecha) { document.getElementById('sessionDate').value=fecha; saveDate(); }
+      // Render chips
+      if (!players.length) { container.innerHTML = ''; }
+      else {
+        container.innerHTML = players.map(p => {
+          const dotClass = p.finished ? 'finished' : p.moving ? 'moving' : '';
+          const statusLine = p.finished
+            ? `<div class="rr-chip-time">🏁 ${p.time} · ${p.moves} mov</div>`
+            : p.moving
+            ? `<div class="rr-chip-status">moviendo…</div>`
+            : '';
+          return `<div class="rr-player-chip">
+            <div class="rr-player-chip-row">
+              <span class="dot ${dotClass}"></span>
+              <span class="rr-chip-name">${p.name}</span>
+            </div>
+            ${statusLine}
+          </div>`;
+        }).join('');
+      }
 
-    recalculate();
-    alert('✓ CSV importado correctamente.');
-  };
-  reader.readAsText(file);
-  input.value='';
-}
+      // Notify React with player list for confirmation modal
+      window.dispatchEvent(new CustomEvent('rrPresenceChange', { detail: players }));
+    };
 
-loadDate();
+    // Reset
+    let lastResetTs = 0;
+    window.__fbResetReceived = function(ts) {
+      if (ts <= lastResetTs) return;
+      lastResetTs = ts;
+      window.dispatchEvent(new CustomEvent('rrGlobalReset', { detail: ts }));
+    };
 
+    // Toast
+    window.__fbNotifReceived = function(item) {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `<div class="toast-row">
+        <div class="toast-emoji">🏁</div>
+        <div class="toast-body">
+          <div class="toast-title">${item.name} ha terminado!</div>
+          <div class="toast-msg">Ha completado el patrón</div>
+          <div class="toast-meta">⏱ ${item.time} · ${item.moves} movimientos</div>
+        </div></div>`;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 5000);
+    };
 
+    function rrGenPattern() {
+      const result = [], counts = new Array(RR_COLORS.length).fill(0);
+      for (let i = 0; i < 9; i++) {
+        const avail = RR_COLORS.map((_,idx)=>idx).filter(idx=>counts[idx]<4);
+        const pick  = avail[Math.floor(Math.random()*avail.length)];
+        counts[pick]++; result.push(pick);
+      }
+      return result;
+    }
 
-</script>
+    function rrShuffle() {
+      const pattern = rrGenPattern();
+      if (window.__fbSetPattern) window.__fbSetPattern(pattern);
+      else rrApplyPattern(pattern);
+    }
+    window.rrShuffle = rrShuffle;
+
+    function setConnected(ok) {
+      fbConnected = ok;
+      const dot = document.getElementById('rr-sync-dot');
+      const dotP = document.getElementById('rr-sync-dot-panel');
+      const status = document.getElementById('rr-status-text');
+      dot.className = ok ? 'connected' : 'disconnected';
+      dotP.style.background = ok ? '#22c55e' : '#ef4444';
+      dotP.style.boxShadow  = ok ? '0 0 6px #22c55e' : 'none';
+      status.textContent = ok ? '● Sincronizado en tiempo real' : '● Sin conexión — modo local';
+      status.style.color = ok ? 'rgba(34,197,94,.8)' : 'rgba(239,68,68,.7)';
+      document.getElementById('rr-shuffle').disabled = false;
+    }
+
+    setTimeout(() => {
+      if (!fbConnected) {
+        document.getElementById('rr-status-text').textContent = '⚠ Firebase no configurado';
+        document.getElementById('rr-status-text').style.color = 'rgba(245,158,11,.8)';
+        document.getElementById('rr-shuffle').disabled = false;
+        rrApplyPattern(rrGenPattern());
+      }
+    }, 3500);
+  </script>
+
+  <!-- ══ React puzzle ══ -->
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    const COLORS = [
+      { id:"blue",   label:"Azul",     bg:"#0D3B8E", shine:"#1A5FC8", shadow:"#061E50", text:"#7BAEF5" },
+      { id:"green",  label:"Verde",    bg:"#0A6B2E", shine:"#13A346", shadow:"#053A18", text:"#5FD98A" },
+      { id:"red",    label:"Rojo",     bg:"#8B0C0C", shine:"#C41A1A", shadow:"#4A0505", text:"#F57A7A" },
+      { id:"yellow", label:"Amarillo", bg:"#B89200", shine:"#E8B800", shadow:"#6B5500", text:"#FFE566" },
+      { id:"orange", label:"Naranja",  bg:"#B84500", shine:"#E86200", shadow:"#6B2600", text:"#FFA85C" },
+      { id:"white",  label:"Blanco",   bg:"#C8C8D8", shine:"#EEEEF8", shadow:"#8888A0", text:"#444460" },
+    ];
+    const colorMap = {};
+    COLORS.forEach(c => { colorMap[c.id] = c; });
+
+    const CENTER  = [6,7,8,11,12,13,16,17,18];
+    const RR_IDS  = ['white','green','yellow','blue','red','orange'];
+
+    // Unique ID for this browser session (for presence tracking)
+    const SESSION_UID = Math.random().toString(36).slice(2);
+
+    function checkMatch(tiles, pattern) {
+      if (!pattern || pattern.length < 9) return false;
+      return CENTER.every((ti,i) => { const t=tiles[ti]; return t && t.colorId===RR_IDS[pattern[i]]; });
+    }
+
+    function buildSolvedTiles() {
+      const tiles = [];
+      COLORS.forEach(c => { for(let i=0;i<4;i++) tiles.push({colorId:c.id,num:i+1}); });
+      tiles.push(null); return tiles;
+    }
+
+    function canMove(ti, ei) {
+      const tR=Math.floor(ti/5),tC=ti%5,eR=Math.floor(ei/5),eC=ei%5;
+      return (tR===eR&&Math.abs(tC-eC)===1)||(tC===eC&&Math.abs(tR-eR)===1);
+    }
+
+    function shuffleTiles(tiles, n=300) {
+      let t=[...tiles],e=t.indexOf(null);
+      for(let i=0;i<n;i++){
+        const nb=[],r=Math.floor(e/5),c=e%5;
+        if(r>0)nb.push(e-5);if(r<4)nb.push(e+5);
+        if(c>0)nb.push(e-1);if(c<4)nb.push(e+1);
+        const p=nb[Math.floor(Math.random()*nb.length)];
+        [t[e],t[p]]=[t[p],t[e]];e=p;
+      }
+      return t;
+    }
+
+    function fmt(s){return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;}
+
+    function App() {
+      const [tiles,     setTiles]     = useState(()=>shuffleTiles(buildSolvedTiles()));
+      const [moves,     setMoves]     = useState(0);
+      const [time,      setTime]      = useState(0);
+      const [finished,  setFinished]  = useState(false);
+      const [lastMoved, setLastMoved] = useState(null);
+      const [rrPat,       setRrPat]       = useState([]);
+      const [playerName,  setPlayerName]  = useState(()=>localStorage.getItem('rr-player-name')||'');
+      const [activePlayers,setActivePlayers] = useState([]);
+      const [showConfirm, setShowConfirm] = useState(false);
+      const timerRef    = useRef(null);
+      const finishedRef = useRef(false);
+      const presenceRef = useRef(null); // interval for presence heartbeat
+
+      // Presence heartbeat — send name every 8s while playing
+      const sendPresence = useCallback((name, moving=false) => {
+        if (typeof window.__fbUpdatePresence === 'function' && name.trim()) {
+          window.__fbUpdatePresence(SESSION_UID, name.trim(), moving);
+        }
+      }, []);
+
+      useEffect(() => {
+        if (playerName.trim()) {
+          sendPresence(playerName);
+          clearInterval(presenceRef.current);
+          presenceRef.current = setInterval(() => sendPresence(playerName), 8000);
+        }
+        return () => clearInterval(presenceRef.current);
+      }, [playerName]);
+
+      // Sync active players from Firebase
+      useEffect(() => {
+        function onPresence(e) { setActivePlayers(e.detail || []); }
+        window.addEventListener('rrPresenceChange', onPresence);
+        return () => window.removeEventListener('rrPresenceChange', onPresence);
+      }, []);
+
+      // Sync pattern from widget
+      useEffect(() => {
+        if (window.rrPattern.length) setRrPat([...window.rrPattern]);
+        function onPat(e) {
+          setRrPat([...e.detail]); setFinished(false); finishedRef.current = false;
+          if (!timerRef.current) timerRef.current = setInterval(()=>setTime(t=>t+1),1000);
+        }
+        window.addEventListener('rrPatternChange', onPat);
+        return () => window.removeEventListener('rrPatternChange', onPat);
+      }, []);
+
+      // Timer
+      useEffect(() => {
+        if (!finished) {
+          timerRef.current = setInterval(()=>setTime(t=>t+1),1000);
+        } else {
+          clearInterval(timerRef.current); timerRef.current=null;
+        }
+        return () => { clearInterval(timerRef.current); timerRef.current=null; };
+      }, [finished]);
+
+      // Global reset listener
+      useEffect(() => {
+        function onGlobalReset() { doLocalReset(); }
+        window.addEventListener('rrGlobalReset', onGlobalReset);
+        return () => window.removeEventListener('rrGlobalReset', onGlobalReset);
+      }, []);
+
+      const handleTile = useCallback((idx) => {
+        if (finished) return;
+        const ei = tiles.indexOf(null);
+        if (!canMove(idx,ei)) return;
+        const nt = [...tiles];
+        [nt[ei],nt[idx]]=[nt[idx],nt[ei]];
+        setTiles(nt); setMoves(m=>m+1); setLastMoved(ei);
+        // Update presence: moving=true
+        sendPresence(playerName || 'Anónimo', true);
+        if (!finishedRef.current && checkMatch(nt, rrPat)) {
+          finishedRef.current = true;
+          setFinished(true);
+          const finName = playerName||'Anónimo';
+          const finTime = fmt(time+1);
+          const finMoves = moves+1;
+          setTimeout(() => {
+            if (typeof window.__fbSendFinish==='function')
+              window.__fbSendFinish(finName, finTime, finMoves);
+            // Update presence with finish data
+            if (typeof window.__fbUpdateFinishPresence==='function')
+              window.__fbUpdateFinishPresence(SESSION_UID, finName, finTime, finMoves);
+          }, 50);
+        }
+      }, [tiles, finished, rrPat, time, moves, playerName, sendPresence]);
+
+      const doLocalReset = () => {
+        setTiles(shuffleTiles(buildSolvedTiles()));
+        setMoves(0); setTime(0); setFinished(false); setLastMoved(null);
+        finishedRef.current = false;
+        // Clear finished state from presence
+        if (playerName.trim() && typeof window.__fbUpdatePresence==='function')
+          window.__fbUpdatePresence(SESSION_UID, playerName.trim(), false);
+      };
+
+      const handleReset = () => {
+        if (activePlayers.length > 1) {
+          setShowConfirm(true);
+        } else {
+          doReset();
+        }
+      };
+      const doReset = () => {
+        setShowConfirm(false);
+        if (typeof window.rrShuffle==='function') window.rrShuffle();
+        if (typeof window.__fbSendReset==='function') window.__fbSendReset();
+        else doLocalReset();
+      };
+
+      const handleNameChange = (e) => {
+        const v = e.target.value;
+        setPlayerName(v);
+        localStorage.setItem('rr-player-name', v);
+      };
+
+      const ei = tiles.indexOf(null);
+
+      return (
+        <div style={{
+          minHeight:"100vh",
+          background:"radial-gradient(ellipse at 30% 20%,#1a1035 0%,#0a0818 60%,#000508 100%)",
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+          fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",
+          padding:"20px",position:"relative",overflow:"hidden",
+        }}>
+
+          {/* Stars */}
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}>
+            {Array.from({length:40}).map((_,i)=>(
+              <div key={i} style={{
+                position:"absolute",
+                width:i%5===0?"3px":"2px",height:i%5===0?"3px":"2px",
+                borderRadius:"50%",background:"rgba(255,255,255,.4)",
+                top:`${Math.sin(i*7.3)*50+50}%`,left:`${Math.cos(i*5.1)*50+50}%`,
+                animation:`pulse ${2+(i%3)}s ease-in-out infinite`,
+                animationDelay:`${(i*.3)%3}s`,
+              }}/>
+            ))}
+          </div>
+
+          {/* Title */}
+          <div style={{textAlign:"left",marginBottom:"18px",animation:"slideIn .6s ease",alignSelf:"flex-start",paddingLeft:"4px"}}>
+            <h1 style={{
+              margin:0,fontSize:"clamp(20px,5vw,32px)",fontWeight:900,
+              letterSpacing:"0.15em",textTransform:"uppercase",
+              background:"linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A)",
+              backgroundSize:"300% auto",WebkitBackgroundClip:"text",
+              WebkitTextFillColor:"transparent",animation:"shimmer 4s linear infinite",
+            }}>RubikRace</h1>
+            <p style={{margin:"4px 0 0",color:"rgba(255,255,255,.35)",fontSize:"12px",letterSpacing:"0.2em"}}>
+              5 × 5 · SLIDING PUZZLE
+            </p>
+          </div>
+
+          {/* Name input */}
+          <div className="name-input-wrap" style={{marginBottom:"14px"}}>
+            <label htmlFor="player-name">👤</label>
+            <input
+              id="player-name"
+              type="text"
+              maxLength={20}
+              placeholder="Tu nombre…"
+              value={playerName}
+              onChange={handleNameChange}
+            />
+          </div>
+
+          {/* Stats */}
+          <div style={{
+            display:"flex",gap:"28px",marginBottom:"16px",
+            background:"rgba(255,255,255,.06)",borderRadius:"12px",
+            padding:"10px 28px",border:"1px solid rgba(255,255,255,.1)",
+            backdropFilter:"blur(8px)",
+          }}>
+            {[{label:"MOVIMIENTOS",value:moves},{label:"TIEMPO",value:fmt(time)}].map(s=>(
+              <div key={s.label} style={{textAlign:"center"}}>
+                <div style={{fontSize:"22px",fontWeight:800,color:"#fff",lineHeight:1}}>{s.value}</div>
+                <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",letterSpacing:".12em",marginTop:"2px"}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Board */}
+          <div style={{position:"relative"}}>
+            <div style={{
+              display:"grid",gridTemplateColumns:"repeat(5,var(--tile))",
+              gap:"5px",padding:"12px",
+              background:"rgba(255,255,255,.04)",borderRadius:"16px",
+              border:"1px solid rgba(255,255,255,.08)",
+              boxShadow:"0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)",
+            }}>
+              {tiles.map((tile,idx)=>{
+                if(tile===null) return (
+                  <div key="empty" style={{
+                    width:"var(--tile)",height:"var(--tile)",borderRadius:"8px",
+                    background:"rgba(0,0,0,.3)",border:"2px dashed rgba(255,255,255,.08)",
+                  }}/>
+                );
+                const c=colorMap[tile.colorId];
+                const isAdj=canMove(idx,ei);
+                return (
+                  <button key={`${tile.colorId}-${tile.num}`} className="tile-btn"
+                    onClick={()=>handleTile(idx)}
+                    style={{
+                      width:"var(--tile)",height:"var(--tile)",
+                      borderRadius:"8px",border:"none",
+                      cursor:isAdj?"pointer":"default",
+                      background:`linear-gradient(145deg,${c.shine} 0%,${c.bg} 50%,${c.shadow} 100%)`,
+                      boxShadow:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
+                      transition:"transform .1s,filter .1s",
+                      transform:isAdj?"scale(1.02)":"scale(1)",
+                      filter:isAdj?"brightness(1.1)":"brightness(1)",
+                      animation:idx===lastMoved?"tileSlide .15s ease":"none",
+                      position:"relative",overflow:"hidden",
+                    }}
+                  >
+                    <div style={{
+                      position:"absolute",top:0,left:0,right:0,height:"45%",
+                      borderRadius:"8px 8px 50% 50%",
+                      background:"linear-gradient(to bottom,rgba(255,255,255,.2),transparent)",
+                      pointerEvents:"none",
+                    }}/>
+                  </button>
+                );
+              })}
+            </div>
+            {finished && (
+              <div className="finished-frame">
+                <div className="finished-text">Finished!!</div>
+              </div>
+            )}
+          </div>
+
+          {/* Confirmation modal */}
+          {showConfirm && (
+            <div className="confirm-backdrop" onClick={()=>setShowConfirm(false)}>
+              <div className="confirm-box" onClick={e=>e.stopPropagation()}>
+                <div className="icon">🎮</div>
+                <h4>¿Nuevo juego?</h4>
+                <p>Hay <strong style={{color:"#c89fff"}}>{activePlayers.length} jugadores</strong> conectados.<br/>Esto reiniciará el tiempo y el patrón para todos.</p>
+                <div className="confirm-btns">
+                  <button className="confirm-btn-no"  onClick={()=>setShowConfirm(false)}>Cancelar</button>
+                  <button className="confirm-btn-yes" onClick={doReset}>¡Sí, reiniciar!</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reset */}
+          <button className="reset-btn" onClick={handleReset} style={{
+            marginTop:"18px",padding:"11px 32px",borderRadius:"10px",
+            border:"1px solid rgba(255,255,255,.15)",
+            background:"rgba(255,255,255,.07)",color:"#fff",
+            fontSize:"13px",fontWeight:700,letterSpacing:".15em",
+            cursor:"pointer",transition:"all .2s",textTransform:"uppercase",
+          }}>↺ Nuevo Juego</button>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
 </body>
 </html>
