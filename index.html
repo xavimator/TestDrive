@@ -21,6 +21,7 @@
     {
       "rules": {
         "rubitrack": {
+          "lobby": { ".read": true, ".write": true },
           "games": {
             "$code": {
               "pattern":      { ".read": true, ".write": true },
@@ -132,28 +133,22 @@
       return snap.exists();
     };
 
-    // Listen to all active games for the lobby list
+    // ── Lobby index (separate node, readable without game-level perms) ──
+    window.__fbRegisterLobby = (code, host) =>
+      set(ref(db, `rubitrack/lobby/${code}`), { host, ts: Date.now() });
+
     let gamesUnsub = null;
     window.__fbListenGames = (cb) => {
-      const gamesRef = ref(db, 'rubitrack/games');
-      gamesUnsub = onValue(gamesRef, snap => {
+      const lobbyRef = ref(db, 'rubitrack/lobby');
+      gamesUnsub = onValue(lobbyRef, snap => {
         const now = Date.now(), list = [];
         snap.forEach(child => {
-          const code = child.key;
-          const data = child.val();
-          const host = data?.meta?.host;
-          if (!host) return;
-          // Active if any player pinged in last 30s
-          let active = false;
-          if (data?.presence) {
-            Object.values(data.presence).forEach(p => {
-              if (p?.ts && (now - p.ts) < 30000) active = true;
-            });
-          }
-          if (active) list.push({ code, host, ts: data.meta.ts || 0 });
+          const d = child.val();
+          if (d?.host && d?.ts && (now - d.ts) < 7200000) // last 2h
+            list.push({ code: child.key, host: d.host, ts: d.ts });
         });
         list.sort((a,b) => b.ts - a.ts);
-        cb(list);
+        cb(list.slice(0, 8)); // max 8 games
       });
     };
     window.__fbUnlistenGames = () => { if (gamesUnsub) { gamesUnsub(); gamesUnsub = null; } };
@@ -577,6 +572,7 @@
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
           await window.__fbSetMeta?.(name.trim());
+          await window.__fbRegisterLobby?.(code, name.trim());
           window.rrShuffle?.();
           onJoin(name.trim(), code);
         } catch(e) {
