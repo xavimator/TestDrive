@@ -26,6 +26,7 @@
               "pattern":      { ".read": true, ".write": true },
               "reset":        { ".read": true, ".write": true },
               "notifications":{ ".read": true, ".write": true },
+              "meta":         { ".read": true, ".write": true },
               "presence": {
                 ".read": true,
                 "$uid": {
@@ -114,6 +115,10 @@
         set(ref(db, `${base}/presence/${uid}`), { name, ts:Date.now(), moving:false,
                                                    finished:true, finishTime, finishMoves });
 
+      // Meta (host info for lobby list)
+      window.__fbSetMeta = (hostName) =>
+        set(ref(db, `${base}/meta`), { host: hostName, ts: Date.now() });
+
       // Return true if game already had a pattern (existing game)
       const snap = await get(patRef);
       return snap.exists();
@@ -126,6 +131,32 @@
       const snap = await get(ref(db, `rubitrack/games/${code}/pattern`));
       return snap.exists();
     };
+
+    // Listen to all active games for the lobby list
+    let gamesUnsub = null;
+    window.__fbListenGames = (cb) => {
+      const gamesRef = ref(db, 'rubitrack/games');
+      gamesUnsub = onValue(gamesRef, snap => {
+        const now = Date.now(), list = [];
+        snap.forEach(child => {
+          const code = child.key;
+          const data = child.val();
+          const host = data?.meta?.host;
+          if (!host) return;
+          // Active if any player pinged in last 30s
+          let active = false;
+          if (data?.presence) {
+            Object.values(data.presence).forEach(p => {
+              if (p?.ts && (now - p.ts) < 30000) active = true;
+            });
+          }
+          if (active) list.push({ code, host, ts: data.meta.ts || 0 });
+        });
+        list.sort((a,b) => b.ts - a.ts);
+        cb(list);
+      });
+    };
+    window.__fbUnlistenGames = () => { if (gamesUnsub) { gamesUnsub(); gamesUnsub = null; } };
 
     window.__fbReady = true;
     window.dispatchEvent(new Event('fbReady'));
@@ -525,8 +556,17 @@
       const [showJoin, setShowJoin] = useState(false);
       const [loading,  setLoading]  = useState(false);
       const [error,    setError]    = useState('');
+      const [games,    setGames]    = useState([]);
 
       const nameOk = name.trim().length > 0;
+
+      // Listen to active games
+      useEffect(() => {
+        const start = () => window.__fbListenGames?.(setGames);
+        if (window.__fbReady) start();
+        else window.addEventListener('fbReady', start, { once: true });
+        return () => window.__fbUnlistenGames?.();
+      }, []);
 
       const handleNew = async () => {
         if (!nameOk) return;
@@ -536,6 +576,7 @@
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
+          await window.__fbSetMeta?.(name.trim());
           window.rrShuffle?.();
           onJoin(name.trim(), code);
         } catch(e) {
@@ -559,6 +600,21 @@
         } catch(e) {
           console.error('handleJoin error:', e);
           setError(e.message || 'Error al unirse. Comprueba tu conexión.');
+          setLoading(false);
+        }
+      };
+
+      const handleJoinGame = async (code) => {
+        if (!nameOk) { setError('Escribe tu nombre primero'); return; }
+        setLoading(true); setError('');
+        try {
+          await waitForFb();
+          localStorage.setItem('rr-player-name', name.trim());
+          await window.__fbJoinGame(code);
+          onJoin(name.trim(), code);
+        } catch(e) {
+          console.error('handleJoinGame error:', e);
+          setError(e.message || 'Error al unirse.');
           setLoading(false);
         }
       };
@@ -607,11 +663,46 @@
                 </div>
             }
           </div>
+
+          {/* Active games list */}
+          {games.length > 0 && (
+            <div style={{width:'100%',maxWidth:'360px',marginTop:'20px'}}>
+              <div style={{fontSize:'10px',color:'rgba(255,255,255,.3)',letterSpacing:'.15em',
+                           textTransform:'uppercase',textAlign:'center',marginBottom:'10px'}}>
+                Partidas en curso
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:'7px'}}>
+                {games.map(g=>(
+                  <button key={g.code} onClick={()=>handleJoinGame(g.code)} disabled={loading||!nameOk}
+                          style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                                  width:'100%',padding:'12px 16px',
+                                  background:'rgba(255,255,255,.04)',
+                                  border:'1px solid rgba(156,90,255,.2)',
+                                  borderRadius:'12px',cursor:'pointer',
+                                  transition:'all .2s',color:'#fff',
+                                  backdropFilter:'blur(10px)',
+                                  opacity: (loading||!nameOk) ? .45 : 1}}
+                          onMouseEnter={e=>{e.currentTarget.style.background='rgba(156,90,255,.12)';e.currentTarget.style.borderColor='rgba(156,90,255,.45)';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.04)';e.currentTarget.style.borderColor='rgba(156,90,255,.2)';}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                      <span style={{fontSize:'16px'}}>🎮</span>
+                      <span style={{fontSize:'14px',fontWeight:600,color:'rgba(255,255,255,.85)'}}>{g.host}</span>
+                    </div>
+                    <span style={{fontFamily:'monospace',fontSize:'15px',fontWeight:900,
+                                  color:'#c89fff',letterSpacing:'.2em',
+                                  background:'rgba(156,90,255,.12)',
+                                  padding:'3px 10px',borderRadius:'7px'}}>
+                      {g.code}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {error && <div className="lobby-error" style={{marginTop:'10px',textAlign:'center'}}>{error}</div>}
+            </div>
+          )}
         </div>
       );
     }
-
-    /* ─── TutorialOverlay ─── */
     function TutorialOverlay({ step, hl, onNext, onClose }) {
       if (!step || !hl) return null;
       const { pat, ctr } = hl;
