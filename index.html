@@ -21,7 +21,8 @@
     {
       "rules": {
         "rubitrack": {
-          "lobby": { ".read": true, ".write": true },
+          "lobby":  { ".read": true, ".write": true },
+          "scores": { ".read": true, ".write": true },
           "games": {
             "$code": {
               "pattern":      { ".read": true, ".write": true },
@@ -133,7 +134,32 @@
       return snap.exists();
     };
 
-    // ── Lobby index (separate node, readable without game-level perms) ──
+    // ── Scores (all-time) ──
+    const safeKey = n => n.toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
+    window.__fbUpdateScore = async (name, timeSec, moves) => {
+      const key = safeKey(name);
+      const sRef = ref(db, `rubitrack/scores/${key}`);
+      const snap = await get(sRef);
+      const prev = snap.val() || {};
+      const update = {
+        name,
+        wins:      (prev.wins||0) + 1,
+        bestSec:   prev.bestSec  != null ? Math.min(prev.bestSec,  timeSec) : timeSec,
+        bestMoves: prev.bestMoves != null ? Math.min(prev.bestMoves, moves)  : moves,
+      };
+      return set(sRef, update);
+    };
+    let scoresUnsub = null;
+    window.__fbListenScores = (cb) => {
+      const sRef = ref(db, 'rubitrack/scores');
+      scoresUnsub = onValue(sRef, snap => {
+        const list = [];
+        snap.forEach(c => { const v=c.val(); if(v?.name) list.push(v); });
+        list.sort((a,b)=> b.wins-a.wins || a.bestSec-b.bestSec);
+        cb(list);
+      });
+    };
+    window.__fbUnlistenScores = () => { if(scoresUnsub){scoresUnsub();scoresUnsub=null;} };
     window.__fbRegisterLobby = (code, host) =>
       set(ref(db, `rubitrack/lobby/${code}`), { host, ts: Date.now() });
 
@@ -699,6 +725,57 @@
         </div>
       );
     }
+    /* ─── ScoresModal ─── */
+    function ScoresModal({ onClose }) {
+      const [scores, setScores] = useState([]);
+      const fmtSec = s => { if(s==null) return '–'; const m=Math.floor(s/60); return `${m}:${String(s%60).padStart(2,'0')}`; };
+      useEffect(() => {
+        window.__fbListenScores?.(setScores);
+        return () => window.__fbUnlistenScores?.();
+      }, []);
+      return (
+        <div style={{position:'fixed',inset:0,zIndex:7000,display:'flex',alignItems:'center',
+                     justifyContent:'center',background:'rgba(0,0,0,.75)',backdropFilter:'blur(8px)'}}
+             onClick={onClose}>
+          <div style={{background:'rgba(15,10,35,.97)',border:'1px solid rgba(156,90,255,.3)',
+                       borderRadius:'20px',padding:'24px',width:'min(94vw,400px)',
+                       boxShadow:'0 30px 80px rgba(0,0,0,.7)'}}
+               onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}}>
+              <div style={{color:'#fff',fontSize:'18px',fontWeight:800}}>🏆 Mejores jugadores</div>
+              <button onClick={onClose} style={{background:'none',border:'none',color:'rgba(255,255,255,.4)',fontSize:'22px',cursor:'pointer',lineHeight:1}}>×</button>
+            </div>
+            {scores.length === 0
+              ? <div style={{color:'rgba(255,255,255,.3)',textAlign:'center',padding:'24px',fontSize:'14px'}}>Aún no hay scores 🎮</div>
+              : <table style={{width:'100%',borderCollapse:'collapse',fontSize:'13px'}}>
+                  <thead>
+                    <tr style={{color:'rgba(255,255,255,.35)',fontSize:'10px',letterSpacing:'.1em',textTransform:'uppercase'}}>
+                      <th style={{textAlign:'left',padding:'6px 6px'}}>#</th>
+                      <th style={{textAlign:'left',padding:'6px 6px'}}>Jugador</th>
+                      <th style={{textAlign:'center',padding:'6px 6px'}}>🏅</th>
+                      <th style={{textAlign:'center',padding:'6px 6px'}}>⏱</th>
+                      <th style={{textAlign:'center',padding:'6px 6px'}}>↔</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scores.map((s,i)=>(
+                      <tr key={s.name} style={{borderTop:'1px solid rgba(255,255,255,.06)',background:i===0?'rgba(255,215,0,.05)':''}}>
+                        <td style={{padding:'10px 6px',color:['#FFD700','#C0C0C0','#CD7F32'][i]||'rgba(255,255,255,.3)',fontWeight:700}}>
+                          {['🥇','🥈','🥉'][i]||i+1}
+                        </td>
+                        <td style={{padding:'10px 6px',color:'#fff',fontWeight:600,maxWidth:'110px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</td>
+                        <td style={{padding:'10px 6px',textAlign:'center',color:'#c89fff',fontWeight:700}}>{s.wins}</td>
+                        <td style={{padding:'10px 6px',textAlign:'center',color:'rgba(255,255,255,.7)',fontFamily:'monospace'}}>{fmtSec(s.bestSec)}</td>
+                        <td style={{padding:'10px 6px',textAlign:'center',color:'rgba(255,255,255,.7)',fontFamily:'monospace'}}>{s.bestMoves??'–'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+            }
+          </div>
+        </div>
+      );
+    }
     function TutorialOverlay({ step, hl, onNext, onClose }) {
       if (!step || !hl) return null;
       const { pat, ctr } = hl;
@@ -812,6 +889,7 @@
       const [copied,      setCopied]       = useState(false);
       const [tutStep,     setTutStep]      = useState(0);
       const [tutHl,       setTutHl]        = useState(null);
+      const [showScores,  setShowScores]   = useState(false);
       const timerRef    = useRef(null);
       const finishedRef = useRef(false);
       const presenceRef = useRef(null);
@@ -893,6 +971,7 @@
           setTimeout(()=>{
             window.__fbSendFinish?.(playerName, ft, fm);
             window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
+            window.__fbUpdateScore?.(playerName, time+1, fm);
           },50);
         }
       }, [tiles, finished, rrPat, time, moves, sendPresence]);
@@ -937,6 +1016,9 @@
 
           {/* Help button */}
           <button className="help-btn" onClick={openTutorial} title="Ayuda">?</button>
+          {/* Scores button */}
+          <button className="help-btn" onClick={()=>setShowScores(true)} title="Scores"
+                  style={{left:'58px',fontSize:'17px'}}>🏆</button>
 
           {/* Top row: title + leave */}
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',width:'100%',maxWidth:'380px',marginBottom:'16px'}}>
@@ -1011,6 +1093,9 @@
           <button onClick={handleReset} style={{marginTop:'18px',padding:'11px 32px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'13px',fontWeight:700,letterSpacing:'.15em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
             ↺ Nuevo Juego
           </button>
+
+          {/* Scores modal */}
+          {showScores && <ScoresModal onClose={()=>setShowScores(false)}/>}
 
           {/* Tutorial */}
           <TutorialOverlay step={tutStep} hl={tutHl}
