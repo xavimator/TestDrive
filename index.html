@@ -454,7 +454,7 @@ let mesas = [], jugadores = [], history = [];
 
 function minOpts(sel = 0) {
   let o = '';
-  for (let m = 0; m <= 300; m += 5)
+  for (let m = 30; m <= 300; m += 5)
     o += `<option value="${m}"${m === sel ? ' selected' : ''}>${m} min</option>`;
   return o;
 }
