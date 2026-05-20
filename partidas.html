@@ -425,16 +425,32 @@ function renderMatches() {
           <div>
             <div class="team-label">Equipo 1</div>
             <div class="team-inputs">
-              ${m.equipo1.map((n,k)=>`<input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}" list="dlPlayers"
-                oninput="getMatch('${m.id}').equipo1[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">`).join('')}
+              ${m.equipo1.map((n,k)=>`
+                <div style="display:flex;flex-direction:column;gap:.25rem">
+                  ${_gp().length?`<select style="font-size:.75rem;padding:.28rem .4rem;background:var(--navy);border:1px solid rgba(59,130,246,.2);border-radius:4px;color:var(--silver-dim);width:100%"
+                    onchange="if(this.value){getMatch('${m.id}').equipo1[${k}]=this.value;calcLeaderboard();saveLocal();pushGun();this.nextElementSibling.value=this.value}">
+                    <option value="">— Seleccionar —</option>
+                    ${_gp().map(p=>`<option value="${esc(p.name)}"${n===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}
+                  </select>`:''}
+                  <input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}" list="dlPlayers"
+                    oninput="getMatch('${m.id}').equipo1[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">
+                </div>`).join('')}
             </div>
           </div>
           <div class="vs-col">VS</div>
           <div>
             <div class="team-label">Equipo 2</div>
             <div class="team-inputs">
-              ${m.equipo2.map((n,k)=>`<input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}" list="dlPlayers"
-                oninput="getMatch('${m.id}').equipo2[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">`).join('')}
+              ${m.equipo2.map((n,k)=>`
+                <div style="display:flex;flex-direction:column;gap:.25rem">
+                  ${_gp().length?`<select style="font-size:.75rem;padding:.28rem .4rem;background:var(--navy);border:1px solid rgba(59,130,246,.2);border-radius:4px;color:var(--silver-dim);width:100%"
+                    onchange="if(this.value){getMatch('${m.id}').equipo2[${k}]=this.value;calcLeaderboard();saveLocal();pushGun();this.nextElementSibling.value=this.value}">
+                    <option value="">— Seleccionar —</option>
+                    ${_gp().map(p=>`<option value="${esc(p.name)}"${n===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}
+                  </select>`:''}
+                  <input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}" list="dlPlayers"
+                    oninput="getMatch('${m.id}').equipo2[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">
+                </div>`).join('')}
             </div>
           </div>
         </div>
@@ -730,10 +746,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initSupabase();
   renderAll();
   setMode('local');
+  // Secret: 5 clicks on header ball → BD config
+  let _bc = 0, _bt = null;
+  document.querySelector('.ball').style.cursor = 'default';
+  document.querySelector('.ball').addEventListener('click', () => {
+    _bc++; clearTimeout(_bt);
+    if (_bc >= 5) { _bc = 0; openCfg(); }
+    else _bt = setTimeout(() => _bc = 0, 3000);
+  });
 });
 
+// Helper: read global players at render time (always fresh from localStorage)
+function _gp() { return JSON.parse(localStorage.getItem('ps-global-players') || '[]'); }
+
 function loadGlobalPlayers() {
-  const players = JSON.parse(localStorage.getItem('ps-global-players') || '[]');
+  const players = _gp();
   document.getElementById('dlPlayers').innerHTML =
     players.map(p => `<option value="${String(p.name||'').replace(/"/g,'&quot;')}">`).join('');
 }

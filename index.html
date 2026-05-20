@@ -156,14 +156,12 @@ input::placeholder{color:var(--silver-dark)}
 <header>
   <div class="header-rule"><span></span><div class="ball"></div><span></span></div>
   <h1>POOL<span>SPLITTER</span></h1>
-  <p class="tagline">// repartidor de gastos //</p>
+  <p class="tagline">// repartidor de gastos · mesas de billar //</p>
 </header>
 
 <!-- DB STATUS -->
-<div class="db-strip">
-  <div class="db-dot off" id="dbDot"></div>
-  <span class="db-label" id="dbLabel">BD no configurada</span>
-</div>
+<div style="display:none" id="dbDot" data-state="off"></div>
+<span style="display:none" id="dbLabel"></span>
 
 <!-- SESSION BAR -->
 <div class="session-bar">
@@ -495,6 +493,11 @@ function renderMesas() {
     <div class="mesa-row">
       <div>
         <label>Nombre</label>
+        ${globalTables.length ? `<select style="margin-bottom:.3rem;font-size:.78rem;padding:.3rem .5rem;color:var(--silver-dim)"
+          onchange="if(this.value){const t=globalTables.find(x=>x.name===this.value);if(t){getMesa('${m.id}').nombre=t.name;getMesa('${m.id}').precio=t.price;renderMesas();updateMesaSelectsInCards();recalculate();saveLocal();pushGun()}}">
+          <option value="">— Seleccionar mesa —</option>
+          ${globalTables.map(t=>`<option value="${esc(t.name)}"${m.nombre===t.name?'selected':''}>${esc(t.name)} (${t.price}€/h)</option>`).join('')}
+        </select>` : ''}
         <input type="text" id="mn_${m.id}" value="${esc(m.nombre)}" placeholder="Mesa" list="dlTables"
           oninput="onMesaName('${m.id}',this.value)"
           onchange="updateMesaSelectsInCards();recalculate()">
@@ -558,8 +561,15 @@ function renderJugadores() {
     <div class="player-card">
       <div class="player-header">
         <span class="pnum">${i + 1}</span>
-        <input type="text" value="${esc(j.nombre)}" placeholder="Nombre jugador" list="dlPlayers"
-          oninput="getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun()">
+        <div style="flex:1;display:flex;flex-direction:column;gap:.3rem">
+          ${globalPlayers.length ? `<select style="font-size:.78rem;padding:.3rem .5rem;color:var(--silver-dim)"
+            onchange="if(this.value){getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun();this.closest('.player-card').querySelector('input[type=text]').value=this.value}">
+            <option value="">— Seleccionar jugador —</option>
+            ${globalPlayers.map(p=>`<option value="${esc(p.name)}"${j.nombre===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}
+          </select>` : ''}
+          <input type="text" value="${esc(j.nombre)}" placeholder="Nombre jugador" list="dlPlayers"
+            oninput="getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun()">
+        </div>
         <span class="player-total${j._total ? ' has-value' : ''}" id="ptot_${j.id}">${j._total ? j._total + '€' : '—'}</span>
         <button class="btn-remove" onclick="removeJugador('${j.id}')">✕</button>
       </div>
@@ -827,6 +837,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initSupabase();
   renderAll();
   setMode('local');
+  // Secret: 5 clicks on the header ball → open BD config
+  let _bc = 0, _bt = null;
+  document.querySelector('.ball').style.cursor = 'default';
+  document.querySelector('.ball').addEventListener('click', () => {
+    _bc++; clearTimeout(_bt);
+    if (_bc >= 5) { _bc = 0; openCfg(); }
+    else _bt = setTimeout(() => _bc = 0, 3000);
+  });
 });
 </script>
 </body>
