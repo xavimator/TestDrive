@@ -3,574 +3,726 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pool Splitter – Partidas</title>
+<title>PoolSplitter — Partidas</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#0b3328;color:#e8f5e9;min-height:100vh;padding:16px}
-h1{color:#ffd700;text-align:center;font-size:24px;margin-bottom:4px}
-.subtitle{text-align:center;color:#81c784;margin-bottom:16px;font-size:14px}
-.card{background:#163d2e;border-radius:12px;padding:16px;margin-bottom:14px;border:1px solid #2e7d52}
-.section-title{color:#ffd700;font-size:15px;font-weight:700;margin-bottom:12px}
-label{font-size:13px;color:#a5d6a7;display:block;margin-bottom:4px}
-input[type=text],input[type=date],select{background:#0b3328;border:1px solid #2e7d52;border-radius:8px;color:#e8f5e9;padding:8px 10px;font-size:14px;width:100%}
-input:focus,select:focus{outline:none;border-color:#ffd700}
-button{border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;transition:opacity .2s}
-button:hover{opacity:.85}
-.btn-primary{background:#ffd700;color:#0b3328}
-.btn-danger{background:#c62828;color:#fff}
-.btn-secondary{background:#2e7d52;color:#fff}
-.btn-winner{background:#1565c0;color:#fff}
-.btn-winner.done{background:#ffd700;color:#0b3328}
-.btn-sm{padding:5px 10px;font-size:12px}
-.partida-card{background:#0b3328;border:1px solid #2e7d52;border-radius:10px;padding:14px;margin-bottom:10px}
-.partida-header{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:end;margin-bottom:12px}
-.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start}
-.team{display:flex;flex-direction:column;gap:6px}
-.team-label{font-size:12px;color:#81c784;font-weight:700;text-align:center}
-.vs{color:#ffd700;font-weight:800;align-self:center;font-size:18px}
-.winner-row{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.winner-label{font-size:12px;color:#a5d6a7}
-.ganador-badge{background:#ffd700;color:#0b3328;font-weight:700;font-size:12px;padding:3px 10px;border-radius:10px}
-.ranking-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0b3328;border-radius:8px;margin-bottom:6px}
-.rank-num{color:#ffd700;font-weight:800;width:24px}
-.rank-name{flex:1;margin-left:8px;font-weight:600}
-.rank-stats{font-size:13px;color:#81c784}
-.sync-bar{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
-.toggle-btn{background:#2e7d52;color:#fff;border:none;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600}
-.toggle-btn.active{background:#ffd700;color:#0b3328}
-.sync-status{font-size:12px;color:#81c784}
-.hist-item{background:#0b3328;border:1px solid #2e7d52;border-radius:8px;padding:12px;margin-bottom:8px}
-.hist-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.hist-fecha{font-weight:700;color:#ffd700;font-size:14px}
-.hist-detail{margin-top:8px;font-size:13px;display:none;color:#a5d6a7}
-.hist-detail.open{display:block}
-.db-badge{font-size:12px;padding:3px 10px;border-radius:10px;display:inline-block}
-.db-ok{background:#1b5e20;color:#69f0ae}
-.db-err{background:#b71c1c;color:#ff8a80}
-.db-off{background:#37474f;color:#90a4ae}
-.actions-row{display:flex;flex-wrap:wrap;gap:8px}
-.empty{color:#4caf50;font-style:italic;text-align:center;padding:12px;font-size:13px}
-.nav-link{display:block;text-align:center;color:#ffd700;text-decoration:none;font-weight:700;margin-top:20px;font-size:15px}
-.db-config{background:#1a3a28;border:1px dashed #ffd700;border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;color:#ffd700}
-.db-config input{margin-top:6px;color:#fff;font-size:13px}
-.tabs{display:flex;gap:8px;margin-bottom:12px}
-.tab{flex:1;text-align:center;padding:8px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:#0b3328;color:#81c784;border:1px solid #2e7d52}
-.tab.active{background:#ffd700;color:#0b3328;border-color:#ffd700}
+:root {
+  --navy:        #060d1a;
+  --felt:        #0b1a35;
+  --felt-mid:    #102245;
+  --blue:        #1d4ed8;
+  --blue-b:      #3b82f6;
+  --cyan:        #38bdf8;
+  --cyan-dim:    #7dd3fc;
+  --silver:      #e2e8f0;
+  --silver-dim:  #94a3b8;
+  --silver-dark: #475569;
+  --white:       #f8fafc;
+  --red:         #ef4444;
+  --green:       #34d399;
+  --amber:       #fbbf24;
+  --purple:      #a78bfa;
+  --shadow:      rgba(0,0,0,.65);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: #060d1a;
+  background-image:
+    radial-gradient(ellipse 90% 50% at 50% -5%, rgba(29,78,216,.2) 0%, transparent 65%),
+    repeating-linear-gradient(0deg,  transparent, transparent 47px, rgba(255,255,255,.012) 47px, rgba(255,255,255,.012) 48px),
+    repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(255,255,255,.012) 47px, rgba(255,255,255,.012) 48px);
+  min-height: 100vh;
+  font-family: 'Barlow', sans-serif;
+  color: var(--silver);
+  padding: 2rem 1rem 5rem;
+}
+.container { max-width: 960px; margin: 0 auto; }
+
+/* HEADER */
+header { text-align: center; margin-bottom: 2rem; }
+.header-rule { display:flex;align-items:center;gap:1rem;justify-content:center;margin-bottom:.6rem; }
+.header-rule span { width:70px;height:1px; }
+.header-rule span:first-child { background:linear-gradient(90deg,transparent,var(--blue-b)); }
+.header-rule span:last-child  { background:linear-gradient(90deg,var(--blue-b),transparent); }
+.header-rule .ball { width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan); }
+header h1 { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(2.5rem,8vw,5rem);letter-spacing:.1em;color:var(--white);text-transform:uppercase;line-height:1;text-shadow:0 0 40px rgba(59,130,246,.4),0 4px 24px rgba(0,0,0,.7); }
+header h1 span { color:var(--cyan); }
+header .tagline { font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--silver-dim);letter-spacing:.2em;text-transform:uppercase;margin-top:.4rem; }
+
+/* SESSION BAR */
+.session-bar { display:flex;align-items:center;gap:.75rem;background:var(--felt-mid);border:1px solid rgba(59,130,246,.2);border-radius:6px;padding:.7rem 1.1rem;margin-bottom:1.25rem;flex-wrap:wrap; }
+.live-dot { width:8px;height:8px;border-radius:50%;background:var(--silver-dark);flex-shrink:0;transition:background .3s,box-shadow .3s; }
+.live-dot.on  { background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite; }
+.live-dot.off { background:var(--amber);box-shadow:0 0 6px var(--amber); }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+.conn-label { font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--silver-dim);margin-right:.5rem; }
+.mode-toggle { display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid rgba(59,130,246,.25);flex-shrink:0; }
+.mode-btn { font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .7rem;border:none;cursor:pointer;transition:all .18s;background:transparent;color:var(--silver-dark); }
+.mode-btn.active-live  { background:rgba(59,130,246,.25);color:var(--cyan); }
+.mode-btn.active-local { background:rgba(251,191,36,.18);color:var(--amber); }
+.mode-btn:hover:not(.active-live):not(.active-local) { background:rgba(255,255,255,.05);color:var(--silver); }
+.session-id-box { background:var(--navy);border:1px solid rgba(59,130,246,.25);border-radius:4px;padding:.3rem .75rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--cyan);letter-spacing:.12em; }
+.btn-copy { background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:4px;color:var(--blue-b);font-family:'Barlow Condensed',sans-serif;font-size:.88rem;letter-spacing:.1em;text-transform:uppercase;padding:.3rem .9rem;cursor:pointer;transition:all .2s; }
+.btn-copy:hover { background:rgba(59,130,246,.22);color:var(--white); }
+.btn-copy.copied { color:var(--green);border-color:rgba(52,211,153,.4); }
+.nav-link { display:inline-flex;align-items:center;gap:.4rem;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan-dim);padding:.35rem 1rem;border:1px solid rgba(56,189,248,.25);border-radius:4px;text-decoration:none;transition:all .2s; }
+.nav-link:hover { color:var(--white);border-color:var(--cyan); }
+
+/* DB STRIP */
+.db-strip { display:flex;align-items:center;gap:.6rem;padding:.5rem .9rem;background:var(--felt-mid);border:1px solid rgba(59,130,246,.14);border-radius:5px;margin-bottom:1.1rem;flex-wrap:wrap; }
+.db-dot { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+.db-dot.ok  { background:var(--green);box-shadow:0 0 6px var(--green); }
+.db-dot.err { background:var(--red);box-shadow:0 0 6px var(--red); }
+.db-dot.off { background:var(--silver-dark); }
+.db-label { font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--silver-dim); }
+
+/* CFG PANEL */
+.cfg-panel { background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:5px;padding:1rem 1.2rem;margin-bottom:1.1rem; }
+.cfg-panel-title { font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--amber);margin-bottom:.8rem; }
+.cfg-grid { display:grid;grid-template-columns:1fr 1fr auto;gap:.6rem;align-items:end; }
+@media(max-width:600px){ .cfg-grid { grid-template-columns:1fr; } }
+
+/* CARD */
+.card { background:var(--felt);border:1px solid rgba(59,130,246,.18);border-radius:6px;padding:1.4rem 1.6rem;margin-bottom:1.25rem;box-shadow:0 10px 36px var(--shadow),inset 0 1px 0 rgba(255,255,255,.03);position:relative;overflow:hidden; }
+.card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue-b),transparent);opacity:.5; }
+.card-title { font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.95rem;letter-spacing:.18em;color:var(--cyan);text-transform:uppercase;margin-bottom:1.1rem;display:flex;align-items:center;gap:.6rem; }
+.card-title::after { content:'';flex:1;height:1px;background:rgba(59,130,246,.18); }
+.card-title .dot { width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);flex-shrink:0; }
+
+/* INPUTS */
+input[type="text"], input[type="number"] {
+  background:var(--navy);border:1px solid rgba(59,130,246,.22);border-radius:4px;
+  color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.88rem;
+  padding:.45rem .7rem;width:100%;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+input:focus { border-color:var(--blue-b);box-shadow:0 0 0 2px rgba(59,130,246,.18); }
+input::placeholder { color:var(--silver-dark); }
+label { font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--silver-dim);display:block;margin-bottom:.28rem; }
+
+/* BUTTONS */
+.btn-primary { background:var(--blue);border:1px solid var(--blue-b);color:var(--white);font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.13em;font-size:.98rem;text-transform:uppercase;padding:.58rem 1.6rem;border-radius:4px;cursor:pointer;transition:all .2s;box-shadow:0 0 18px rgba(29,78,216,.38); }
+.btn-primary:hover { background:var(--blue-b);transform:translateY(-1px); }
+.btn-ghost { background:transparent;border:1px solid rgba(255,255,255,.11);color:var(--silver-dim);font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.13em;font-size:.98rem;text-transform:uppercase;padding:.58rem 1.6rem;border-radius:4px;cursor:pointer;transition:all .2s; }
+.btn-ghost:hover { border-color:rgba(255,255,255,.28);color:var(--silver); }
+.btn-remove { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:4px;color:#f87171;font-size:1rem;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;line-height:1;flex-shrink:0; }
+.btn-remove:hover { background:rgba(239,68,68,.25);color:var(--white); }
+.btn-add-match { background:rgba(59,130,246,.07);border:1px dashed rgba(59,130,246,.32);border-radius:5px;padding:.6rem 1.2rem;color:var(--blue-b);font-family:'Barlow Condensed',sans-serif;font-size:.9rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .2s;width:100%;margin-top:.8rem; }
+.btn-add-match:hover { background:rgba(59,130,246,.16);border-color:var(--blue-b);color:var(--white); }
+
+/* MATCH CARDS */
+.matches-list { display:flex;flex-direction:column;gap:.9rem; }
+.match-card { background:var(--felt-mid);border:1px solid rgba(59,130,246,.15);border-radius:6px;padding:1rem 1.1rem;transition:border-color .2s;animation:rowIn .25s ease; }
+.match-card.has-winner { border-color:rgba(52,211,153,.35); }
+@keyframes rowIn { from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)} }
+.match-header { display:flex;align-items:center;gap:.7rem;margin-bottom:.85rem;flex-wrap:wrap; }
+.match-num { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.2rem;color:rgba(59,130,246,.4);min-width:28px; }
+.match-header input[type="text"] { flex:1;min-width:120px;background:rgba(0,0,0,.2);border-color:rgba(59,130,246,.15);font-family:'Barlow',sans-serif;font-size:.9rem;padding:.35rem .55rem; }
+
+/* FORMAT TOGGLE */
+.format-toggle { display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid rgba(59,130,246,.25);flex-shrink:0; }
+.fmt-btn { font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.08em;padding:.32rem .65rem;border:none;cursor:pointer;background:transparent;color:var(--silver-dark);transition:all .18s; }
+.fmt-btn.active { background:rgba(59,130,246,.28);color:var(--cyan); }
+.fmt-btn:hover:not(.active) { background:rgba(255,255,255,.05);color:var(--silver); }
+
+/* TEAMS */
+.teams-grid { display:grid;grid-template-columns:1fr 36px 1fr;gap:.6rem;align-items:start; }
+.team-label { font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--silver-dark);margin-bottom:.35rem;text-align:center; }
+.team-inputs { display:flex;flex-direction:column;gap:.3rem; }
+.vs-col { display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;color:var(--silver-dark);padding-top:1.4rem; }
+
+/* WINNER ROW */
+.winner-row { margin-top:.85rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap; }
+.winner-label { font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--silver-dark);flex-shrink:0; }
+.btn-win { font-family:'Barlow Condensed',sans-serif;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:4px;cursor:pointer;transition:all .2s;border:1px solid rgba(59,130,246,.25);background:rgba(59,130,246,.08);color:var(--silver-dim); }
+.btn-win:hover { border-color:rgba(56,189,248,.4);color:var(--silver); }
+.btn-win.winner { background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.5);color:var(--green);font-weight:700; }
+.winner-tag { font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--green);margin-left:.3rem; }
+
+/* LEADERBOARD */
+.lb-empty { font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--silver-dark);padding:.5rem; }
+.stat-row { display:flex;align-items:center;gap:.75rem;padding:.5rem .6rem;border-radius:4px;transition:background .15s; }
+.stat-row:hover { background:rgba(59,130,246,.05); }
+.stat-pos { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;width:26px;text-align:center;flex-shrink:0; }
+.stat-pos.gold   { color:#fbbf24; }
+.stat-pos.silver { color:#94a3b8; }
+.stat-pos.bronze { color:#b45309; }
+.stat-pos.other  { color:rgba(59,130,246,.35); }
+.stat-name { flex:1;font-size:.92rem;color:var(--silver); }
+.stat-bars { flex:2;display:flex;flex-direction:column;gap:3px; }
+.stat-bar-row { display:flex;align-items:center;gap:.4rem; }
+.stat-bar-label { font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--silver-dark);width:38px;text-align:right;flex-shrink:0; }
+.stat-bar-track { flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden; }
+.stat-bar-fill-win  { height:100%;background:linear-gradient(90deg,var(--blue-b),var(--cyan));border-radius:3px;transition:width .4s; }
+.stat-bar-fill-play { height:100%;background:rgba(148,163,184,.25);border-radius:3px;transition:width .4s; }
+.stat-nums { font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--cyan);min-width:70px;text-align:right;flex-shrink:0; }
+.stat-rate { font-size:.65rem;color:var(--silver-dark); }
+
+/* HISTORY */
+.history-session { background:var(--felt-mid);border:1px solid rgba(59,130,246,.14);border-radius:5px;padding:.8rem 1rem;margin-bottom:.6rem;cursor:pointer;transition:border-color .2s; }
+.history-session:hover { border-color:rgba(59,130,246,.35); }
+.history-session-header { display:flex;align-items:center;gap:.75rem;flex-wrap:wrap; }
+.history-date { font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;color:var(--cyan);letter-spacing:.06em; }
+.history-meta { font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--silver-dark);flex:1; }
+.history-top  { font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--green); }
+.history-del  { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:3px;color:#f87171;font-size:.72rem;padding:.15rem .45rem;cursor:pointer;flex-shrink:0; }
+.history-matches { margin-top:.7rem;display:none;flex-direction:column;gap:.3rem;border-top:1px solid rgba(59,130,246,.1);padding-top:.6rem; }
+.history-matches.open { display:flex; }
+.history-match-row { font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--silver-dim);padding:.2rem .4rem;background:rgba(0,0,0,.15);border-radius:3px; }
+.history-match-row .winner-tag-sm { color:var(--green); }
+
+/* TABS */
+.tabs { display:flex;gap:0;border-radius:5px;overflow:hidden;border:1px solid rgba(59,130,246,.2);margin-bottom:1rem; }
+.tab { flex:1;text-align:center;padding:.5rem;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--silver-dark);border:none;transition:all .2s; }
+.tab.active { background:rgba(59,130,246,.22);color:var(--cyan); }
+.tab:hover:not(.active) { background:rgba(255,255,255,.04);color:var(--silver); }
+
+.empty-state { font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--silver-dark);text-align:center;padding:1.2rem .5rem; }
+.actions { display:flex;gap:.6rem;flex-wrap:wrap;align-items:center; }
+
+@media(max-width:600px){
+  .card { padding:1rem; }
+  .teams-grid { grid-template-columns:1fr 30px 1fr; }
+}
 </style>
 </head>
 <body>
+<div class="container">
 
-<h1>🎱 Pool Splitter</h1>
-<p class="subtitle">Partidas · Clasificación</p>
+<header>
+  <div class="header-rule"><span></span><div class="ball"></div><span></span></div>
+  <h1>PARTI<span>DAS</span></h1>
+  <p class="tagline">// contador de partidas &amp; clasificación //</p>
+</header>
 
-<div class="db-config" id="dbConfig">
-  ⚠️ <strong>Configura Supabase</strong> para guardar historial en la nube
-  <div style="margin-top:8px;display:grid;gap:6px">
-    <input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co" oninput="saveCfg()">
-    <input type="text" id="cfgKey" placeholder="eyJ... (anon key)" oninput="saveCfg()">
-    <button class="btn-primary btn-sm" onclick="applyConfig()">Conectar</button>
+<!-- CFG PANEL -->
+<div class="cfg-panel" id="cfgPanel">
+  <div class="cfg-panel-title">⚠ Configura Supabase para guardar en la nube</div>
+  <div class="cfg-grid">
+    <div><label>Project URL</label><input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co" oninput="saveCfg()"></div>
+    <div><label>Anon Key</label><input type="text" id="cfgKey" placeholder="eyJ…" oninput="saveCfg()"></div>
+    <div><label>&nbsp;</label><button class="btn-primary" onclick="applyConfig()" style="white-space:nowrap">Conectar</button></div>
   </div>
 </div>
 
-<div style="text-align:center;margin-bottom:12px">
-  <span id="dbStatus" class="db-badge db-off">⬤ BD no configurada</span>
-  <button class="btn-sm btn-secondary" style="margin-left:8px" onclick="toggleDbConfig()">⚙️</button>
+<!-- DB STRIP -->
+<div class="db-strip">
+  <div class="db-dot off" id="dbDot"></div>
+  <span class="db-label" id="dbLabel">BD no configurada</span>
+  <button class="btn-ghost" style="font-size:.72rem;padding:.25rem .7rem;margin-left:auto" onclick="toggleCfg()">⚙ Config</button>
 </div>
 
-<div class="sync-bar">
-  <button class="toggle-btn" id="syncToggle" onclick="toggleSync()">Solo local</button>
-  <span class="sync-status" id="syncStatus">Sin sincronización</span>
-</div>
-
-<div class="card">
-  <label>📅 Fecha de juego</label>
-  <input type="date" id="fecha" onchange="saveLocal()">
-</div>
-
-<div class="card">
-  <div class="section-title">🎮 Partidas</div>
-  <div id="partidasContainer"><p class="empty">Sin partidas. Añade la primera.</p></div>
-  <button class="btn-secondary btn-sm" onclick="addPartida()" style="margin-top:6px">+ Añadir partida</button>
-</div>
-
-<div class="card">
-  <div class="section-title">🏆 Clasificación actual</div>
-  <div id="rankingContainer"><p class="empty">Juega partidas para ver la clasificación.</p></div>
-</div>
-
-<div class="card">
-  <div class="section-title">⚙️ Acciones</div>
-  <div class="actions-row">
-    <button class="btn-primary" onclick="guardarHistorial()">💾 Guardar sesión</button>
-    <button class="btn-secondary" onclick="exportCSV()">📤 Exportar CSV</button>
-    <label style="margin:0">
-      <button class="btn-secondary" onclick="document.getElementById('csvIn').click()">📥 Importar CSV</button>
-      <input type="file" id="csvIn" accept=".csv" style="display:none" onchange="importCSV(event)">
-    </label>
-    <button class="btn-secondary" onclick="toggleHistorial()">📚 Historial</button>
+<!-- DATE + ACTIONS BAR -->
+<div class="session-bar" style="justify-content:space-between;flex-wrap:wrap;gap:.6rem;">
+  <div style="display:flex;align-items:center;gap:.6rem;">
+    <label style="margin:0;font-size:.65rem">Fecha</label>
+    <input type="date" id="sessionDate"
+      style="background:var(--navy);border:1px solid rgba(59,130,246,.25);border-radius:4px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:.35rem .6rem;outline:none;width:auto"
+      onchange="saveLocal()">
+  </div>
+  <div class="actions">
+    <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem" onclick="saveSession()">💾 Guardar sesión</button>
+    <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem" onclick="toggleStats()">📊 Estadísticas</button>
+    <button class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <label class="btn-ghost" style="font-size:.82rem;padding:.35rem 1rem;cursor:pointer">⬆ Importar CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
   </div>
 </div>
 
-<div class="card" id="histSection" style="display:none">
-  <div class="tabs">
-    <div class="tab active" onclick="setTab('sesiones')">📅 Sesiones</div>
-    <div class="tab" onclick="setTab('ranking')">🏆 Ranking global</div>
+<!-- STATS PANEL (hidden) -->
+<div id="statsPanel" style="display:none">
+  <div class="card">
+    <div class="card-title"><div class="dot"></div>Ranking histórico — Todos los tiempos</div>
+    <div id="statsRanking"><div class="lb-empty">Guarda sesiones para ver el ranking histórico.</div></div>
   </div>
-  <div id="histSesiones"></div>
-  <div id="histRanking" style="display:none"></div>
+  <div class="card">
+    <div class="card-title"><div class="dot"></div>Historial de sesiones</div>
+    <div id="statsHistory"><div class="lb-empty">No hay sesiones guardadas todavía.</div></div>
+  </div>
 </div>
 
-<a class="nav-link" id="gastosLink" href="index.html">💶 Ir a Gastos ←</a>
+<!-- SYNC BAR -->
+<div class="session-bar">
+  <div class="live-dot" id="liveDot"></div>
+  <span class="conn-label" id="connLabel">Solo local</span>
+  <div class="mode-toggle">
+    <button class="mode-btn active-local" id="btnLocal" onclick="setMode('local')">Solo local</button>
+    <button class="mode-btn" id="btnLive"  onclick="setMode('live')">En directo</button>
+  </div>
+  <div class="session-id-box" id="sessionIdBox">—</div>
+  <button class="btn-copy" id="btnCopy" onclick="copyLink()">Copiar enlace</button>
+  <a class="nav-link" id="linkGastos" href="billar.html">← Gastos</a>
+</div>
 
+<!-- LEADERBOARD -->
+<div class="card">
+  <div class="card-title"><div class="dot"></div>Clasificación</div>
+  <div id="leaderboard"><div class="lb-empty">Registra partidas para ver la clasificación.</div></div>
+</div>
+
+<!-- MATCHES -->
+<div class="card">
+  <div class="card-title"><div class="dot"></div>Partidas</div>
+  <div class="matches-list" id="matchesList"></div>
+  <button class="btn-add-match" onclick="addMatch()">+ Nueva partida</button>
+</div>
+
+</div><!-- /container -->
 <script>
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  SUPABASE
-// ═══════════════════════════════════════════════════════════
-let SUPA_URL=localStorage.getItem('sb_url')||'';
-let SUPA_KEY=localStorage.getItem('sb_key')||'';
-let sb=null, sbReady=false;
+// ══════════════════════════════════════════════════════════
+let SUPA_URL = localStorage.getItem('sb_url') || '';
+let SUPA_KEY = localStorage.getItem('sb_key') || '';
+let sb = null, sbReady = false;
 
-function saveCfg(){
-  SUPA_URL=document.getElementById('cfgUrl').value.trim();
-  SUPA_KEY=document.getElementById('cfgKey').value.trim();
-  localStorage.setItem('sb_url',SUPA_URL);
-  localStorage.setItem('sb_key',SUPA_KEY);
+function saveCfg() {
+  SUPA_URL = document.getElementById('cfgUrl').value.trim();
+  SUPA_KEY = document.getElementById('cfgKey').value.trim();
+  localStorage.setItem('sb_url', SUPA_URL);
+  localStorage.setItem('sb_key', SUPA_KEY);
 }
-function toggleDbConfig(){
-  const el=document.getElementById('dbConfig');
-  el.style.display=el.style.display==='none'?'':'none';
+function toggleCfg() {
+  const p = document.getElementById('cfgPanel');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
 }
-function applyConfig(){ saveCfg(); initSupabase(); }
-
-function initSupabase(){
-  if(!SUPA_URL.includes('supabase')||!SUPA_KEY.startsWith('eyJ')){
-    if(SUPA_URL||SUPA_KEY) setDbStatus('err');
+function applyConfig() { saveCfg(); initSupabase(); }
+function initSupabase() {
+  if (!SUPA_URL.includes('supabase') || !SUPA_KEY.startsWith('eyJ')) {
+    if (SUPA_URL || SUPA_KEY) setDb('err', 'Error de configuración');
     return;
   }
-  try{ sb=supabase.createClient(SUPA_URL,SUPA_KEY); checkSupabase(); }
-  catch(e){ setDbStatus('err'); }
+  try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); checkSupabase(); }
+  catch(e) { setDb('err', 'Error al inicializar'); }
+}
+async function checkSupabase() {
+  try {
+    const { error } = await sb.from('partidas_sessions').select('id').limit(1);
+    if (error) throw error;
+    sbReady = true; setDb('ok', 'BD conectada');
+    document.getElementById('cfgPanel').style.display = 'none';
+    await loadHistoryFromDB();
+  } catch(e) { sbReady = false; setDb('err', 'Error: ' + e.message.slice(0,40)); }
+}
+function setDb(state, msg) {
+  document.getElementById('dbDot').className = 'db-dot ' + state;
+  document.getElementById('dbLabel').textContent = msg;
 }
 
-async function checkSupabase(){
-  try{
-    const {error}=await sb.from('partidas_sessions').select('id').limit(1);
-    if(error) throw error;
-    sbReady=true; setDbStatus('ok');
-    document.getElementById('dbConfig').style.display='none';
-    await loadHistorialFromDB(); renderHistorial();
-  }catch(e){ sbReady=false; setDbStatus('err'); console.error('Supabase:',e.message); }
+// ══════════════════════════════════════════════════════════
+//  GUN / SYNC
+// ══════════════════════════════════════════════════════════
+let isLocal = true, gun = null, gunNode = null, sessionId = '', lastLocal = 0;
+
+function initSession() {
+  sessionId = location.hash.slice(1).replace(/[^a-zA-Z0-9]/g,'');
+  if (!sessionId) sessionId = Math.random().toString(36).slice(2,8).toUpperCase();
+  location.hash = sessionId;
+  document.getElementById('sessionIdBox').textContent = sessionId;
+  document.getElementById('linkGastos').href = 'billar.html#' + sessionId;
 }
 
-function setDbStatus(s){
-  const el=document.getElementById('dbStatus');
-  const m={ok:['db-ok','⬤ BD conectada'],err:['db-err','⬤ Error BD'],off:['db-off','⬤ BD no configurada']};
-  el.className='db-badge '+m[s][0]; el.textContent=m[s][1];
-}
-
-// ═══════════════════════════════════════════════════════════
-//  GUN SYNC
-// ═══════════════════════════════════════════════════════════
-let gunActive=false,gun=null,gunNode=null,sessionId='',lastLocal=0;
-
-function initSync(){
-  sessionId=window.location.hash.replace('#','')||Math.random().toString(36).slice(2,10);
-  window.location.hash=sessionId;
-  document.getElementById('gastosLink').href=`index.html#${sessionId}`;
-}
-function toggleSync(){
-  if(!gunActive){
-    gun=Gun(['https://gun-manhattan.herokuapp.com/gun']);
-    gunNode=gun.get('ps-partidas-'+sessionId);
-    gunNode.on(d=>{
-      if(Date.now()-lastLocal<2000) return;
-      if(['INPUT','SELECT'].includes(document.activeElement.tagName)) return;
-      if(d&&d.state) try{
-        const s=JSON.parse(d.state);
-        partidas=s.partidas||[];
-        document.getElementById('fecha').value=s.fecha||'';
-        renderAll();
-      }catch(e){}
-    });
-    gunActive=true;
-    document.getElementById('syncToggle').classList.add('active');
-    document.getElementById('syncToggle').textContent='En directo 🟢';
-    document.getElementById('syncStatus').textContent='ID: '+sessionId.slice(0,8);
+function setMode(mode) {
+  isLocal = mode === 'local';
+  document.getElementById('btnLocal').className = 'mode-btn' + (isLocal ? ' active-local' : '');
+  document.getElementById('btnLive').className  = 'mode-btn' + (!isLocal ? ' active-live' : '');
+  const dot = document.getElementById('liveDot');
+  const lbl = document.getElementById('connLabel');
+  if (isLocal) {
+    dot.className = 'live-dot off'; lbl.textContent = 'Solo local';
+    gun = null; gunNode = null;
   } else {
-    gun=null;gunNode=null;gunActive=false;
-    document.getElementById('syncToggle').classList.remove('active');
-    document.getElementById('syncToggle').textContent='Solo local';
-    document.getElementById('syncStatus').textContent='Sin sincronización';
+    dot.className = 'live-dot on'; lbl.textContent = 'En directo · ' + sessionId;
+    gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+    gunNode = gun.get('ps-partidas-' + sessionId);
+    gunNode.on(d => {
+      if (Date.now() - lastLocal < 2000) return;
+      if (['INPUT','SELECT'].includes(document.activeElement.tagName)) return;
+      if (d && d.state) try {
+        const s = JSON.parse(d.state);
+        matches = s.matches || [];
+        document.getElementById('sessionDate').value = s.fecha || '';
+        renderAll();
+      } catch(e) {}
+    });
   }
 }
-function pushGun(){
-  if(!gunActive||!gunNode) return;
-  lastLocal=Date.now();
-  gunNode.put({state:JSON.stringify({partidas,fecha:document.getElementById('fecha').value})});
+
+function pushGun() {
+  if (isLocal || !gunNode) return;
+  lastLocal = Date.now();
+  gunNode.put({ state: JSON.stringify({ matches, fecha: document.getElementById('sessionDate').value }) });
 }
 
-// ═══════════════════════════════════════════════════════════
+function copyLink() {
+  navigator.clipboard.writeText(location.href);
+  const btn = document.getElementById('btnCopy');
+  btn.textContent = '✓ Copiado'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copiar enlace'; btn.classList.remove('copied'); }, 2000);
+}
+
+// ══════════════════════════════════════════════════════════
 //  DATA
-// ═══════════════════════════════════════════════════════════
-let partidas=[], historial=[], histVisible=false, activeTab='sesiones';
+// ══════════════════════════════════════════════════════════
+let matches = [], sessionHistory = [];
+const FORMATS = { '1v1': [1,1], '2v1': [2,1], '2v2': [2,2] };
 
-const FORMATS={
-  '1v1':{e1:1,e2:1},
-  '2v1':{e1:2,e2:1},
-  '2v2':{e1:2,e2:2}
-};
-
-function addPartida(){
-  partidas.push({
-    id:Date.now(),
-    mesa:'Mesa 1',
-    formato:'1v1',
-    equipo1:[''],
-    equipo2:[''],
-    ganador:null
-  });
-  renderPartidas(); saveLocal(); pushGun();
+function addMatch() {
+  matches.push({ id: uid(), mesa: 'Mesa 1', formato: '1v1', equipo1: [''], equipo2: [''], ganador: null });
+  renderMatches(); saveLocal(); pushGun();
 }
 
-function removePartida(i){
-  partidas.splice(i,1);
+function removeMatch(id) {
+  matches = matches.filter(m => m.id !== id);
   renderAll(); saveLocal(); pushGun();
 }
 
-function setFormato(i,fmt){
-  const f=FORMATS[fmt];
-  partidas[i].formato=fmt;
-  partidas[i].equipo1=Array(f.e1).fill('');
-  partidas[i].equipo2=Array(f.e2).fill('');
-  partidas[i].ganador=null;
-  renderPartidas(); calcRanking(); saveLocal(); pushGun();
+function setFormato(id, fmt) {
+  const m = getMatch(id); if (!m) return;
+  const [s1, s2] = FORMATS[fmt];
+  m.formato = fmt;
+  m.equipo1 = Array(s1).fill('');
+  m.equipo2 = Array(s2).fill('');
+  m.ganador = null;
+  renderMatches(); calcLeaderboard(); saveLocal(); pushGun();
 }
 
-function setGanador(i,team){
-  if(partidas[i].ganador===team){ partidas[i].ganador=null; }
-  else { partidas[i].ganador=team; }
-  renderPartidas(); calcRanking(); saveLocal(); pushGun();
+function setGanador(id, team) {
+  const m = getMatch(id); if (!m) return;
+  m.ganador = m.ganador === team ? null : team;
+  renderMatches(); calcLeaderboard(); saveLocal(); pushGun();
 }
 
-function renderPartidas(){
-  const c=document.getElementById('partidasContainer');
-  if(!partidas.length){c.innerHTML='<p class="empty">Sin partidas. Añade la primera.</p>';return;}
-  c.innerHTML=partidas.map((p,i)=>{
-    const f=FORMATS[p.formato];
+function getMatch(id) { return matches.find(m => m.id === id); }
+
+function renderMatches() {
+  const c = document.getElementById('matchesList');
+  if (!matches.length) { c.innerHTML = '<div class="empty-state">Sin partidas. Añade la primera.</div>'; return; }
+  c.innerHTML = matches.map((m, i) => {
+    const [s1, s2] = FORMATS[m.formato];
+    const n1 = m.equipo1.filter(Boolean).join(' & ') || 'Equipo 1';
+    const n2 = m.equipo2.filter(Boolean).join(' & ') || 'Equipo 2';
     return `
-      <div class="partida-card">
-        <div class="partida-header">
-          <input type="text" value="${escH(p.mesa)}" placeholder="Mesa"
-            oninput="partidas[${i}].mesa=this.value;saveLocal();pushGun()">
-          <select onchange="setFormato(${i},this.value)">
-            ${['1v1','2v1','2v2'].map(f=>`<option${f===p.formato?' selected':''}>${f}</option>`).join('')}
-          </select>
-          <button class="btn-danger btn-sm" onclick="removePartida(${i})">✕</button>
-        </div>
-        <div class="teams">
-          <div class="team">
-            <div class="team-label">Equipo 1</div>
-            ${p.equipo1.map((n,k)=>`
-              <input type="text" value="${escH(n)}" placeholder="Jugador"
-                oninput="partidas[${i}].equipo1[${k}]=this.value;calcRanking();saveLocal();pushGun()">`).join('')}
+      <div class="match-card${m.ganador ? ' has-winner' : ''}">
+        <div class="match-header">
+          <span class="match-num">#${i+1}</span>
+          <input type="text" value="${esc(m.mesa)}" placeholder="Mesa"
+            oninput="getMatch('${m.id}').mesa=this.value;saveLocal();pushGun()" style="max-width:160px">
+          <div class="format-toggle">
+            ${['1v1','2v1','2v2'].map(f=>`<button class="fmt-btn${f===m.formato?' active':''}" onclick="setFormato('${m.id}','${f}')">${f}</button>`).join('')}
           </div>
-          <div class="vs">VS</div>
-          <div class="team">
+          <button class="btn-remove" onclick="removeMatch('${m.id}')" style="margin-left:auto">✕</button>
+        </div>
+        <div class="teams-grid">
+          <div>
+            <div class="team-label">Equipo 1</div>
+            <div class="team-inputs">
+              ${m.equipo1.map((n,k)=>`<input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}"
+                oninput="getMatch('${m.id}').equipo1[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">`).join('')}
+            </div>
+          </div>
+          <div class="vs-col">VS</div>
+          <div>
             <div class="team-label">Equipo 2</div>
-            ${p.equipo2.map((n,k)=>`
-              <input type="text" value="${escH(n)}" placeholder="Jugador"
-                oninput="partidas[${i}].equipo2[${k}]=this.value;calcRanking();saveLocal();pushGun()">`).join('')}
+            <div class="team-inputs">
+              ${m.equipo2.map((n,k)=>`<input type="text" value="${esc(n)}" placeholder="Jugador ${k+1}"
+                oninput="getMatch('${m.id}').equipo2[${k}]=this.value;calcLeaderboard();saveLocal();pushGun()">`).join('')}
+            </div>
           </div>
         </div>
         <div class="winner-row">
-          <span class="winner-label">Ganador:</span>
-          <button class="btn-winner btn-sm${p.ganador===1?' done':''}" onclick="setGanador(${i},1)">
-            ${p.ganador===1?'🏆 ':''} ${p.equipo1.filter(Boolean).join(' & ')||'Equipo 1'}
+          <span class="winner-label">Ganador →</span>
+          <button class="btn-win${m.ganador===1?' winner':''}" onclick="setGanador('${m.id}',1)">
+            ${m.ganador===1?'🏆 ':''}${esc(n1)}
           </button>
-          <button class="btn-winner btn-sm${p.ganador===2?' done':''}" onclick="setGanador(${i},2)">
-            ${p.ganador===2?'🏆 ':''} ${p.equipo2.filter(Boolean).join(' & ')||'Equipo 2'}
+          <button class="btn-win${m.ganador===2?' winner':''}" onclick="setGanador('${m.id}',2)">
+            ${m.ganador===2?'🏆 ':''}${esc(n2)}
           </button>
-          ${p.ganador?`<span class="ganador-badge">✓ Registrado</span>`:''}
+          ${m.ganador ? `<span class="winner-tag">✓ registrado</span>` : ''}
         </div>
       </div>`;
   }).join('');
 }
 
-function calcRanking(){
-  const stats={};
-  const reg=(name,win)=>{
-    if(!name.trim()) return;
-    const n=name.trim();
-    if(!stats[n]) stats[n]={wins:0,games:0};
+function calcLeaderboard() {
+  const stats = {};
+  const reg = (name, win) => {
+    if (!name.trim()) return;
+    const n = name.trim();
+    if (!stats[n]) stats[n] = { wins: 0, games: 0 };
     stats[n].games++;
-    if(win) stats[n].wins++;
+    if (win) stats[n].wins++;
   };
-  partidas.forEach(p=>{
-    const hasWinner=p.ganador!==null;
-    p.equipo1.forEach(n=>reg(n, hasWinner&&p.ganador===1));
-    p.equipo2.forEach(n=>reg(n, hasWinner&&p.ganador===2));
+  matches.forEach(m => {
+    const hasWin = m.ganador !== null;
+    m.equipo1.forEach(n => reg(n, hasWin && m.ganador === 1));
+    m.equipo2.forEach(n => reg(n, hasWin && m.ganador === 2));
   });
-  const sorted=Object.entries(stats).sort((a,b)=>b[1].wins-a[1].wins||b[1].games-a[1].games);
-  const c=document.getElementById('rankingContainer');
-  if(!sorted.length){c.innerHTML='<p class="empty">Juega partidas para ver la clasificación.</p>';return;}
-  c.innerHTML=sorted.map(([name,s],i)=>`
-    <div class="ranking-row">
-      <span class="rank-num">${i+1}</span>
-      <span class="rank-name">${escH(name)}</span>
-      <span class="rank-stats">${s.wins}V · ${s.games}P · ${s.games?Math.round(s.wins/s.games*100):0}%</span>
+  const sorted = Object.entries(stats).sort((a,b) => b[1].wins - a[1].wins || b[1].games - a[1].games);
+  const lb = document.getElementById('leaderboard');
+  if (!sorted.length) { lb.innerHTML = '<div class="lb-empty">Registra partidas para ver la clasificación.</div>'; return stats; }
+  const maxWins = sorted[0][1].wins || 1;
+  const maxGames = Math.max(...sorted.map(([,s])=>s.games)) || 1;
+  const posClass = i => ['gold','silver','bronze'][i] || 'other';
+  lb.innerHTML = sorted.map(([name, s], i) => `
+    <div class="stat-row">
+      <span class="stat-pos ${posClass(i)}">${i+1}</span>
+      <span class="stat-name">${esc(name)}</span>
+      <div class="stat-bars">
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">VICT</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-win" style="width:${(s.wins/maxWins)*100}%"></div></div>
+        </div>
+        <div class="stat-bar-row">
+          <span class="stat-bar-label">PART</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-play" style="width:${(s.games/maxGames)*100}%"></div></div>
+        </div>
+      </div>
+      <span class="stat-nums">${s.wins}V · ${s.games}P <span class="stat-rate">${s.games?Math.round(s.wins/s.games*100):0}%</span></span>
     </div>`).join('');
   return stats;
 }
 
-function renderAll(){ renderPartidas(); calcRanking(); }
+function renderAll() { renderMatches(); calcLeaderboard(); }
 
-// ═══════════════════════════════════════════════════════════
-//  HISTORIAL
-// ═══════════════════════════════════════════════════════════
-async function guardarHistorial(){
-  const fecha=document.getElementById('fecha').value||new Date().toISOString().split('T')[0];
-  const statsNow=calcRanking()||{};
-  const entry={
-    session_date: fecha,
-    partidas: JSON.parse(JSON.stringify(partidas)),
-    clasificacion: statsNow
-  };
-  if(sbReady){
-    try{
-      const {error}=await sb.from('partidas_sessions').insert(entry);
-      if(error) throw error;
-      await loadHistorialFromDB();
-      alert('✅ Sesión guardada en la base de datos');
-    }catch(e){
-      alert('⚠️ Error BD: '+e.message+'\nGuardado localmente.');
-      historial.push(entry);
-      localStorage.setItem('poolHistPartidas',JSON.stringify(historial));
-    }
-  } else {
-    historial.push(entry);
-    localStorage.setItem('poolHistPartidas',JSON.stringify(historial));
-    alert('✅ Sesión guardada localmente');
-  }
-  if(histVisible) renderHistorial();
+// ══════════════════════════════════════════════════════════
+//  STATS PANEL
+// ══════════════════════════════════════════════════════════
+let statsOpen = false;
+function toggleStats() {
+  statsOpen = !statsOpen;
+  document.getElementById('statsPanel').style.display = statsOpen ? '' : 'none';
+  if (statsOpen) renderStats();
 }
 
-async function loadHistorialFromDB(){
-  if(!sbReady){
-    historial=JSON.parse(localStorage.getItem('poolHistPartidas')||'[]');
-    return;
-  }
-  try{
-    const {data,error}=await sb.from('partidas_sessions').select('*').order('created_at',{ascending:false});
-    if(error) throw error;
-    historial=data||[];
-  }catch(e){
-    console.error(e);
-    historial=JSON.parse(localStorage.getItem('poolHistPartidas')||'[]');
-  }
+function renderStats() {
+  renderGlobalRanking();
+  renderSessionHistory();
 }
 
-async function borrarHistorial(idOrIdx){
-  if(!confirm('¿Borrar esta sesión?')) return;
-  if(sbReady&&typeof idOrIdx==='string'){
-    const {error}=await sb.from('partidas_sessions').delete().eq('id',idOrIdx);
-    if(error){alert('Error: '+error.message);return;}
-    await loadHistorialFromDB();
-  } else {
-    historial.splice(+idOrIdx,1);
-    localStorage.setItem('poolHistPartidas',JSON.stringify(historial));
-  }
-  renderHistorial();
-}
-
-function toggleHistorial(){
-  histVisible=!histVisible;
-  document.getElementById('histSection').style.display=histVisible?'':'none';
-  if(histVisible) renderHistorial();
-}
-
-function setTab(tab){
-  activeTab=tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active',(['sesiones','ranking'][i])===tab);
+function renderGlobalRanking() {
+  const global = {};
+  sessionHistory.forEach(h => {
+    Object.entries(h.clasificacion || {}).forEach(([name, s]) => {
+      if (!global[name]) global[name] = { wins: 0, games: 0 };
+      global[name].wins  += s.wins  || 0;
+      global[name].games += s.games || 0;
+    });
   });
-  document.getElementById('histSesiones').style.display=tab==='sesiones'?'':'none';
-  document.getElementById('histRanking').style.display=tab==='ranking'?'':'none';
-}
-
-function renderHistorial(){
-  renderSesiones();
-  renderRankingGlobal();
-}
-
-function renderSesiones(){
-  const c=document.getElementById('histSesiones');
-  if(!historial.length){c.innerHTML='<p class="empty">No hay sesiones guardadas.</p>';return;}
-  c.innerHTML=historial.map((h,i)=>{
-    const id=h.id||i; const isDb=!!h.id;
-    const ps=h.partidas||[];
-    const cl=h.clasificacion||{};
-    const topPlayers=Object.entries(cl).sort((a,b)=>b[1].wins-a[1].wins).slice(0,3).map(([n,s])=>`${escH(n)}: ${s.wins}V`).join(', ');
-    return `
-      <div class="hist-item">
-        <div class="hist-header" onclick="toggleDet('d${i}')">
-          <span class="hist-fecha">📅 ${h.session_date} (${ps.length} partidas)</span>
-          <button class="btn-danger btn-sm" onclick="event.stopPropagation();borrarHistorial(${isDb?`'${id}'`:i})">✕</button>
+  const sorted = Object.entries(global).sort((a,b) => b[1].wins - a[1].wins);
+  const c = document.getElementById('statsRanking');
+  if (!sorted.length) { c.innerHTML = '<div class="lb-empty">Guarda sesiones para ver el ranking histórico.</div>'; return; }
+  const maxW = sorted[0][1].wins || 1;
+  const maxG = Math.max(...sorted.map(([,s])=>s.games)) || 1;
+  const posClass = i => ['gold','silver','bronze'][i] || 'other';
+  c.innerHTML = sorted.map(([name,s], i) => `
+    <div class="stat-row">
+      <span class="stat-pos ${posClass(i)}">${i+1}</span>
+      <span class="stat-name">${esc(name)}</span>
+      <div class="stat-bars">
+        <div class="stat-bar-row"><span class="stat-bar-label">VICT</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-win" style="width:${(s.wins/maxW)*100}%"></div></div>
         </div>
-        <div class="hist-detail" id="d${i}">
-          <strong>Top jugadores:</strong> ${topPlayers||'—'}<br>
-          <strong>Partidas:</strong><br>
-          ${ps.map(p=>{
-            const g1=p.equipo1.filter(Boolean).join(' & ')||'E1';
-            const g2=p.equipo2.filter(Boolean).join(' & ')||'E2';
-            const winner=p.ganador===1?g1:p.ganador===2?g2:'—';
-            return `  · ${p.mesa} (${p.formato}): ${g1} vs ${g2} → 🏆 ${winner}`;
-          }).join('<br>')||'—'}
+        <div class="stat-bar-row"><span class="stat-bar-label">PART</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill-play" style="width:${(s.games/maxG)*100}%"></div></div>
+        </div>
+      </div>
+      <span class="stat-nums">${s.wins}V · ${s.games}P <span class="stat-rate">${s.games?Math.round(s.wins/s.games*100):0}%</span></span>
+    </div>`).join('');
+}
+
+function renderSessionHistory() {
+  const c = document.getElementById('statsHistory');
+  if (!sessionHistory.length) { c.innerHTML = '<div class="lb-empty">No hay sesiones guardadas todavía.</div>'; return; }
+  c.innerHTML = sessionHistory.map((h, idx) => {
+    const id = h.id || idx; const isDb = !!h.id;
+    const ps = h.partidas || [];
+    const cl = h.clasificacion || {};
+    const top = Object.entries(cl).sort((a,b)=>b[1].wins-a[1].wins).slice(0,3).map(([n,s])=>`${esc(n)} ${s.wins}V`).join(' · ');
+    return `
+      <div class="history-session" onclick="toggleDetail('hm${idx}')">
+        <div class="history-session-header">
+          <span class="history-date">${h.session_date}</span>
+          <span class="history-meta">${ps.length} partidas</span>
+          <span class="history-top">${top || '—'}</span>
+          <button class="history-del" onclick="event.stopPropagation();deleteHistory(${isDb?`'${id}'`:idx})">Borrar</button>
+        </div>
+        <div class="history-matches" id="hm${idx}">
+          ${ps.map(p => {
+            const n1 = p.equipo1.filter(Boolean).join(' & ') || 'E1';
+            const n2 = p.equipo2.filter(Boolean).join(' & ') || 'E2';
+            const winner = p.ganador===1?n1:p.ganador===2?n2:'—';
+            return `<div class="history-match-row">${esc(p.mesa)} (${p.formato}): ${esc(n1)} vs ${esc(n2)} → <span class="winner-tag-sm">${esc(winner)}</span></div>`;
+          }).join('')}
         </div>
       </div>`;
   }).join('');
 }
 
-function renderRankingGlobal(){
-  const c=document.getElementById('histRanking');
-  if(!historial.length){c.innerHTML='<p class="empty">No hay datos de historial.</p>';return;}
-  // Acumular stats de todo el historial
-  const global={};
-  historial.forEach(h=>{
-    const cl=h.clasificacion||{};
-    Object.entries(cl).forEach(([name,s])=>{
-      if(!global[name]) global[name]={wins:0,games:0};
-      global[name].wins+=s.wins||0;
-      global[name].games+=s.games||0;
-    });
-  });
-  const sorted=Object.entries(global).sort((a,b)=>b[1].wins-a[1].wins);
-  if(!sorted.length){c.innerHTML='<p class="empty">Sin datos de clasificación.</p>';return;}
-  c.innerHTML='<div style="margin-bottom:8px;font-size:13px;color:#81c784">Acumulado de todas las sesiones</div>'+
-    sorted.map(([name,s],i)=>`
-      <div class="ranking-row">
-        <span class="rank-num">${i+1}</span>
-        <span class="rank-name">${escH(name)}</span>
-        <span class="rank-stats">${s.wins}V · ${s.games}P · ${s.games?Math.round(s.wins/s.games*100):0}%</span>
-      </div>`).join('');
+function toggleDetail(id) { document.getElementById(id).classList.toggle('open'); }
+
+// ══════════════════════════════════════════════════════════
+//  HISTORY CRUD
+// ══════════════════════════════════════════════════════════
+async function saveSession() {
+  const fecha = document.getElementById('sessionDate').value || new Date().toISOString().slice(0,10);
+  const stats = calcLeaderboard() || {};
+  const entry = { session_date: fecha, partidas: JSON.parse(JSON.stringify(matches)), clasificacion: stats };
+  if (sbReady) {
+    try {
+      const { error } = await sb.from('partidas_sessions').insert(entry);
+      if (error) throw error;
+      await loadHistoryFromDB();
+      alert('✓ Sesión guardada en la base de datos.');
+    } catch(e) {
+      alert('⚠ Error BD: ' + e.message + '\nGuardado localmente.');
+      sessionHistory.push(entry);
+      localStorage.setItem('ps-history-partidas', JSON.stringify(sessionHistory));
+    }
+  } else {
+    sessionHistory.push(entry);
+    localStorage.setItem('ps-history-partidas', JSON.stringify(sessionHistory));
+    alert('✓ Sesión guardada localmente.');
+  }
+  if (statsOpen) renderStats();
 }
 
-function toggleDet(id){ document.getElementById(id).classList.toggle('open'); }
-
-// ═══════════════════════════════════════════════════════════
-//  EXPORT / IMPORT CSV
-// ═══════════════════════════════════════════════════════════
-function exportCSV(){
-  const fecha=document.getElementById('fecha').value;
-  let csv='##POOL-SPLITTER-PARTIDAS-v2\n';
-  csv+=`FECHA,${fecha}\n\n`;
-  csv+='##PARTIDAS\nMesa,Formato,Equipo1,Equipo2,Ganador\n';
-  partidas.forEach(p=>{
-    csv+=`${q(p.mesa)},${p.formato},${q(p.equipo1.join('|'))},${q(p.equipo2.join('|'))},${p.ganador||''}\n`;
-  });
-  csv+='\n##HISTORIAL\nFecha,Partidas_JSON,Clasificacion_JSON\n';
-  historial.forEach(h=>{
-    csv+=`${h.session_date},${q(JSON.stringify(h.partidas||[]))},${q(JSON.stringify(h.clasificacion||{}))}\n`;
-  });
-  dlCsv(csv,`pool-partidas-${fecha||'sesion'}.csv`);
+async function loadHistoryFromDB() {
+  if (!sbReady) { sessionHistory = JSON.parse(localStorage.getItem('ps-history-partidas') || '[]'); return; }
+  try {
+    const { data, error } = await sb.from('partidas_sessions').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    sessionHistory = data || [];
+  } catch(e) { sessionHistory = JSON.parse(localStorage.getItem('ps-history-partidas') || '[]'); }
 }
 
-function importCSV(event){
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    const lines=e.target.result.split('\n').map(l=>l.trimEnd());
-    let sec='', nPartidas=[], nHist=[], fecha='';
-    for(const line of lines){
-      if(!line||line.startsWith('#')){sec=line.replace(/^#+/,'').trim();continue;}
-      if(line.startsWith('FECHA,')){ fecha=line.split(',')[1]; continue; }
-      if(/^(Mesa|Fecha)/.test(line)) continue;
-      if(sec==='PARTIDAS'){
-        const [mesa,formato,e1,e2,ganador]=parseCsvLine(line);
-        if(mesa) nPartidas.push({
-          id:Date.now()+Math.random(),
-          mesa,formato:formato||'1v1',
-          equipo1:(e1||'').split('|').filter(Boolean),
-          equipo2:(e2||'').split('|').filter(Boolean),
-          ganador:ganador?+ganador:null
-        });
-      } else if(sec==='HISTORIAL'){
-        const [fd,pj,cj]=parseCsvLine(line);
-        try{ nHist.push({session_date:fd,partidas:JSON.parse(pj),clasificacion:JSON.parse(cj)}); }catch(e){}
+async function deleteHistory(idOrIdx) {
+  if (!confirm('¿Borrar esta sesión?')) return;
+  if (sbReady && typeof idOrIdx === 'string') {
+    await sb.from('partidas_sessions').delete().eq('id', idOrIdx);
+    await loadHistoryFromDB();
+  } else {
+    sessionHistory.splice(+idOrIdx, 1);
+    localStorage.setItem('ps-history-partidas', JSON.stringify(sessionHistory));
+  }
+  renderStats();
+}
+
+// ══════════════════════════════════════════════════════════
+//  CSV EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════
+function exportCSV() {
+  const fecha = document.getElementById('sessionDate').value;
+  let csv = '##POOL-SPLITTER-PARTIDAS-v2\n';
+  csv += `FECHA,${fecha}\n\n`;
+  csv += '##PARTIDAS\nMesa,Formato,Equipo1,Equipo2,Ganador\n';
+  matches.forEach(m => {
+    csv += `${q(m.mesa)},${m.formato},${q(m.equipo1.join('|'))},${q(m.equipo2.join('|'))},${m.ganador||''}\n`;
+  });
+  csv += '\n##HISTORIAL\nFecha,Partidas_JSON,Clasificacion_JSON\n';
+  sessionHistory.forEach(h => {
+    csv += `${h.session_date},${q(JSON.stringify(h.partidas||[]))},${q(JSON.stringify(h.clasificacion||{}))}\n`;
+  });
+  dlCSV(csv, `pool-partidas-${fecha||'sesion'}.csv`);
+}
+
+async function importCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const lines = e.target.result.split('\n').map(l => l.trimEnd());
+    let sec = '', nMatches = [], nHist = [], fecha = '';
+    for (const line of lines) {
+      if (!line || line.startsWith('#')) { sec = line.replace(/^#+/,'').trim(); continue; }
+      if (line.startsWith('FECHA,')) { fecha = line.split(',')[1]; continue; }
+      if (/^(Mesa|Fecha)/.test(line)) continue;
+      if (sec === 'PARTIDAS') {
+        const [mesa,formato,e1,e2,ganador] = parseCSVLine(line);
+        if (mesa) nMatches.push({ id:uid(), mesa, formato:formato||'1v1',
+          equipo1:(e1||'').split('|').filter(Boolean), equipo2:(e2||'').split('|').filter(Boolean),
+          ganador: ganador ? +ganador : null });
+      } else if (sec === 'HISTORIAL') {
+        const [fd,pj,cj] = parseCSVLine(line);
+        try { nHist.push({ session_date:fd, partidas:JSON.parse(pj), clasificacion:JSON.parse(cj) }); } catch(e){}
       }
     }
-    if(nPartidas.length&&confirm('¿Restaurar sesión actual con los datos importados?')) {
-      partidas=nPartidas;
-      if(fecha) document.getElementById('fecha').value=fecha;
+    if (nMatches.length && confirm('¿Restaurar sesión actual con los datos importados?')) {
+      matches = nMatches;
+      if (fecha) document.getElementById('sessionDate').value = fecha;
     }
-    for(const h of nHist){
-      const exists=historial.some(x=>x.session_date===h.session_date);
-      if(!exists){
-        if(sbReady){ await sb.from('partidas_sessions').insert({session_date:h.session_date,partidas:h.partidas,clasificacion:h.clasificacion}); }
-        else { historial.push(h); }
+    for (const h of nHist) {
+      const exists = sessionHistory.some(x => x.session_date === h.session_date);
+      if (!exists) {
+        if (sbReady) await sb.from('partidas_sessions').insert({ session_date:h.session_date, partidas:h.partidas, clasificacion:h.clasificacion });
+        else sessionHistory.push(h);
       }
     }
-    if(sbReady) await loadHistorialFromDB();
-    else localStorage.setItem('poolHistPartidas',JSON.stringify(historial));
-    renderAll(); if(histVisible) renderHistorial();
-    saveLocal(); alert('✅ CSV importado');
+    if (sbReady) await loadHistoryFromDB();
+    else localStorage.setItem('ps-history-partidas', JSON.stringify(sessionHistory));
+    renderAll();
+    if (statsOpen) renderStats();
+    saveLocal();
+    alert('✓ CSV importado correctamente.');
   };
   reader.readAsText(file);
-  event.target.value='';
+  input.value = '';
 }
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  LOCAL STORAGE
-// ═══════════════════════════════════════════════════════════
-function saveLocal(){
-  localStorage.setItem('poolPartidas',JSON.stringify({partidas,fecha:document.getElementById('fecha').value}));
+// ══════════════════════════════════════════════════════════
+function saveLocal() {
+  localStorage.setItem('ps-partidas', JSON.stringify({ matches, fecha: document.getElementById('sessionDate').value }));
   pushGun();
 }
-function loadLocal(){
-  try{
-    const d=JSON.parse(localStorage.getItem('poolPartidas')||'{}');
-    partidas=d.partidas||[];
-    if(d.fecha) document.getElementById('fecha').value=d.fecha;
-  }catch(e){}
-  historial=JSON.parse(localStorage.getItem('poolHistPartidas')||'[]');
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem('ps-partidas') || '{}');
+    matches = d.matches || [];
+    if (d.fecha) document.getElementById('sessionDate').value = d.fecha;
+  } catch(e) {}
+  sessionHistory = JSON.parse(localStorage.getItem('ps-history-partidas') || '[]');
 }
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  UTILS
-// ═══════════════════════════════════════════════════════════
-function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function q(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
-function dlCsv(csv,name){
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=name; a.click();
+// ══════════════════════════════════════════════════════════
+let _uidC = 0;
+function uid() { return 'm' + Date.now() + (++_uidC); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function q(s) { return '"' + String(s||'').replace(/"/g,'""') + '"'; }
+function dlCSV(csv, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], { type:'text/csv;charset=utf-8;' }));
+  a.download = name; a.click();
 }
-function parseCsvLine(line){
-  const res=[]; let cur='', inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'&&!inQ){inQ=true;}
-    else if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
-    else if(c==='"'&&inQ){inQ=false;}
-    else if(c===','&&!inQ){res.push(cur);cur='';}
-    else cur+=c;
+function parseCSVLine(line) {
+  const res = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"' && !inQ) { inQ = true; }
+    else if (c === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; }
+    else if (c === '"' && inQ) { inQ = false; }
+    else if (c === ',' && !inQ) { res.push(cur); cur = ''; }
+    else cur += c;
   }
   res.push(cur); return res;
 }
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  INIT
-// ═══════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
-  initSync();
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('sessionDate').value = new Date().toISOString().slice(0,10);
+  initSession();
   loadLocal();
-  document.getElementById('cfgUrl').value=SUPA_URL;
-  document.getElementById('cfgKey').value=SUPA_KEY;
-  if(SUPA_URL||SUPA_KEY) document.getElementById('dbConfig').style.display='none';
+  document.getElementById('cfgUrl').value = SUPA_URL;
+  document.getElementById('cfgKey').value = SUPA_KEY;
+  if (SUPA_URL || SUPA_KEY) document.getElementById('cfgPanel').style.display = 'none';
   initSupabase();
   renderAll();
-  document.getElementById('fecha').addEventListener('change',saveLocal);
+  setMode('local');
 });
 </script>
 </body>
