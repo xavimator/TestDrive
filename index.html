@@ -156,7 +156,7 @@ input::placeholder{color:var(--silver-dark)}
 <header>
   <div class="header-rule"><span></span><div class="ball"></div><span></span></div>
   <h1>POOL<span>SPLITTER</span></h1>
-  <p class="tagline">// repartidor de gastos · mesas de billar //</p>
+  <p class="tagline">// repartidor de gastos //</p>
 </header>
 
 <!-- DB STATUS -->
@@ -454,7 +454,7 @@ let mesas = [], jugadores = [], history = [];
 
 function minOpts(sel = 0) {
   let o = '';
-  for (let m = 0; m <= 300; m += 15)
+  for (let m = 0; m <= 300; m += 5)
     o += `<option value="${m}"${m === sel ? ' selected' : ''}>${m} min</option>`;
   return o;
 }
