@@ -452,7 +452,7 @@ let mesas = [], jugadores = [], history = [];
 
 function minOpts(sel = 0) {
   let o = '';
-  for (let m = 30; m <= 300; m += 5)
+  for (let m = 0; m <= 300; m += 15)
     o += `<option value="${m}"${m === sel ? ' selected' : ''}>${m} min</option>`;
   return o;
 }
@@ -561,14 +561,13 @@ function renderJugadores() {
     <div class="player-card">
       <div class="player-header">
         <span class="pnum">${i + 1}</span>
-        <div style="flex:1;display:flex;flex-direction:column;gap:.3rem">
-          ${globalPlayers.length ? `<select style="font-size:.78rem;padding:.3rem .5rem;color:var(--silver-dim)"
-            onchange="if(this.value){getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun();this.closest('.player-card').querySelector('input[type=text]').value=this.value}">
+        <div style="flex:1">
+          ${globalPlayers.length ? `<select style="width:100%;font-size:.88rem;padding:.4rem .6rem"
+            onchange="getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun()">
             <option value="">— Seleccionar jugador —</option>
             ${globalPlayers.map(p=>`<option value="${esc(p.name)}"${j.nombre===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}
-          </select>` : ''}
-          <input type="text" value="${esc(j.nombre)}" placeholder="Nombre jugador" list="dlPlayers"
-            oninput="getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun()">
+          </select>` : `<input type="text" value="${esc(j.nombre)}" placeholder="Nombre jugador"
+            oninput="getJug('${j.id}').nombre=this.value;recalculate();saveLocal();pushGun()">`}
         </div>
         <span class="player-total${j._total ? ' has-value' : ''}" id="ptot_${j.id}">${j._total ? j._total + '€' : '—'}</span>
         <button class="btn-remove" onclick="removeJugador('${j.id}')">✕</button>
