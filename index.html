@@ -80,8 +80,13 @@ input::placeholder{color:var(--silver-dark)}
 .template-add-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .template-add-row input,.template-add-row select{width:auto;flex:1;min-width:100px;padding:.35rem .6rem;font-size:.82rem}
 /* MESAS */
-.mesa-row{display:grid;grid-template-columns:1fr 90px 100px 32px;gap:.55rem;align-items:end;background:var(--felt-mid);border:1px solid rgba(59,130,246,.12);border-radius:5px;padding:.8rem .9rem;margin-bottom:.6rem}
+.mesa-row{background:var(--felt-mid);border:1px solid rgba(59,130,246,.12);border-radius:5px;padding:.8rem .9rem;margin-bottom:.6rem;display:flex;flex-direction:column;gap:.55rem}
 .mesa-row:hover{border-color:rgba(59,130,246,.28)}
+.mesa-top{display:grid;grid-template-columns:1fr 70px 32px;gap:.55rem;align-items:end}
+.mesa-times{display:grid;grid-template-columns:1fr 1fr auto;gap:.55rem;align-items:end}
+.mins-display{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.18);border-radius:4px;padding:.45rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cyan);white-space:nowrap}
+input[type="time"]{background:var(--navy);border:1px solid rgba(59,130,246,.22);border-radius:4px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.85rem;padding:.45rem .6rem;width:100%;outline:none;transition:border-color .2s}
+input[type="time"]:focus{border-color:var(--blue-b);box-shadow:0 0 0 2px rgba(59,130,246,.18)}
 /* JUGADORES */
 .player-card{background:var(--felt-mid);border:1px solid rgba(59,130,246,.14);border-radius:5px;padding:.8rem .9rem;margin-bottom:.6rem;transition:border-color .2s}
 .player-card:hover{border-color:rgba(59,130,246,.3)}
@@ -90,11 +95,13 @@ input::placeholder{color:var(--silver-dark)}
 .player-header input[type="text"]{flex:1;background:var(--navy);border-color:rgba(59,130,246,.2);padding:.35rem .6rem;font-family:'Barlow',sans-serif;font-size:.9rem}
 .player-total{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--silver-dark);min-width:68px;text-align:right;flex-shrink:0}
 .player-total.has-value{color:var(--cyan);font-size:1rem;font-weight:500}
-.pmrows{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.38rem}
-.pmrow{display:flex;gap:.4rem;align-items:center}
-.pmrow select{background:var(--navy);border-color:rgba(59,130,246,.14);padding:.3rem .5rem;font-size:.82rem}
-.pmrow select:first-child{flex:1}
-.pmrow select:nth-child(2){width:98px;flex-shrink:0}
+.pmrows{display:flex;flex-direction:column;gap:.5rem;margin-bottom:.38rem}
+.pmrow{display:flex;flex-direction:column;gap:.3rem;background:rgba(0,0,0,.15);border-radius:4px;padding:.45rem .5rem}
+.pmrow-top{display:flex;gap:.4rem;align-items:center}
+.pmrow-top select{flex:1;background:var(--navy);border:1px solid rgba(59,130,246,.14);border-radius:4px;color:var(--white);font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:.3rem .5rem}
+.pmrow-times{display:grid;grid-template-columns:1fr 1fr auto;gap:.4rem;align-items:center}
+.pmrow-times input[type="time"]{font-size:.78rem;padding:.3rem .5rem}
+.pmrow-mins{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--cyan);background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.15);border-radius:4px;padding:.3rem .55rem;white-space:nowrap;text-align:center}
 .btn-remove-row{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:3px;color:#f87171;font-size:1rem;width:27px;height:27px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0;line-height:1}
 .btn-remove-row:hover{background:rgba(239,68,68,.22);color:var(--white)}
 /* TOTALS */
@@ -427,7 +434,7 @@ function addMesaFromTemplate() {
   if (!globalTables.length) return;
   globalTables.forEach(t => {
     if (!mesas.some(m => m.nombre === t.name)) {
-      mesas.push({ id: uid(), nombre: t.name, precio: t.price, minutos: 60 });
+      mesas.push({ id: uid(), nombre: t.name, precio: t.price, minutos: 0, horaEntrada: '', horaSalida: '' });
     }
   });
   renderMesas(); updateMesaSelectsInCards(); recalculate(); saveLocal(); pushGun();
@@ -464,8 +471,20 @@ function priceOpts(sel = 10) {
 }
 
 // ── MESAS ──
+function calcMins(entrada, salida) {
+  if (!entrada || !salida) return 0;
+  const [eh, em] = entrada.split(':').map(Number);
+  const [sh, sm] = salida.split(':').map(Number);
+  let mins = (sh * 60 + sm) - (eh * 60 + em);
+  return mins < 0 ? mins + 1440 : mins; // crosses midnight
+}
+function minsLabel(entrada, salida, fallback) {
+  const m = calcMins(entrada, salida);
+  return m > 0 ? `${m} min` : (fallback > 0 ? `${fallback} min` : '0 min');
+}
+
 function addMesa() {
-  mesas.push({ id: uid(), nombre: '', precio: 10, minutos: 60 });
+  mesas.push({ id: uid(), nombre: '', precio: 10, minutos: 0, horaEntrada: '', horaSalida: '' });
   renderMesas(); updateMesaSelectsInCards(); recalculate(); saveLocal(); pushGun();
 }
 function removeMesa(id) {
@@ -489,35 +508,49 @@ function onMesaName(id, value) {
 function renderMesas() {
   const c = document.getElementById('tablesList');
   if (!mesas.length) { c.innerHTML = '<div class="empty-state">Sin mesas. Añade una o usa la plantilla.</div>'; return; }
-  c.innerHTML = mesas.map(m => `
+  c.innerHTML = mesas.map(m => {
+    const mins = calcMins(m.horaEntrada, m.horaSalida) || m.minutos;
+    return `
     <div class="mesa-row">
-      <div>
-        <label>Nombre</label>
-        ${globalTables.length ? `<select style="margin-bottom:.3rem;font-size:.78rem;padding:.3rem .5rem;color:var(--silver-dim)"
-          onchange="if(this.value){const t=globalTables.find(x=>x.name===this.value);if(t){getMesa('${m.id}').nombre=t.name;getMesa('${m.id}').precio=t.price;renderMesas();updateMesaSelectsInCards();recalculate();saveLocal();pushGun()}}">
-          <option value="">— Seleccionar mesa —</option>
-          ${globalTables.map(t=>`<option value="${esc(t.name)}"${m.nombre===t.name?'selected':''}>${esc(t.name)} (${t.price}€/h)</option>`).join('')}
-        </select>` : ''}
-        <input type="text" id="mn_${m.id}" value="${esc(m.nombre)}" placeholder="Mesa" list="dlTables"
-          oninput="onMesaName('${m.id}',this.value)"
-          onchange="updateMesaSelectsInCards();recalculate()">
+      <div class="mesa-top">
+        <div>
+          <label>Nombre de mesa</label>
+          ${globalTables.length ? `<select style="margin-bottom:.3rem;font-size:.78rem;padding:.3rem .5rem;color:var(--silver-dim);width:100%"
+            onchange="if(this.value){const t=globalTables.find(x=>x.name===this.value);if(t){getMesa('${m.id}').nombre=t.name;getMesa('${m.id}').precio=t.price;renderMesas();updateMesaSelectsInCards();recalculate();saveLocal();pushGun()}}">
+            <option value="">— Seleccionar —</option>
+            ${globalTables.map(t=>`<option value="${esc(t.name)}"${m.nombre===t.name?'selected':''}>${esc(t.name)} (${t.price}€/h)</option>`).join('')}
+          </select>` : ''}
+          <input type="text" id="mn_${m.id}" value="${esc(m.nombre)}" placeholder="Mesa" list="dlTables"
+            oninput="onMesaName('${m.id}',this.value)" onchange="updateMesaSelectsInCards();recalculate()">
+        </div>
+        <div>
+          <label>€ / hora</label>
+          <select onchange="getMesa('${m.id}').precio=+this.value;recalculate();saveLocal();pushGun()">
+            ${priceOpts(m.precio)}
+          </select>
+        </div>
+        <div style="align-self:flex-end">
+          <button class="btn-remove" onclick="removeMesa('${m.id}')">✕</button>
+        </div>
       </div>
-      <div>
-        <label>€ / hora</label>
-        <select onchange="getMesa('${m.id}').precio=+this.value;recalculate();saveLocal();pushGun()">
-          ${priceOpts(m.precio)}
-        </select>
+      <div class="mesa-times">
+        <div>
+          <label>🕐 Hora entrada</label>
+          <input type="time" value="${m.horaEntrada||''}"
+            onchange="getMesa('${m.id}').horaEntrada=this.value;recalculate();saveLocal();pushGun()">
+        </div>
+        <div>
+          <label>🕐 Hora salida</label>
+          <input type="time" value="${m.horaSalida||''}"
+            onchange="getMesa('${m.id}').horaSalida=this.value;recalculate();saveLocal();pushGun()">
+        </div>
+        <div>
+          <label>Duración</label>
+          <div class="mins-display">${mins > 0 ? mins + ' min · ' + ((m.precio*mins/60).toFixed(2)) + '€' : '—'}</div>
+        </div>
       </div>
-      <div>
-        <label>Minutos</label>
-        <select onchange="getMesa('${m.id}').minutos=+this.value;recalculate();saveLocal();pushGun()">
-          ${minOpts(m.minutos)}
-        </select>
-      </div>
-      <div style="align-self:flex-end">
-        <button class="btn-remove" onclick="removeMesa('${m.id}')">✕</button>
-      </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // Update only the mesa <option> labels inside player cards (no full re-render)
@@ -545,7 +578,7 @@ function removeJugador(id) {
   document.getElementById('btnPlayerFromTemplate').style.display = jugadores.length >= 10 ? 'none' : '';
 }
 function addJugMesa(jid) {
-  getJug(jid).mesas.push({ mid: mesas[0]?.id || '', minutos: 0 });
+  getJug(jid).mesas.push({ mid: mesas[0]?.id || '', minutos: 0, horaEntrada: '', horaSalida: '' });
   renderJugadores(); recalculate(); saveLocal();
 }
 function removeJugMesa(jid, idx) {
@@ -573,16 +606,31 @@ function renderJugadores() {
         <button class="btn-remove" onclick="removeJugador('${j.id}')">✕</button>
       </div>
       <div class="pmrows">
-        ${j.mesas.map((jm, mi) => `
+        ${j.mesas.map((jm, mi) => {
+          const mins = calcMins(jm.horaEntrada, jm.horaSalida) || jm.minutos;
+          return `
           <div class="pmrow">
-            <select onchange="getJug('${j.id}').mesas[${mi}].mid=this.value;recalculate();saveLocal();pushGun()">
-              ${mesas.map(m => `<option value="${m.id}"${m.id === jm.mid ? ' selected' : ''}>${esc(m.nombre || '(sin nombre)')}</option>`).join('')}
-            </select>
-            <select onchange="getJug('${j.id}').mesas[${mi}].minutos=+this.value;recalculate();saveLocal();pushGun()">
-              ${minOpts(jm.minutos)}
-            </select>
-            <button class="btn-remove-row" onclick="removeJugMesa('${j.id}',${mi})">✕</button>
-          </div>`).join('')}
+            <div class="pmrow-top">
+              <select onchange="getJug('${j.id}').mesas[${mi}].mid=this.value;recalculate();saveLocal();pushGun()">
+                ${mesas.map(m => `<option value="${m.id}"${m.id === jm.mid ? ' selected' : ''}>${esc(m.nombre || '(sin nombre)')}</option>`).join('')}
+              </select>
+              <button class="btn-remove-row" onclick="removeJugMesa('${j.id}',${mi})">✕</button>
+            </div>
+            <div class="pmrow-times">
+              <div>
+                <label style="font-size:.58rem">Entrada</label>
+                <input type="time" value="${jm.horaEntrada||''}"
+                  onchange="getJug('${j.id}').mesas[${mi}].horaEntrada=this.value;recalculate();saveLocal();pushGun()">
+              </div>
+              <div>
+                <label style="font-size:.58rem">Salida</label>
+                <input type="time" value="${jm.horaSalida||''}"
+                  onchange="getJug('${j.id}').mesas[${mi}].horaSalida=this.value;recalculate();saveLocal();pushGun()">
+              </div>
+              <div class="pmrow-mins">${mins > 0 ? mins + 'min' : '—'}</div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
       ${mesas.length ? `<button class="btn-add-sm" onclick="addJugMesa('${j.id}')">+ Mesa</button>` : ''}
     </div>`).join('');
@@ -591,29 +639,36 @@ function renderJugadores() {
 // ── CÁLCULO ──
 function recalculate() {
   const mesaCost = {};
-  mesas.forEach(m => { mesaCost[m.id] = (m.precio * m.minutos) / 60; });
+  mesas.forEach(m => {
+    const mins = calcMins(m.horaEntrada, m.horaSalida) || m.minutos;
+    mesaCost[m.id] = { cost: (m.precio * mins) / 60, mins };
+  });
   const mesaTotalMin = {};
   jugadores.forEach(j => j.mesas.forEach(jm => {
-    mesaTotalMin[jm.mid] = (mesaTotalMin[jm.mid] || 0) + jm.minutos;
+    const mins = calcMins(jm.horaEntrada, jm.horaSalida) || jm.minutos;
+    mesaTotalMin[jm.mid] = (mesaTotalMin[jm.mid] || 0) + mins;
   }));
   const byName = {};
   jugadores.forEach(j => {
     const name = j.nombre.trim() || '?';
     if (!byName[name]) byName[name] = { total: 0, items: [] };
     j.mesas.forEach(jm => {
-      const m = getMesa(jm.mid); if (!m || !jm.minutos) return;
+      const m = getMesa(jm.mid); if (!m) return;
+      const jMins = calcMins(jm.horaEntrada, jm.horaSalida) || jm.minutos;
+      if (!jMins) return;
       const allMin = mesaTotalMin[jm.mid] || 0; if (!allMin) return;
-      const share = (jm.minutos / allMin) * (mesaCost[jm.mid] || 0);
+      const share = (jMins / allMin) * (mesaCost[jm.mid]?.cost || 0);
       byName[name].total += share;
-      byName[name].items.push(`${m.nombre || '?'} ${share.toFixed(2)}€`);
+      const timeStr = jm.horaEntrada && jm.horaSalida ? ` (${jm.horaEntrada}–${jm.horaSalida})` : ` (${jMins}min)`;
+      byName[name].items.push(`${m.nombre || '?'}${timeStr}: ${share.toFixed(2)}€`);
     });
     j._total = byName[name].total > 0 ? byName[name].total.toFixed(2) : '';
   });
-  const totalImporte = mesas.reduce((a, m) => a + (mesaCost[m.id] || 0), 0);
+  const totalImporte = Object.values(mesaCost).reduce((a, v) => a + v.cost, 0);
   const totalPagado  = Object.values(byName).reduce((a, p) => a + p.total, 0);
   const diff = totalImporte - totalPagado;
-  document.getElementById('totMesas').textContent    = mesas.length;
-  document.getElementById('totImporte').textContent  = totalImporte.toFixed(2) + '€';
+  document.getElementById('totMesas').textContent     = mesas.length;
+  document.getElementById('totImporte').textContent   = totalImporte.toFixed(2) + '€';
   document.getElementById('totJugadores').textContent = Object.keys(byName).filter(k => byName[k].total > 0).length;
   const dEl = document.getElementById('totDiff');
   dEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(2) + '€';
@@ -823,6 +878,15 @@ function parseCSVLine(line) {
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
+async function pingServer() {
+  try {
+    await fetch('https://gun-manhattan.herokuapp.com/gun', {
+      mode: 'no-cors', signal: AbortSignal.timeout(4000)
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sessionDate').value = new Date().toISOString().slice(0,10);
   initSession();
@@ -835,7 +899,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cfgKey').value = SUPA_KEY;
   initSupabase();
   renderAll();
-  setMode('local');
+  // Auto-connect en directo; si falla, pedir confirmación para solo local
+  setMode('live');
+  pingServer().then(ok => {
+    if (!ok) {
+      const goLocal = confirm('⚠ No se pudo conectar al servidor en tiempo real.\n¿Cambiar a modo solo local?');
+      if (goLocal) setMode('local');
+    }
+  });
   // Secret: 5 clicks on the header ball → open BD config
   let _bc = 0, _bt = null;
   document.querySelector('.ball').style.cursor = 'default';

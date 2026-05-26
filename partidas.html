@@ -734,6 +734,15 @@ function parseCSVLine(line) {
 // ══════════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════════
+async function pingServer() {
+  try {
+    await fetch('https://gun-manhattan.herokuapp.com/gun', {
+      mode: 'no-cors', signal: AbortSignal.timeout(4000)
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sessionDate').value = new Date().toISOString().slice(0,10);
   initSession();
@@ -743,7 +752,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cfgKey').value = SUPA_KEY;
   initSupabase();
   renderAll();
-  setMode('local');
+  setMode('live');
+  pingServer().then(ok => {
+    if (!ok) {
+      const goLocal = confirm('⚠ No se pudo conectar al servidor en tiempo real.\n¿Cambiar a modo solo local?');
+      if (goLocal) setMode('local');
+    }
+  });
   // Secret: 5 clicks on header ball → BD config
   let _bc = 0, _bt = null;
   document.querySelector('.ball').style.cursor = 'default';
