@@ -508,9 +508,7 @@ function onMesaName(id, value) {
 function renderMesas() {
   const c = document.getElementById('tablesList');
   if (!mesas.length) { c.innerHTML = '<div class="empty-state">Sin mesas. Añade una o usa la plantilla.</div>'; return; }
-  c.innerHTML = mesas.map(m => {
-    const mins = calcMins(m.horaEntrada, m.horaSalida) || m.minutos;
-    return `
+  c.innerHTML = mesas.map(m => `
     <div class="mesa-row">
       <div class="mesa-top">
         <div>
@@ -537,23 +535,29 @@ function renderMesas() {
         <div>
           <label>🕐 Hora entrada</label>
           <input type="time" value="${m.horaEntrada||''}"
-            onchange="getMesa('${m.id}').horaEntrada=this.value;recalculate();saveLocal();pushGun()">
+            onchange="getMesa('${m.id}').horaEntrada=this.value;copyMesaTimes('${m.id}');renderJugadores();recalculate();saveLocal();pushGun()">
         </div>
         <div>
           <label>🕐 Hora salida</label>
           <input type="time" value="${m.horaSalida||''}"
-            onchange="getMesa('${m.id}').horaSalida=this.value;recalculate();saveLocal();pushGun()">
-        </div>
-        <div>
-          <label>Duración</label>
-          <div class="mins-display">${mins > 0 ? mins + ' min · ' + ((m.precio*mins/60).toFixed(2)) + '€' : '—'}</div>
+            onchange="getMesa('${m.id}').horaSalida=this.value;copyMesaTimes('${m.id}');renderJugadores();recalculate();saveLocal();pushGun()">
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
-// Update only the mesa <option> labels inside player cards (no full re-render)
+// Auto-copy mesa times to players that have that mesa (only if player time is empty)
+function copyMesaTimes(mesaId) {
+  const m = getMesa(mesaId); if (!m) return;
+  jugadores.forEach(j => {
+    j.mesas.forEach(jm => {
+      if (jm.mid !== mesaId) return;
+      if (!jm.horaEntrada) jm.horaEntrada = m.horaEntrada;
+      if (!jm.horaSalida)  jm.horaSalida  = m.horaSalida;
+    });
+  });
+}
+
 function updateMesaSelectsInCards() {
   document.querySelectorAll('.pmrow select:first-child').forEach(sel => {
     const currentVal = sel.value;
@@ -578,7 +582,13 @@ function removeJugador(id) {
   document.getElementById('btnPlayerFromTemplate').style.display = jugadores.length >= 10 ? 'none' : '';
 }
 function addJugMesa(jid) {
-  getJug(jid).mesas.push({ mid: mesas[0]?.id || '', minutos: 0, horaEntrada: '', horaSalida: '' });
+  const firstMesaId = mesas[0]?.id || '';
+  const m = getMesa(firstMesaId);
+  getJug(jid).mesas.push({
+    mid: firstMesaId, minutos: 0,
+    horaEntrada: m?.horaEntrada || '',
+    horaSalida:  m?.horaSalida  || ''
+  });
   renderJugadores(); recalculate(); saveLocal();
 }
 function removeJugMesa(jid, idx) {
@@ -606,12 +616,10 @@ function renderJugadores() {
         <button class="btn-remove" onclick="removeJugador('${j.id}')">✕</button>
       </div>
       <div class="pmrows">
-        ${j.mesas.map((jm, mi) => {
-          const mins = calcMins(jm.horaEntrada, jm.horaSalida) || jm.minutos;
-          return `
+        ${j.mesas.map((jm, mi) => `
           <div class="pmrow">
             <div class="pmrow-top">
-              <select onchange="getJug('${j.id}').mesas[${mi}].mid=this.value;recalculate();saveLocal();pushGun()">
+              <select onchange="getJug('${j.id}').mesas[${mi}].mid=this.value;const m=getMesa(this.value);if(m){if(!getJug('${j.id}').mesas[${mi}].horaEntrada)getJug('${j.id}').mesas[${mi}].horaEntrada=m.horaEntrada;if(!getJug('${j.id}').mesas[${mi}].horaSalida)getJug('${j.id}').mesas[${mi}].horaSalida=m.horaSalida;}recalculate();saveLocal();pushGun()">
                 ${mesas.map(m => `<option value="${m.id}"${m.id === jm.mid ? ' selected' : ''}>${esc(m.nombre || '(sin nombre)')}</option>`).join('')}
               </select>
               <button class="btn-remove-row" onclick="removeJugMesa('${j.id}',${mi})">✕</button>
@@ -627,10 +635,8 @@ function renderJugadores() {
                 <input type="time" value="${jm.horaSalida||''}"
                   onchange="getJug('${j.id}').mesas[${mi}].horaSalida=this.value;recalculate();saveLocal();pushGun()">
               </div>
-              <div class="pmrow-mins">${mins > 0 ? mins + 'min' : '—'}</div>
             </div>
-          </div>`;
-        }).join('')}
+          </div>`).join('')}
       </div>
       ${mesas.length ? `<button class="btn-add-sm" onclick="addJugMesa('${j.id}')">+ Mesa</button>` : ''}
     </div>`).join('');
