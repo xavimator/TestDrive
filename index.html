@@ -2179,6 +2179,9 @@
                 const isCenter = CENTER.includes(idx);
                 if(tile===null) return <div key="empty" data-tut={isCenter?'center':undefined} style={{width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',background:'rgba(0,0,0,.3)',border:'2px dashed rgba(255,255,255,.08)'}}/>;
                 const c=colorMap[tile.colorId], isAdj=canMove(idx,ei);
+                const col = idx % 5;
+                const row = Math.floor(idx / 5);
+                const coord = String.fromCharCode(65+col) + (row+1);
                 return (
                   <button key={`${tile.colorId}-${tile.num}`} className="tile-btn"
                           data-tut={isCenter?'center':undefined}
@@ -2197,6 +2200,17 @@
                     position:'relative',overflow:'hidden',
                   }}>
                     <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',borderRadius:'8px 8px 50% 50%',background:'linear-gradient(to bottom,rgba(255,255,255,.2),transparent)',pointerEvents:'none'}}/>
+                    {voiceOn && isAdj && (
+                      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',
+                                   justifyContent:'center',pointerEvents:'none',
+                                   background:'rgba(0,0,0,.45)',borderRadius:'8px'}}>
+                        <span style={{fontFamily:"'Pacifico',cursive",fontSize:'clamp(13px,3.5vw,18px)',
+                                      color:'#fff',textShadow:'0 1px 6px rgba(0,0,0,.8)',
+                                      letterSpacing:'.05em'}}>
+                          {coord}
+                        </span>
+                      </div>
+                    )}
                   </button>
                 );
               })}
