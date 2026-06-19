@@ -1316,6 +1316,7 @@
       document.getElementById('toast-container').appendChild(el);
       setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),300); },3000);
     }
+    window.showDiscreteToast = showDiscreteToast;
     window.__fbPresenceReceived = function(players) {
       const cur=new Set(players.map(p=>p.name));
       cur.forEach(n=>{ if(!_prevNames.has(n)&&_prevNames.size>0) showDiscreteToast('🟢', window.T.connected(n),'#22c55e'); });
@@ -1968,16 +1969,56 @@
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) return;
         const r = new SR();
-        r.lang = navigator.language || 'es-ES';
+        r.lang = 'en-US';
         r.continuous = true;
         r.interimResults = false;
+        r.maxAlternatives = 5;
+
+        const LETTER_WORDS = {
+          A:'A', AY:'A', HEY:'A', HEI:'A', EH:'A',
+          B:'B', BE:'B', BEE:'B',
+          C:'C', SEE:'C', SEA:'C',
+          D:'D', DEE:'D', THE:'D',
+          E:'E', EE:'E',
+        };
+        const NUM_WORDS = {
+          ONE:'1', WON:'1', TO:'2', TWO:'2', TOO:'2',
+          THREE:'3', TREE:'3', FOR:'4', FOUR:'4', FORE:'4',
+          FIVE:'5', FIE:'5',
+        };
+
+        const parseCoord = (raw) => {
+          let txt = raw.trim().toUpperCase();
+          // Try direct pattern first: "A3", "A 3", "A-3"
+          let m = txt.replace(/[^A-Z0-9]/g,'').match(/^([A-E])([1-5])$/);
+          if (m) return [m[1], m[2]];
+          // Try word-by-word: split on spaces/punct, map words to letter+digit
+          const words = txt.split(/[^A-Z0-9]+/).filter(Boolean);
+          let letter=null, num=null;
+          for (const w of words) {
+            if (!letter) {
+              if (/^[A-E]$/.test(w)) letter=w;
+              else if (LETTER_WORDS[w]) letter=LETTER_WORDS[w];
+            }
+            if (!num) {
+              if (/^[1-5]$/.test(w)) num=w;
+              else if (NUM_WORDS[w]) num=NUM_WORDS[w];
+            }
+          }
+          if (letter && num) return [letter, num];
+          return null;
+        };
+
         r.onresult = e => {
-          const txt = e.results[e.results.length-1][0].transcript.trim().toUpperCase().replace(/\s/g,'');
-          const m = txt.match(/([A-E])([1-5])/);
-          if (m) {
-            const col = m[1].charCodeAt(0)-65; // A=0..E=4
-            const row = parseInt(m[2])-1;       // 1=0..5=4
-            handleTile(row*5+col);
+          const res = e.results[e.results.length-1];
+          for (let i=0; i<res.length; i++) {
+            const parsed = parseCoord(res[i].transcript);
+            if (parsed) {
+              const col = parsed[0].charCodeAt(0)-65;
+              const row = parseInt(parsed[1])-1;
+              handleTile(row*5+col);
+              break;
+            }
           }
         };
         r.onerror = () => { setVoiceOn(false); };
@@ -1990,6 +2031,23 @@
       const stopVoice = useCallback(() => {
         if (voiceRef.current) { voiceRef.current.onend=null; voiceRef.current.stop(); voiceRef.current=null; }
         setVoiceOn(false);
+      }, []);
+
+      // Long-press anywhere (1s) toggles voice control
+      const pressTimerRef = useRef(null);
+      const pressFiredRef = useRef(false);
+      const handlePressStart = useCallback((e) => {
+        if (e.target.closest('button, input, .tile-btn, .help-btn')) return; // ignore presses on interactive elements
+        pressFiredRef.current = false;
+        pressTimerRef.current = setTimeout(() => {
+          pressFiredRef.current = true;
+          if (navigator.vibrate) navigator.vibrate(40);
+          if (voiceRef.current) { stopVoice(); window.showDiscreteToast?.('🎙️', window.T.voiceOff, '#6b7280'); }
+          else { startVoice(); window.showDiscreteToast?.('🎙️', window.T.voiceOn, '#c89fff'); }
+        }, 1000);
+      }, [startVoice, stopVoice]);
+      const handlePressEnd = useCallback(() => {
+        if (pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current=null; }
       }, []);
 
       useEffect(() => () => { if(voiceRef.current){voiceRef.current.onend=null;voiceRef.current.stop();} }, []);
@@ -2062,7 +2120,10 @@
       const ei=tiles.indexOf(null);
 
       return (
-        <div style={{
+        <div
+          onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onMouseLeave={handlePressEnd}
+          onTouchStart={handlePressStart} onTouchEnd={handlePressEnd} onTouchCancel={handlePressEnd}
+          style={{
           minHeight:'100vh',
           background:'radial-gradient(ellipse at 30% 20%,#1a1035 0%,#0a0818 60%,#000508 100%)',
           display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
@@ -2144,14 +2205,36 @@
           </div>
 
           {/* Stats */}
-          <div style={{display:'flex',gap:'28px',marginBottom:'16px',background:'rgba(255,255,255,.06)',borderRadius:'12px',padding:'10px 28px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)'}}>
-            {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
-              <div key={s.label} style={{textAlign:'center'}}>
-                <div style={{fontSize:'22px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
-                <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
-              </div>
-            ))}
+          <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'16px'}}>
+            <div style={{display:'flex',gap:'28px',background:'rgba(255,255,255,.06)',borderRadius:'12px',padding:'10px 28px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)'}}>
+              {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
+                <div key={s.label} style={{textAlign:'center'}}>
+                  <div style={{fontSize:'22px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
+                  <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {(window.SpeechRecognition||window.webkitSpeechRecognition) && (
+              <button onClick={voiceOn?stopVoice:startVoice} title={voiceOn?window.T.voiceOn:window.T.voiceOff}
+                      style={{width:'40px',height:'40px',borderRadius:'50%',flexShrink:0,
+                              border:`1px solid ${voiceOn?'rgba(239,68,68,.6)':'rgba(156,90,255,.35)'}`,
+                              background:voiceOn?'rgba(239,68,68,.15)':'rgba(255,255,255,.06)',
+                              display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',
+                              animation:voiceOn?'voicePulse 1.2s ease-in-out infinite':'none',
+                              backdropFilter:'blur(8px)',padding:0}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  {/* Mouth */}
+                  <path d="M5 12c0-1.5 2.5-2.5 7-2.5s7 1 7 2.5-2.5 2.5-7 2.5-7-1-7-2.5z"
+                        fill={voiceOn?'#f87171':'#c89fff'} opacity="0.9"/>
+                  <ellipse cx="12" cy="12" rx="2.2" ry="1.3" fill={voiceOn?'#7a1a1a':'#3a1a5c'}/>
+                  {/* Sound waves */}
+                  <path d="M21 9c1 1 1 5 0 6" stroke={voiceOn?'#f87171':'#c89fff'} strokeWidth="1.6" strokeLinecap="round"/>
+                  <path d="M23.2 7c1.8 2 1.8 8 0 10" stroke={voiceOn?'#f87171':'#c89fff'} strokeWidth="1.4" strokeLinecap="round" opacity="0.6"/>
+                </svg>
+              </button>
+            )}
           </div>
+
 
           {/* Board */}
           <div style={{position:'relative'}} ref={boardRef}>
@@ -2204,8 +2287,7 @@
                       <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',
                                    justifyContent:'center',pointerEvents:'none',
                                    background:'rgba(0,0,0,.5)',borderRadius:'8px'}}>
-                        <span style={{fontWeight:900,letterSpacing:'.15em',textTransform:'uppercase',
-                                      fontSize:'clamp(13px,3.8vw,18px)',
+                        <span style={{fontFamily:"'Pacifico',cursive",fontSize:'clamp(13px,3.8vw,18px)',
                                       background:'linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A)',
                                       backgroundSize:'300% auto',
                                       WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
@@ -2222,20 +2304,6 @@
             </div>{/* end flex row (row labels + grid) */}
             {finished && <div className="finished-frame"><div className="finished-text">{window.T.finished}</div></div>}
           </div>{/* end board wrapper */}
-
-          {/* Voice button */}
-          {(window.SpeechRecognition||window.webkitSpeechRecognition) && (
-            <button onClick={voiceOn?stopVoice:startVoice}
-                    style={{marginTop:'12px',padding:'9px 22px',borderRadius:'20px',
-                            border:`1px solid ${voiceOn?'rgba(239,68,68,.6)':'rgba(156,90,255,.4)'}`,
-                            background:voiceOn?'rgba(239,68,68,.15)':'rgba(156,90,255,.1)',
-                            color:voiceOn?'#f87171':'#c89fff',fontSize:'13px',fontWeight:700,
-                            cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',
-                            animation:voiceOn?'voicePulse 1.2s ease-in-out infinite':'none'}}>
-              <span style={{fontSize:'18px'}}>{voiceOn?'🎙️':'🎤'}</span>
-              {voiceOn ? (window.T.voiceOn||'Escuchando…') : (window.T.voiceOff||'Voz')}
-            </button>
-          )}
 
           {/* Reset */}
           <button onClick={handleReset} style={{marginTop:'18px',padding:'11px 32px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'13px',fontWeight:700,letterSpacing:'.15em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
