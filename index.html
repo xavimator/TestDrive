@@ -1965,6 +1965,8 @@
       const [voiceOn,    setVoiceOn]    = useState(false);
       const voiceRef = useRef(null);
 
+      const handleTileRef = useRef(null);
+
       const startVoice = useCallback(() => {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) return;
@@ -2016,7 +2018,7 @@
             if (parsed) {
               const col = parsed[0].charCodeAt(0)-65;
               const row = parseInt(parsed[1])-1;
-              handleTile(row*5+col);
+              handleTileRef.current?.(row*5+col);
               break;
             }
           }
@@ -2026,7 +2028,7 @@
         voiceRef.current = r;
         r.start();
         setVoiceOn(true);
-      }, [handleTile]);
+      }, []);
 
       const stopVoice = useCallback(() => {
         if (voiceRef.current) { voiceRef.current.onend=null; voiceRef.current.stop(); voiceRef.current=null; }
@@ -2088,6 +2090,8 @@
           },50);
         }
       }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode]);
+
+      useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
       const doLocalReset = () => {
         setTiles(shuffle(buildSolved())); setMoves(0); setTime(0); setFinished(false);
