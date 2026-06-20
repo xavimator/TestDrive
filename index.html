@@ -2094,9 +2094,10 @@
       useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
       const doLocalReset = () => {
-        setTiles(shuffle(buildSolved())); setMoves(0); setTime(0); setFinished(false);
+        setTiles(shuffle(buildSolved())); setMoves(0); setFinished(false);
         setLastMoved(null); finishedRef.current=false; nearWinSentRef.current=false;
         window.__fbUpdatePresence?.(SESSION_UID, playerName, false);
+        startCountdown();
       };
 
       const handleReset = () => {
