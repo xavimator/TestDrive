@@ -633,6 +633,11 @@
         chooseLevel: 'Nivel de dificultad',
         levelShort: (n) => `Nivel ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: '¿Tienes un código?',
+        level8CodePlaceholder: 'Código secreto',
+        unlock: 'Desbloquear',
+        codeWrong: 'Código incorrecto',
         newGame: '🎮 Nueva partida',
         joinWithCode: '🔗 Unirse con código',
         gameCode: 'Código de partida',
@@ -700,6 +705,11 @@
         chooseLevel: 'Nivell de dificultat',
         levelShort: (n) => `Nivell ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Tens un codi?',
+        level8CodePlaceholder: 'Codi secret',
+        unlock: 'Desbloqueja',
+        codeWrong: 'Codi incorrecte',
         newGame: '🎮 Nova partida',
         joinWithCode: '🔗 Unir-se amb codi',
         gameCode: 'Codi de partida',
@@ -760,6 +770,11 @@
         chooseLevel: 'Difficulty level',
         levelShort: (n) => `Level ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Got a code?',
+        level8CodePlaceholder: 'Secret code',
+        unlock: 'Unlock',
+        codeWrong: 'Wrong code',
         newGame: '🎮 New game',
         joinWithCode: '🔗 Join with code',
         gameCode: 'Game code',
@@ -820,6 +835,11 @@
         chooseLevel: 'Niveau de difficulté',
         levelShort: (n) => `Niveau ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Tu as un code\u00a0?',
+        level8CodePlaceholder: 'Code secret',
+        unlock: 'D\u00e9bloquer',
+        codeWrong: 'Code incorrect',
         newGame: '🎮 Nouvelle partie',
         joinWithCode: '🔗 Rejoindre avec un code',
         gameCode: 'Code de partie',
@@ -880,6 +900,11 @@
         chooseLevel: 'Schwierigkeitsgrad',
         levelShort: (n) => `Stufe ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Hast du einen Code?',
+        level8CodePlaceholder: 'Geheimcode',
+        unlock: 'Freischalten',
+        codeWrong: 'Falscher Code',
         newGame: '🎮 Neues Spiel',
         joinWithCode: '🔗 Mit Code beitreten',
         gameCode: 'Spielcode',
@@ -940,6 +965,11 @@
         chooseLevel: 'Nível de dificuldade',
         levelShort: (n) => `Nível ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Tens um c\u00f3digo?',
+        level8CodePlaceholder: 'C\u00f3digo secreto',
+        unlock: 'Desbloquear',
+        codeWrong: 'C\u00f3digo incorreto',
         newGame: '🎮 Nova partida',
         joinWithCode: '🔗 Entrar com código',
         gameCode: 'Código da partida',
@@ -1000,6 +1030,11 @@
         chooseLevel: 'Livello di difficoltà',
         levelShort: (n) => `Livello ${n}`,
         brainMelt: 'Brain Melt',
+        mosaicCross: 'Mosaic Cross',
+        haveCode: 'Hai un codice?',
+        level8CodePlaceholder: 'Codice segreto',
+        unlock: 'Sblocca',
+        codeWrong: 'Codice errato',
         newGame: '🎮 Nuova partita',
         joinWithCode: '🔗 Unisciti con codice',
         gameCode: 'Codice partita',
@@ -1084,6 +1119,7 @@
     @keyframes tileSlide  { from{transform:scale(0.92)} to{transform:scale(1)} }
     @keyframes widgetIn   { from{transform:translateY(-14px) scale(.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
     @keyframes panelIn    { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes level8In   { 0%{transform:scale(0.3) rotate(-25deg);opacity:0} 60%{transform:scale(1.15) rotate(8deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
     @keyframes finishPop  { 0%{transform:scale(.5) rotate(-8deg);opacity:0} 70%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
     @keyframes frameIn    { from{opacity:0} to{opacity:1} }
     @keyframes glowPulse  { 0%,100%{filter:drop-shadow(0 0 8px rgba(255,200,80,.4))} 50%{filter:drop-shadow(0 0 20px rgba(255,200,80,.9))} }
@@ -1358,8 +1394,33 @@
       { level:5, patternSize:6, boardSize:8,  tileMin:31, tileMax:40 },
       { level:6, patternSize:7, boardSize:9,  tileMin:27, tileMax:34 },
       { level:7, patternSize:8, boardSize:10, tileMin:23, tileMax:30, brainMelt:true },
+      { level:8, special:'cross', boardSize:11, tileMin:19, tileMax:25, hidden:true },
     ];
     window.RR_LEVEL_INFO = (lvl) => window.RR_LEVELS.find(l=>l.level===lvl) || window.RR_LEVELS[1];
+    window.RR_SECRET_CODE = 'PENTA5';
+
+    // Nivel 8 — "Mosaic Cross": 5 tableros 5×5 (uno en cada esquina + uno central)
+    // dentro de una cuadrícula 11×11, con solape 2×2 en las diagonales y 12 casillas
+    // huérfanas eliminadas (3 en cada lado medio: arriba/abajo/izquierda/derecha).
+    function computeCrossShape() {
+      const N = 11;
+      const corners = [[0,4,0,4],[0,4,6,10],[6,10,0,4],[6,10,6,10]];
+      const center  = [3,7,3,7];
+      const inR = (v,a,b) => v>=a && v<=b;
+      const valid = new Set();
+      for (let r=0;r<N;r++) for (let c=0;c<N;c++) {
+        const inCorner = corners.some(([r0,r1,c0,c1]) => inR(r,r0,r1) && inR(c,c0,c1));
+        const inCenter = inR(r,center[0],center[1]) && inR(c,center[2],center[3]);
+        if (inCorner || inCenter) valid.add(r*N+c);
+      }
+      // Patrón objetivo: un parche 3×3 en el centro de cada uno de los 5 tableros
+      const subCenters = [[1,3,1,3],[1,3,7,9],[7,9,1,3],[7,9,7,9],[4,6,4,6]];
+      const patternIndices = [];
+      for (const [r0,r1,c0,c1] of subCenters)
+        for (let r=r0;r<=r1;r++) for (let c=c0;c<=c1;c++) patternIndices.push(r*N+c);
+      return { N, validIndices:[...valid].sort((a,b)=>a-b), patternIndices };
+    }
+    window.RR_CROSS_SHAPE = computeCrossShape();
 
     let rrOpen = false, fbConnected = false;
     window.rrPattern = [];
@@ -1372,21 +1433,46 @@
     function rrApplyPattern(pattern) {
       window.rrPattern=pattern;
       const n = pattern.length;
-      const size = Math.max(1, Math.round(Math.sqrt(n)));
-
-      // Reconstruye el grid expandido si el tamaño del patrón cambió
+      const isCross = n === window.RR_CROSS_SHAPE.patternIndices.length;
       const grid = document.getElementById('rr-grid');
-      if (grid && grid.children.length !== n) {
-        grid.innerHTML = '';
-        grid.style.gridTemplateColumns = `repeat(${size}, var(--tile))`;
-        for (let i=0;i<n;i++){ const c=document.createElement('div'); c.className='rrcell'; grid.appendChild(c); }
+
+      if (isCross) {
+        // Construye el grid 11×11 con huecos, mostrando sólo las 45 celdas del patrón
+        const shape = window.RR_CROSS_SHAPE;
+        const total = shape.N * shape.N;
+        if (grid && (grid.dataset.mode !== 'cross')) {
+          grid.innerHTML = '';
+          grid.dataset.mode = 'cross';
+          grid.style.gridTemplateColumns = `repeat(${shape.N}, var(--tile))`;
+          const validSet = new Set(shape.validIndices);
+          const patSet = new Set(shape.patternIndices);
+          for (let i=0;i<total;i++){
+            const c = document.createElement('div');
+            if (!validSet.has(i)) { c.style.visibility='hidden'; }
+            else if (!patSet.has(i)) { c.className='rrcell'; c.style.background='rgba(255,255,255,.05)'; c.style.borderColor='rgba(255,255,255,.08)'; }
+            else { c.className='rrcell rrcell-pat'; }
+            grid.appendChild(c);
+          }
+        }
+        const patCells = grid.querySelectorAll('.rrcell-pat');
+        patCells.forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
+      } else {
+        const size = Math.max(1, Math.round(Math.sqrt(n)));
+        if (grid && (grid.children.length !== n || grid.dataset.mode === 'cross')) {
+          grid.innerHTML = '';
+          grid.dataset.mode = 'square';
+          grid.style.gridTemplateColumns = `repeat(${size}, var(--tile))`;
+          for (let i=0;i<n;i++){ const c=document.createElement('div'); c.className='rrcell'; grid.appendChild(c); }
+        }
+        document.querySelectorAll('#rr-grid .rrcell').forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
       }
-      document.querySelectorAll('.rrcell').forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
+
       // Icono miniatura: siempre una muestra representativa 3×3
       document.querySelectorAll('#rr-preview span').forEach((d,i)=>{ const col=RR_COLORS[pattern[i%n]]; d.style.background=col.bg; d.style.borderColor=col.border; });
       // Badge de tamaño de tablero
       const badge = document.getElementById('rr-level-badge');
-      const lvlInfo = (window.RR_LEVELS||[]).find(l=>l.patternSize===size);
+      const lvlInfo = isCross ? window.RR_LEVELS.find(l=>l.special==='cross')
+                               : (window.RR_LEVELS||[]).find(l=>l.patternSize===Math.round(Math.sqrt(n)));
       if (badge) badge.textContent = lvlInfo ? `${lvlInfo.boardSize}×${lvlInfo.boardSize}` : '';
       window.dispatchEvent(new CustomEvent('rrPatternChange',{detail:pattern}));
     }
@@ -1442,8 +1528,7 @@
       document.getElementById('rr-shuffle').disabled=!ok;
     };
 
-    function rrGenPattern(size) {
-      const n = size*size;
+    function rrGenPattern(n) {
       const cap = Math.ceil(n / RR_COLORS.length);
       const r=[],c=new Array(RR_COLORS.length).fill(0);
       for(let i=0;i<n;i++){const a=RR_COLORS.map((_,i)=>i).filter(i=>c[i]<cap);const p=a[Math.floor(Math.random()*a.length)];c[p]++;r.push(p);}
@@ -1451,7 +1536,8 @@
     }
     function rrShuffle() {
       const info = window.RR_LEVEL_INFO(window.__rrLevel || 2);
-      const p = rrGenPattern(info.patternSize);
+      const n = info.special==='cross' ? window.RR_CROSS_SHAPE.patternIndices.length : info.patternSize*info.patternSize;
+      const p = rrGenPattern(n);
       if(window.__fbSetPattern) window.__fbSetPattern(p); else rrApplyPattern(p);
     }
     window.rrShuffle=rrShuffle;
@@ -1492,15 +1578,36 @@
       return arr;
     }
     function checkMatch(tiles,pat,center){ if(!pat||!center||pat.length<center.length)return false; return center.every((ti,i)=>{const t=tiles[ti];return t&&t.colorId===RR_IDS[pat[i]];}); }
-    function buildSolved(boardSize){
-      const total = boardSize*boardSize-1;
-      const t=[]; const counts={};
-      for(let i=0;i<total;i++){ const c=COLORS[i%COLORS.length]; counts[c.id]=(counts[c.id]||0)+1; t.push({colorId:c.id,num:counts[c.id]}); }
-      t.push(null);
+    // mask (Set opcional): índices válidos del tablero. Si se omite, el tablero es un cuadrado completo boardSize×boardSize.
+    function buildSolved(boardSize, mask){
+      const validIdxs = mask ? [...mask] : Array.from({length:boardSize*boardSize},(_,i)=>i);
+      const total = validIdxs.length-1;
+      const t = new Array(boardSize*boardSize); // undefined = casilla inexistente (hueco de la forma)
+      const counts={};
+      validIdxs.forEach((idx,i)=>{
+        if (i<total) { const c=COLORS[i%COLORS.length]; counts[c.id]=(counts[c.id]||0)+1; t[idx]={colorId:c.id,num:counts[c.id]}; }
+        else t[idx]=null;
+      });
       return t;
     }
-    function canMove(ti,ei,boardSize){ const tR=Math.floor(ti/boardSize),tC=ti%boardSize,eR=Math.floor(ei/boardSize),eC=ei%boardSize; return(tR===eR&&Math.abs(tC-eC)===1)||(tC===eC&&Math.abs(tR-eR)===1); }
-    function shuffle(tiles,boardSize,n=300){ let t=[...tiles],e=t.indexOf(null); for(let i=0;i<n;i++){const nb=[],r=Math.floor(e/boardSize),c=e%boardSize;if(r>0)nb.push(e-boardSize);if(r<boardSize-1)nb.push(e+boardSize);if(c>0)nb.push(e-1);if(c<boardSize-1)nb.push(e+1);const p=nb[Math.floor(Math.random()*nb.length)];[t[e],t[p]]=[t[p],t[e]];e=p;} return t; }
+    function canMove(ti,ei,boardSize,mask){
+      if (mask && (!mask.has(ti) || !mask.has(ei))) return false;
+      const tR=Math.floor(ti/boardSize),tC=ti%boardSize,eR=Math.floor(ei/boardSize),eC=ei%boardSize;
+      return(tR===eR&&Math.abs(tC-eC)===1)||(tC===eC&&Math.abs(tR-eR)===1);
+    }
+    function shuffle(tiles,boardSize,n=300,mask){
+      let t=[...tiles],e=t.indexOf(null);
+      for(let i=0;i<n;i++){
+        const cand=[],r=Math.floor(e/boardSize),c=e%boardSize;
+        if(r>0)cand.push(e-boardSize); if(r<boardSize-1)cand.push(e+boardSize);
+        if(c>0)cand.push(e-1); if(c<boardSize-1)cand.push(e+1);
+        const nb = mask ? cand.filter(p=>mask.has(p)) : cand;
+        if (!nb.length) continue;
+        const p=nb[Math.floor(Math.random()*nb.length)];
+        [t[e],t[p]]=[t[p],t[e]]; e=p;
+      }
+      return t;
+    }
     function fmt(s){return`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;}
 
     /* ─── Stars ─── */
@@ -1526,11 +1633,47 @@
       const [games,    setGames]    = useState([]);
       const [level,    setLevel]    = useState(()=>{
         const saved = parseInt(localStorage.getItem('rr-level'),10);
-        return (saved>=1 && saved<=7) ? saved : 2;
+        return (saved>=1 && saved<=8) ? saved : 2;
       });
 
       const nameOk = name.trim().length > 0;
       const [rankName, setRankName] = useState('');
+
+      // ── Nivel 8 oculto: se desbloquea por nombre 'Rubiking', código secreto,
+      // o haber completado en solo los 7 niveles normales ──
+      const [level8Unlocked, setLevel8Unlocked] = useState(false);
+      const [showCodeBox,    setShowCodeBox]    = useState(false);
+      const [codeInput,      setCodeInput]      = useState('');
+      const [codeError,      setCodeError]      = useState('');
+
+      const checkLevel8 = useCallback(() => {
+        let done = [];
+        try { done = JSON.parse(localStorage.getItem('rr-solo-completed')||'[]'); } catch(e) {}
+        const allDone = [1,2,3,4,5,6,7].every(l=>done.includes(l));
+        const isRubiking = name.trim().toLowerCase() === 'rubiking';
+        const codeUnlocked = localStorage.getItem('rr-level8-code') === '1';
+        const unlocked = allDone || isRubiking || codeUnlocked;
+        if (unlocked) {
+          setLevel8Unlocked(true);
+          if (!localStorage.getItem('rr-level8-seen')) {
+            localStorage.setItem('rr-level8-seen','1');
+            window.playChime?.();
+          }
+        }
+        return unlocked;
+      }, [name]);
+
+      useEffect(() => { checkLevel8(); }, [checkLevel8]);
+
+      const tryUnlockCode = () => {
+        if (codeInput.trim().toUpperCase() === window.RR_SECRET_CODE) {
+          localStorage.setItem('rr-level8-code','1');
+          setCodeError(''); setShowCodeBox(false); setCodeInput('');
+          checkLevel8();
+        } else {
+          setCodeError(window.T.codeWrong);
+        }
+      };
 
       // Comprobar conflicto de nombre (debounced)
       useEffect(() => {
@@ -1662,26 +1805,26 @@
               )}
             </div>
 
-            <div className="lobby-divider"/>
-
             {/* Nivel de dificultad */}
             <div>
               <div className="lobby-label" style={{marginBottom:'8px'}}>{window.T.chooseLevel}</div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'6px'}}>
-                {window.RR_LEVELS.map(lv=>{
+                {window.RR_LEVELS.filter(lv=>!lv.hidden || level8Unlocked).map(lv=>{
                   const active = level===lv.level;
+                  const isSpecial = lv.special==='cross';
                   return (
                     <button key={lv.level} onClick={()=>setLevel(lv.level)}
-                      title={`${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
+                      title={isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
                       style={{
                         position:'relative',padding:'8px 4px',borderRadius:'9px',cursor:'pointer',
-                        border:`1px solid ${active?'rgba(156,90,255,.8)':'rgba(255,255,255,.12)'}`,
-                        background:active?'rgba(156,90,255,.22)':'rgba(255,255,255,.04)',
-                        color:active?'#fff':'rgba(255,255,255,.65)',
+                        border:`1px solid ${active?'rgba(156,90,255,.8)':isSpecial?'rgba(255,200,80,.55)':'rgba(255,255,255,.12)'}`,
+                        background:active?'rgba(156,90,255,.22)':isSpecial?'rgba(255,200,80,.1)':'rgba(255,255,255,.04)',
+                        color:active?'#fff':isSpecial?'#FFD27A':'rgba(255,255,255,.65)',
                         fontWeight:800,fontSize:'14px',transition:'all .15s',
-                        boxShadow:active?'0 0 14px rgba(156,90,255,.4)':'none',
+                        boxShadow:active?'0 0 14px rgba(156,90,255,.4)':isSpecial?'0 0 10px rgba(255,200,80,.35)':'none',
+                        animation:isSpecial?'level8In .5s ease':'none',
                       }}>
-                      {lv.level}
+                      {isSpecial ? '✛' : lv.level}
                       {lv.brainMelt && (
                         <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
                                      filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
@@ -1691,12 +1834,43 @@
                 })}
               </div>
               <div style={{marginTop:'7px',fontSize:'11px',color:'rgba(255,255,255,.4)',textAlign:'center'}}>
-                {window.RR_LEVEL_INFO(level).boardSize}×{window.RR_LEVEL_INFO(level).boardSize}
-                {' · '}
-                {window.RR_LEVEL_INFO(level).patternSize}×{window.RR_LEVEL_INFO(level).patternSize}
-                {' '}{window.T.patternLabel}
-                {window.RR_LEVEL_INFO(level).brainMelt && <span style={{color:'#FFA85C',fontWeight:800}}> · {window.T.brainMelt} 🔥</span>}
+                {window.RR_LEVEL_INFO(level).special==='cross' ? (
+                  <span style={{color:'#FFD27A',fontWeight:800}}>✛ {window.T.mosaicCross} · 11×11</span>
+                ) : (
+                  <>
+                    {window.RR_LEVEL_INFO(level).boardSize}×{window.RR_LEVEL_INFO(level).boardSize}
+                    {' · '}
+                    {window.RR_LEVEL_INFO(level).patternSize}×{window.RR_LEVEL_INFO(level).patternSize}
+                    {' '}{window.T.patternLabel}
+                    {window.RR_LEVEL_INFO(level).brainMelt && <span style={{color:'#FFA85C',fontWeight:800}}> · {window.T.brainMelt} 🔥</span>}
+                  </>
+                )}
               </div>
+
+              {!level8Unlocked && (
+                <div style={{marginTop:'10px',textAlign:'center'}}>
+                  <button onClick={()=>setShowCodeBox(s=>!s)}
+                    style={{background:'none',border:'none',color:'rgba(255,255,255,.3)',
+                            fontSize:'11px',cursor:'pointer',textDecoration:'underline'}}>
+                    {window.T.haveCode}
+                  </button>
+                  {showCodeBox && (
+                    <div style={{display:'flex',gap:'6px',marginTop:'8px'}}>
+                      <input value={codeInput} onChange={e=>{setCodeInput(e.target.value);setCodeError('');}}
+                             placeholder={window.T.level8CodePlaceholder}
+                             onKeyDown={e=>e.key==='Enter' && tryUnlockCode()}
+                             style={{flex:1,padding:'8px 10px',borderRadius:'8px',border:'1px solid rgba(255,255,255,.15)',
+                                     background:'rgba(255,255,255,.05)',color:'#fff',fontSize:'12px',letterSpacing:'.1em'}}/>
+                      <button onClick={tryUnlockCode}
+                        style={{padding:'8px 14px',borderRadius:'8px',border:'none',background:'#7c3aed',
+                                color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
+                        {window.T.unlock}
+                      </button>
+                    </div>
+                  )}
+                  {codeError && <div style={{color:'#f87171',fontSize:'11px',marginTop:'6px'}}>{codeError}</div>}
+                </div>
+              )}
             </div>
 
             <div className="lobby-divider"/>
@@ -2089,10 +2263,12 @@
     /* ─── Game ─── */
     function Game({ playerName, gameCode, level, onLeave }) {
       const LV = window.RR_LEVEL_INFO(level);
+      const isCross = LV.special === 'cross';
       const boardSize = LV.boardSize, patternSize = LV.patternSize;
-      const CENTER = computeCenter(boardSize, patternSize);
+      const mask = isCross ? new Set(window.RR_CROSS_SHAPE.validIndices) : null;
+      const CENTER = isCross ? window.RR_CROSS_SHAPE.patternIndices : computeCenter(boardSize, patternSize);
 
-      const [tiles,       setTiles]        = useState(()=>shuffle(buildSolved(boardSize), boardSize));
+      const [tiles,       setTiles]        = useState(()=>shuffle(buildSolved(boardSize, mask), boardSize, 300, mask));
       const [moves,       setMoves]        = useState(0);
       const [time,        setTime]         = useState(0);
       const [finished,    setFinished]     = useState(false);
@@ -2294,7 +2470,8 @@
             if (parsed) {
               const col = parsed[0].charCodeAt(0)-65;
               const row = parseInt(parsed[1])-1;
-              if (col < boardSize && row < boardSize) handleTileRef.current?.(row*boardSize+col);
+              const idx = row*boardSize+col;
+              if (col < boardSize && row < boardSize && (!mask || mask.has(idx))) handleTileRef.current?.(idx);
               break;
             }
           }
@@ -2334,7 +2511,7 @@
       const handleTile = useCallback((idx) => {
         if (finished || countdown !== null) return;
         const ei=tiles.indexOf(null);
-        if (!canMove(idx,ei,boardSize)) return;
+        if (!canMove(idx,ei,boardSize,mask)) return;
         const movedTile = tiles[idx];
         const nt=[...tiles]; [nt[ei],nt[idx]]=[nt[idx],nt[ei]];
         setTiles(nt); setMoves(m=>m+1); setLastMoved(ei);
@@ -2362,6 +2539,12 @@
         if (!finishedRef.current && checkMatch(nt,rrPat,CENTER)) {
           finishedRef.current=true; setFinished(true);
           const ft=fmt(time+1), fm=moves+1;
+          if (activePl.length <= 1 && level >= 1 && level <= 7) {
+            try {
+              const done = JSON.parse(localStorage.getItem('rr-solo-completed')||'[]');
+              if (!done.includes(level)) { done.push(level); localStorage.setItem('rr-solo-completed', JSON.stringify(done)); }
+            } catch(e) {}
+          }
           setTimeout(()=>{
             window.__fbSendFinish?.(playerName, ft, fm);
             window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
@@ -2374,7 +2557,7 @@
       useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
       const doLocalReset = () => {
-        setTiles(shuffle(buildSolved(boardSize), boardSize)); setMoves(0); setFinished(false);
+        setTiles(shuffle(buildSolved(boardSize, mask), boardSize, 300, mask)); setMoves(0); setFinished(false);
         setLastMoved(null); finishedRef.current=false; nearWinSentRef.current=false;
         window.__fbUpdatePresence?.(SESSION_UID, playerName, false);
         startCountdown();
@@ -2539,9 +2722,10 @@
               </div>
               <div style={{display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)'}}>
               {tiles.map((tile,idx)=>{
+                if (tile===undefined) return <div key={`void-${idx}`} style={{width:'var(--tile)',height:'var(--tile)'}}/>;
                 const isCenter = CENTER.includes(idx);
                 if(tile===null) return <div key="empty" data-tut={isCenter?'center':undefined} style={{width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',background:'rgba(0,0,0,.3)',border:'2px dashed rgba(255,255,255,.08)'}}/>;
-                const c=colorMap[tile.colorId], isAdj=canMove(idx,ei,boardSize);
+                const c=colorMap[tile.colorId], isAdj=canMove(idx,ei,boardSize,mask);
                 const col = idx % boardSize;
                 const row = Math.floor(idx / boardSize);
                 const coord = String.fromCharCode(65+col) + (row+1);
