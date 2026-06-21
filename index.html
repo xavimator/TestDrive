@@ -586,6 +586,45 @@
       } catch(e) { return { ok:false, reason:'error' }; }
     };
 
+    // ── Alias protegido por contraseña (opcional) ──
+    // Si el jugador pone contraseña al usar un nombre por primera vez, ese alias queda
+    // "reservado": la próxima vez que alguien (en cualquier dispositivo) quiera usar ese
+    // mismo nombre, deberá introducir la contraseña. Si nunca se puso contraseña, el
+    // nombre es libre y sus datos (puntuación/progreso) se borran al dejar de jugar.
+    async function sha256Hex(text) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    window.__fbCheckAlias = async (name) => {
+      try {
+        const snap = await get(ref(db, `rubitrack/aliases/${safeKey(name)}`));
+        return snap.exists();
+      } catch(e) { return false; }
+    };
+    window.__fbVerifyAliasPassword = async (name, password) => {
+      try {
+        const snap = await get(ref(db, `rubitrack/aliases/${safeKey(name)}`));
+        if (!snap.exists()) return true; // no reclamado: nadie lo protege
+        const hash = await sha256Hex(password||'');
+        return snap.val().passwordHash === hash;
+      } catch(e) { return false; }
+    };
+    window.__fbClaimAlias = async (name, password) => {
+      try {
+        const passwordHash = await sha256Hex(password);
+        await set(ref(db, `rubitrack/aliases/${safeKey(name)}`), { name, passwordHash, claimedAt: Date.now() });
+        return true;
+      } catch(e) { return false; }
+    };
+    // Borra los datos (puntuación/progreso) de una sesión efímera (sin contraseña) al dejar de jugar
+    window.__fbDeleteEphemeralData = async (name) => {
+      try {
+        const deviceId = getDeviceId();
+        await remove(ref(db, `rubitrack/scores/${deviceId}`));
+        await remove(ref(db, `rubitrack/soloProgress/${safeKey(name)}`));
+      } catch(e) { console.error('deleteEphemeralData error:', e); }
+    };
+
     let scoresUnsub = null;
     window.__fbListenScores = (cb) => {
       if (scoresUnsub) { scoresUnsub(); scoresUnsub = null; }
@@ -696,9 +735,14 @@
         // Lobby
         lobbySubtitle: 'SLIDING PUZZLE',
         boardSubtitle: (n) => `${n} × ${n} · SLIDING PUZZLE`,
-        yourName: 'Tu nombre',
+        yourName: 'Escribe tu alias',
+        passwordOptional: 'Contrase\u00f1a (opcional, para conservar tu alias)',
+        passwordRequired: 'Este alias est\u00e1 protegido: introduce la contrase\u00f1a',
+        aliasProtected: 'Alias protegido por contrase\u00f1a',
+        wrongPassword: 'Contrase\u00f1a incorrecta',
         namePlaceholder: 'Cómo te llamas…',
         chooseLevel: 'Nivel de dificultad',
+        lockedLevel: 'Completa el nivel 2 para desbloquear',
         levelShort: (n) => `Nivel ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -708,7 +752,7 @@
         codeWrong: 'Código incorrecto',
         codeExpired: 'Ese código ha caducado',
         yourCode: 'Tu código',
-        newGame: '🎮 Nueva partida',
+        newGame: '¡Acepto el reto!',
         joinWithCode: '🔗 Unirse con código',
         gameCode: 'Código de partida',
         codePlaceholder: 'XXXX',
@@ -727,7 +771,7 @@
         // Game UI
         moves: 'MOVIMIENTOS',
         time: 'TIEMPO',
-        newGameBtn: '↺ Nuevo Juego',
+        newGameBtn: '↺ Nuevo reto',
         getReady: '¡Prepárate!',
         finished: 'Finished!!',
         exitBtn: '✕ Salir',
@@ -770,9 +814,14 @@
       ca: {
         lobbySubtitle: 'SLIDING PUZZLE',
         boardSubtitle: (n) => `${n} × ${n} · SLIDING PUZZLE`,
-        yourName: 'El teu nom',
+        yourName: 'Escriu el teu \u00e0lies',
+        passwordOptional: 'Contrasenya (opcional, per conservar el teu \u00e0lies)',
+        passwordRequired: 'Aquest \u00e0lies est\u00e0 protegit: introdueix la contrasenya',
+        aliasProtected: 'Alies protegit per contrasenya',
+        wrongPassword: 'Contrasenya incorrecta',
         namePlaceholder: 'Com et dius…',
         chooseLevel: 'Nivell de dificultat',
+        lockedLevel: 'Completa el nivell 2 per desbloquejar',
         levelShort: (n) => `Nivell ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -782,7 +831,7 @@
         codeWrong: 'Codi incorrecte',
         codeExpired: 'Aquest codi ha caducat',
         yourCode: 'El teu codi',
-        newGame: '🎮 Nova partida',
+        newGame: 'Accepto el repte!',
         joinWithCode: '🔗 Unir-se amb codi',
         gameCode: 'Codi de partida',
         codePlaceholder: 'XXXX',
@@ -799,7 +848,7 @@
         errFirebase: 'Firebase no disponible. Comprova la connexió.',
         moves: 'MOVIMENTS',
         time: 'TEMPS',
-        newGameBtn: '↺ Nova Partida',
+        newGameBtn: '↺ Nou repte',
         getReady: 'Prepara\'t!',
         finished: 'Finished!!',
         exitBtn: '✕ Sortir',
@@ -837,9 +886,14 @@
       en: {
         lobbySubtitle: 'SLIDING PUZZLE',
         boardSubtitle: (n) => `${n} × ${n} · SLIDING PUZZLE`,
-        yourName: 'Your name',
+        yourName: 'Enter your alias',
+        passwordOptional: 'Password (optional, to keep your alias)',
+        passwordRequired: 'This alias is protected: enter the password',
+        aliasProtected: 'Alias protected by password',
+        wrongPassword: 'Wrong password',
         namePlaceholder: 'What\'s your name…',
         chooseLevel: 'Difficulty level',
+        lockedLevel: 'Complete level 2 to unlock',
         levelShort: (n) => `Level ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -849,7 +903,7 @@
         codeWrong: 'Wrong code',
         codeExpired: 'That code has expired',
         yourCode: 'Your code',
-        newGame: '🎮 New game',
+        newGame: 'I accept the challenge!',
         joinWithCode: '🔗 Join with code',
         gameCode: 'Game code',
         codePlaceholder: 'XXXX',
@@ -866,7 +920,7 @@
         errFirebase: 'Firebase unavailable. Check your connection.',
         moves: 'MOVES',
         time: 'TIME',
-        newGameBtn: '↺ New Game',
+        newGameBtn: '↺ New Challenge',
         getReady: 'Get Ready!',
         finished: 'Finished!!',
         exitBtn: '✕ Leave',
@@ -904,9 +958,14 @@
       fr: {
         lobbySubtitle: 'PUZZLE COULISSANT',
         boardSubtitle: (n) => `${n} × ${n} · PUZZLE COULISSANT`,
-        yourName: 'Ton nom',
+        yourName: 'Entre ton pseudo',
+        passwordOptional: 'Mot de passe (optionnel, pour garder ton pseudo)',
+        passwordRequired: 'Ce pseudo est prot\u00e9g\u00e9\u00a0: entre le mot de passe',
+        aliasProtected: 'Pseudo prot\u00e9g\u00e9 par mot de passe',
+        wrongPassword: 'Mot de passe incorrect',
         namePlaceholder: 'Comment tu t\'appelles…',
         chooseLevel: 'Niveau de difficulté',
+        lockedLevel: 'Termine le niveau 2 pour débloquer',
         levelShort: (n) => `Niveau ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -916,7 +975,7 @@
         codeWrong: 'Code incorrect',
         codeExpired: 'Ce code a expir\u00e9',
         yourCode: 'Ton code',
-        newGame: '🎮 Nouvelle partie',
+        newGame: "J'accepte le d\u00e9fi\u00a0!",
         joinWithCode: '🔗 Rejoindre avec un code',
         gameCode: 'Code de partie',
         codePlaceholder: 'XXXX',
@@ -933,7 +992,7 @@
         errFirebase: 'Firebase indisponible. Vérifie ta connexion.',
         moves: 'MOUVEMENTS',
         time: 'TEMPS',
-        newGameBtn: '↺ Nouvelle Partie',
+        newGameBtn: '↺ Nouveau d\u00e9fi',
         getReady: 'Prêt ?',
         finished: 'Finished!!',
         exitBtn: '✕ Quitter',
@@ -971,9 +1030,14 @@
       de: {
         lobbySubtitle: 'SCHIEBEPUZZLE',
         boardSubtitle: (n) => `${n} × ${n} · SCHIEBEPUZZLE`,
-        yourName: 'Dein Name',
+        yourName: 'Gib deinen Alias ein',
+        passwordOptional: 'Passwort (optional, um deinen Alias zu behalten)',
+        passwordRequired: 'Dieser Alias ist gesch\u00fctzt: Passwort eingeben',
+        aliasProtected: 'Alias durch Passwort gesch\u00fctzt',
+        wrongPassword: 'Falsches Passwort',
         namePlaceholder: 'Wie heißt du…',
         chooseLevel: 'Schwierigkeitsgrad',
+        lockedLevel: 'Schließe Level 2 ab, um freizuschalten',
         levelShort: (n) => `Stufe ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -983,7 +1047,7 @@
         codeWrong: 'Falscher Code',
         codeExpired: 'Dieser Code ist abgelaufen',
         yourCode: 'Dein Code',
-        newGame: '🎮 Neues Spiel',
+        newGame: 'Ich nehme die Herausforderung an!',
         joinWithCode: '🔗 Mit Code beitreten',
         gameCode: 'Spielcode',
         codePlaceholder: 'XXXX',
@@ -1000,7 +1064,7 @@
         errFirebase: 'Firebase nicht verfügbar. Verbindung prüfen.',
         moves: 'ZÜGE',
         time: 'ZEIT',
-        newGameBtn: '↺ Neues Spiel',
+        newGameBtn: '↺ Neue Herausforderung',
         getReady: 'Fertig machen!',
         finished: 'Finished!!',
         exitBtn: '✕ Verlassen',
@@ -1038,9 +1102,14 @@
       pt: {
         lobbySubtitle: 'PUZZLE DESLIZANTE',
         boardSubtitle: (n) => `${n} × ${n} · PUZZLE DESLIZANTE`,
-        yourName: 'Teu nome',
+        yourName: 'Escreve o teu alias',
+        passwordOptional: 'Senha (opcional, para manter o teu alias)',
+        passwordRequired: 'Este alias est\u00e1 protegido: introduz a senha',
+        aliasProtected: 'Alias protegido por senha',
+        wrongPassword: 'Senha incorreta',
         namePlaceholder: 'Como te chamas…',
         chooseLevel: 'Nível de dificuldade',
+        lockedLevel: 'Completa o nível 2 para desbloquear',
         levelShort: (n) => `Nível ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1050,7 +1119,7 @@
         codeWrong: 'C\u00f3digo incorreto',
         codeExpired: 'Esse c\u00f3digo expirou',
         yourCode: 'Teu c\u00f3digo',
-        newGame: '🎮 Nova partida',
+        newGame: 'Aceito o desafio!',
         joinWithCode: '🔗 Entrar com código',
         gameCode: 'Código da partida',
         codePlaceholder: 'XXXX',
@@ -1067,7 +1136,7 @@
         errFirebase: 'Firebase indisponível. Verifica a ligação.',
         moves: 'MOVIMENTOS',
         time: 'TEMPO',
-        newGameBtn: '↺ Novo Jogo',
+        newGameBtn: '↺ Novo desafio',
         getReady: 'Prepara-te!',
         finished: 'Finished!!',
         exitBtn: '✕ Sair',
@@ -1105,9 +1174,14 @@
       it: {
         lobbySubtitle: 'PUZZLE SCORREVOLE',
         boardSubtitle: (n) => `${n} × ${n} · PUZZLE SCORREVOLE`,
-        yourName: 'Il tuo nome',
+        yourName: 'Scrivi il tuo alias',
+        passwordOptional: 'Password (opzionale, per mantenere il tuo alias)',
+        passwordRequired: 'Questo alias \u00e8 protetto: inserisci la password',
+        aliasProtected: 'Alias protetto da password',
+        wrongPassword: 'Password errata',
         namePlaceholder: 'Come ti chiami…',
         chooseLevel: 'Livello di difficoltà',
+        lockedLevel: 'Completa il livello 2 per sbloccare',
         levelShort: (n) => `Livello ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1117,7 +1191,7 @@
         codeWrong: 'Codice errato',
         codeExpired: 'Questo codice \u00e8 scaduto',
         yourCode: 'Il tuo codice',
-        newGame: '🎮 Nuova partita',
+        newGame: 'Accetto la sfida!',
         joinWithCode: '🔗 Unisciti con codice',
         gameCode: 'Codice partita',
         codePlaceholder: 'XXXX',
@@ -1134,7 +1208,7 @@
         errFirebase: 'Firebase non disponibile. Controlla la connessione.',
         moves: 'MOSSE',
         time: 'TEMPO',
-        newGameBtn: '↺ Nuova Partita',
+        newGameBtn: '↺ Nuova sfida',
         getReady: 'Pronti!',
         finished: 'Finished!!',
         exitBtn: '✕ Esci',
@@ -1202,6 +1276,7 @@
     @keyframes widgetIn   { from{transform:translateY(-14px) scale(.95);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
     @keyframes panelIn    { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes level8In   { 0%{transform:scale(0.3) rotate(-25deg);opacity:0} 60%{transform:scale(1.15) rotate(8deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
+    @keyframes starTwinkle { 0%,100%{opacity:.15;transform:scale(.5)} 50%{opacity:1;transform:scale(1.2)} }
     @keyframes finishPop  { 0%{transform:scale(.5) rotate(-8deg);opacity:0} 70%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
     @keyframes frameIn    { from{opacity:0} to{opacity:1} }
     @keyframes glowPulse  { 0%,100%{filter:drop-shadow(0 0 8px rgba(255,200,80,.4))} 50%{filter:drop-shadow(0 0 20px rgba(255,200,80,.9))} }
@@ -1231,13 +1306,14 @@
       font-family:'Trebuchet MS','Segoe UI',sans-serif;
     }
     .lobby-title {
-      font-size:clamp(28px,7.5vw,48px); font-weight:900; letter-spacing:.08em;
-      text-transform:uppercase; margin-bottom:4px;
+      font-size:clamp(36px,9.5vw,58px); font-weight:900; letter-spacing:.06em;
+      text-transform:uppercase; margin-bottom:32px;
       background:linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A);
       background-size:300% auto; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      -webkit-text-stroke:1.5px #FFD700;
+      filter:drop-shadow(0 2px 10px rgba(255,215,0,.4));
       animation:shimmer 4s linear infinite;
     }
-    .lobby-sub { color:rgba(255,255,255,.3); font-size:12px; letter-spacing:.2em; margin-bottom:36px; }
     .lobby-card {
       background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09);
       border-radius:20px; padding:28px 28px 24px; width:100%; max-width:360px;
@@ -1394,8 +1470,8 @@
     .name-input-wrap input::placeholder { color:rgba(255,255,255,.2); }
 
     /* ══ Leave button ══ */
-    .leave-btn { background:none; border:1px solid rgba(255,255,255,.12); border-radius:8px; color:rgba(255,255,255,.35); font-size:11px; padding:5px 12px; cursor:pointer; transition:all .2s; letter-spacing:.08em; }
-    .leave-btn:hover { border-color:rgba(239,68,68,.4); color:rgba(239,68,68,.7); }
+    .leave-btn { background:rgba(34,197,94,.12); border:1px solid rgba(74,222,128,.5); border-radius:8px; color:#4ade80; font-size:11px; font-weight:700; padding:5px 12px; cursor:pointer; transition:all .2s; letter-spacing:.08em; box-shadow:0 0 10px rgba(74,222,128,.25); }
+    .leave-btn:hover { background:rgba(34,197,94,.22); border-color:rgba(74,222,128,.8); color:#86efac; box-shadow:0 0 16px rgba(74,222,128,.4); }
 
     /* ══ Tutorial overlay ══ */
     @keyframes tutDraw   { to { stroke-dashoffset: 0; } }
@@ -1524,15 +1600,21 @@
         preview.style.gap = GAP+'px';
         const validSet = new Set(shape.validIndices);
         const patSet = new Set(shape.patternIndices);
-        let pi = 0;
+        const cells = [];
         for (let i=0;i<shape.N*shape.N;i++){
           const d = document.createElement('span');
           d.style.width = cell+'px'; d.style.height = cell+'px';
           if (!validSet.has(i)) { d.style.visibility='hidden'; d.style.border='none'; }
-          else if (patSet.has(i)) { const col = RR_COLORS[pattern[pi++]]; d.style.background=col.bg; d.style.borderColor=col.border; }
-          else { d.style.background='rgba(255,255,255,.05)'; d.style.borderColor='rgba(255,255,255,.08)'; }
+          else if (!patSet.has(i)) { d.style.background='rgba(255,255,255,.05)'; d.style.borderColor='rgba(255,255,255,.08)'; }
           preview.appendChild(d);
+          cells.push(d);
         }
+        // pattern[k] va SIEMPRE a la celda absoluta patternIndices[k] (mismo orden que usa
+        // el juego para comprobar la victoria — no en orden fila-por-fila)
+        shape.patternIndices.forEach((absIdx, k) => {
+          const col = RR_COLORS[pattern[k]];
+          cells[absIdx].style.background = col.bg; cells[absIdx].style.borderColor = col.border;
+        });
       } else {
         const size = Math.max(1, Math.round(Math.sqrt(n)));
         const cell = Math.max(6, Math.ceil((MIN - (size-1)*GAP) / size));
@@ -1572,8 +1654,12 @@
             grid.appendChild(c);
           }
         }
-        const patCells = grid.querySelectorAll('.rrcell-pat');
-        patCells.forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
+        // pattern[k] va SIEMPRE a la celda absoluta patternIndices[k] (mismo orden que usa
+        // el juego para comprobar la victoria — no en el orden en que aparecen en el DOM)
+        shape.patternIndices.forEach((absIdx, k) => {
+          const cell = grid.children[absIdx];
+          if (cell) { const col = RR_COLORS[pattern[k]]; cell.style.background = col.bg; cell.style.borderColor = col.border; }
+        });
       } else {
         const size = Math.max(1, Math.round(Math.sqrt(n)));
         if (grid && (grid.children.length !== n || grid.dataset.mode === 'cross')) {
@@ -1767,6 +1853,7 @@
       const [codeInput,      setCodeInput]      = useState('');
       const [codeMsg,        setCodeMsg]        = useState('');
       const [codeBusy,       setCodeBusy]       = useState(false);
+      const [level2Done,     setLevel2Done]     = useState(false);
 
       const checkLevel8 = useCallback(async () => {
         const isRubiking = name.trim().toLowerCase() === 'rubiking';
@@ -1775,6 +1862,9 @@
         if (name.trim()) {
           const done = await window.__fbGetSoloLevelsDone?.(name.trim()) ?? [];
           allDone = [1,2,3,4,5,6,7].every(l=>done.includes(l));
+          setLevel2Done(done.includes(2));
+        } else {
+          setLevel2Done(false);
         }
         const unlocked = allDone || isRubiking || codeUnlocked;
         if (unlocked) {
@@ -1792,6 +1882,12 @@
       }, [name]);
 
       useEffect(() => { checkLevel8(); }, [checkLevel8]);
+
+      // Si el nivel seleccionado quedó bloqueado (no se ha completado el nivel 2), volver al 2
+      useEffect(() => {
+        const lv = window.RR_LEVEL_INFO(level);
+        if (level > 2 && lv.special !== 'cross' && !level2Done) setLevel(2);
+      }, [level2Done]);
 
       const tryRedeemCode = async () => {
         if (!codeInput.trim()) return;
@@ -1821,6 +1917,37 @@
         return () => clearTimeout(t);
       }, [name, nameOk]);
 
+      // Alias protegido por contraseña (debounced)
+      const [aliasClaimed, setAliasClaimed] = useState(false);
+      const [password,     setPassword]     = useState('');
+      const [passwordError,setPasswordError]= useState('');
+      useEffect(() => {
+        setPassword(''); setPasswordError('');
+        if (!nameOk) { setAliasClaimed(false); return; }
+        const t = setTimeout(async () => {
+          if (!window.__fbReady) return;
+          const claimed = await window.__fbCheckAlias?.(name.trim()) ?? false;
+          setAliasClaimed(claimed);
+        }, 600);
+        return () => clearTimeout(t);
+      }, [name, nameOk]);
+
+      // Verifica la contraseña (si el alias está reclamado) o la reclama (si se ha escrito una
+      // contraseña para un alias libre). Devuelve si la sesión debe tratarse como efímera
+      // (sin contraseña → se borrarán los datos al salir) o null si falló la verificación.
+      const resolveAlias = async () => {
+        if (aliasClaimed) {
+          const ok = await window.__fbVerifyAliasPassword?.(name.trim(), password) ?? false;
+          if (!ok) { setPasswordError(window.T.wrongPassword); return null; }
+          return false; // ya reclamado, no es efímera
+        }
+        if (password.trim()) {
+          await window.__fbClaimAlias?.(name.trim(), password.trim());
+          return false; // recién reclamada, no es efímera
+        }
+        return true; // sin contraseña → efímera
+      };
+
       // Auto-join if URL has ?code=XXXX
       useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -1845,9 +1972,11 @@
 
       const handleNew = async () => {
         if (!nameOk) return;
-        setLoading(true); setError('');
+        setLoading(true); setError(''); setPasswordError('');
         try {
           await waitForFb();
+          const ephemeral = await resolveAlias();
+          if (ephemeral === null) { setLoading(false); return; }
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
           localStorage.setItem('rr-level', String(level));
@@ -1856,7 +1985,7 @@
           await window.__fbSetMeta?.(name.trim());
           await window.__fbRegisterLobby?.(code, name.trim(), level);
           window.rrShuffle?.();
-          onJoin(name.trim(), code, level);
+          onJoin(name.trim(), code, level, ephemeral);
         } catch(e) {
           console.error('handleNew error:', e);
           setError(e.message || window.T.errCreate);
@@ -1867,16 +1996,18 @@
       const handleJoin = async () => {
         const code = joinCode.trim().toUpperCase();
         if (code.length !== 4) { setError(window.T.errCode4); return; }
-        setLoading(true); setError('');
+        setLoading(true); setError(''); setPasswordError('');
         try {
           await waitForFb();
           const exists = await window.__fbGameExists(code);
           if (!exists) { setError(window.T.errNotFound); setLoading(false); return; }
+          const ephemeral = await resolveAlias();
+          if (ephemeral === null) { setLoading(false); return; }
           const joinLevel = await window.__fbGetLobbyLevel?.(code) ?? 2;
           window.__rrLevel = joinLevel;
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
-          onJoin(name.trim(), code, joinLevel);
+          onJoin(name.trim(), code, joinLevel, ephemeral);
         } catch(e) {
           console.error('handleJoin error:', e);
           setError(e.message || window.T.errJoin);
@@ -1886,15 +2017,17 @@
 
       const handleJoinGame = async (code) => {
         if (!nameOk) { setError(window.T.errWriteName); return; }
-        setLoading(true); setError('');
+        setLoading(true); setError(''); setPasswordError('');
         try {
           await waitForFb();
+          const ephemeral = await resolveAlias();
+          if (ephemeral === null) { setLoading(false); return; }
           const g = games.find(g=>g.code===code);
           const joinLevel = g?.level || 2;
           window.__rrLevel = joinLevel;
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
-          onJoin(name.trim(), code, joinLevel);
+          onJoin(name.trim(), code, joinLevel, ephemeral);
         } catch(e) {
           console.error('handleJoinGame error:', e);
           setError(e.message || window.T.errJoinShort);
@@ -1906,7 +2039,6 @@
         <div className="lobby-wrap">
           <Stars/>
           <div className="lobby-title">Mosaic Champ</div>
-          <div className="lobby-sub">{window.T.lobbySubtitle}</div>
           <div className="lobby-card">
             {/* Name */}
             <div>
@@ -1938,6 +2070,23 @@
                   </div>
                 </div>
               )}
+
+              {nameOk && (
+                <div style={{marginTop:'10px'}}>
+                  <input type="password" maxLength={17} value={password}
+                    onChange={e=>{setPassword(e.target.value); setPasswordError('');}}
+                    placeholder={aliasClaimed ? window.T.passwordRequired : window.T.passwordOptional}
+                    style={{width:'100%',boxSizing:'border-box',padding:'9px 12px',borderRadius:'8px',
+                            border:`1px solid ${passwordError?'rgba(248,113,113,.5)':aliasClaimed?'rgba(255,180,0,.35)':'rgba(255,255,255,.12)'}`,
+                            background:'rgba(255,255,255,.04)',color:'#fff',fontSize:'12.5px'}}/>
+                  {aliasClaimed && !passwordError && (
+                    <div style={{marginTop:'5px',fontSize:'10.5px',color:'rgba(255,200,80,.75)'}}>🔒 {window.T.aliasProtected}</div>
+                  )}
+                  {passwordError && (
+                    <div style={{marginTop:'5px',fontSize:'10.5px',color:'#f87171'}}>{passwordError}</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Nivel de dificultad */}
@@ -1947,11 +2096,15 @@
                 {window.RR_LEVELS.filter(lv=>!lv.hidden || level8Unlocked).map(lv=>{
                   const active = level===lv.level;
                   const isSpecial = lv.special==='cross';
+                  const locked = lv.level > 2 && !isSpecial && !level2Done;
                   return (
-                    <button key={lv.level} onClick={()=>setLevel(lv.level)}
-                      title={isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
+                    <button key={lv.level} onClick={()=>{ if(!locked) setLevel(lv.level); }}
+                      disabled={locked}
+                      title={locked ? window.T.lockedLevel : isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
                       style={{
-                        position:'relative',padding:'8px 4px',borderRadius:'9px',cursor:'pointer',
+                        position:'relative',padding:'8px 4px',borderRadius:'9px',
+                        cursor:locked?'not-allowed':'pointer',
+                        opacity:locked?0.4:1,
                         border:`1px solid ${active?'rgba(156,90,255,.8)':isSpecial?'rgba(255,200,80,.55)':'rgba(255,255,255,.12)'}`,
                         background:active?'rgba(156,90,255,.22)':isSpecial?'rgba(255,200,80,.1)':'rgba(255,255,255,.04)',
                         color:active?'#fff':isSpecial?'#FFD27A':'rgba(255,255,255,.65)',
@@ -1959,20 +2112,29 @@
                         boxShadow:active?'0 0 14px rgba(156,90,255,.4)':isSpecial?'0 0 10px rgba(255,200,80,.35)':'none',
                         animation:isSpecial?'level8In .5s ease':'none',
                       }}>
-                      {isSpecial ? '✛' : lv.level}
-                      {lv.brainMelt && (
-                        <>
-                          <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
-                                       filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
-                          <div onClick={(e)=>{e.stopPropagation(); setShowCodePanel(s=>!s); setCodeMsg('');}}
-                               style={{position:'absolute',bottom:'-5px',right:'-5px',width:'14px',height:'14px',
-                                       borderRadius:'50%',background:'rgba(255,255,255,.08)',
-                                       border:'1px solid rgba(255,255,255,.2)',cursor:'pointer'}}/>
-                        </>
+                      {locked ? '🔒' : isSpecial ? (
+                        <span style={{position:'relative',display:'inline-block'}}>
+                          8
+                          <span style={{position:'absolute',top:'-9px',left:'-11px',fontSize:'9px',
+                                        animation:'starTwinkle 1.6s ease-in-out infinite'}}>✨</span>
+                          <span style={{position:'absolute',bottom:'-7px',right:'-12px',fontSize:'8px',
+                                        animation:'starTwinkle 1.6s ease-in-out infinite .5s'}}>✨</span>
+                          <span style={{position:'absolute',top:'-7px',right:'-10px',fontSize:'7px',
+                                        animation:'starTwinkle 1.6s ease-in-out infinite 1s'}}>⭐</span>
+                        </span>
+                      ) : lv.level}
+                      {lv.brainMelt && !locked && (
+                        <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
+                                     filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
                       )}
                     </button>
                   );
                 })}
+                {!level8Unlocked && (
+                  <div onClick={()=>{setShowCodePanel(s=>!s); setCodeMsg('');}}
+                       style={{padding:'8px 4px',borderRadius:'9px',minHeight:'34px',
+                               border:'1px solid transparent',background:'transparent'}}/>
+                )}
               </div>
               <div style={{marginTop:'7px',fontSize:'11px',color:'rgba(255,255,255,.4)',textAlign:'center'}}>
                 {window.RR_LEVEL_INFO(level).special==='cross' ? (
@@ -1998,10 +2160,12 @@
                            onKeyDown={e=>e.key==='Enter' && tryRedeemCode()}
                            style={{flex:1,padding:'8px 10px',borderRadius:'8px',border:'1px solid rgba(255,255,255,.15)',
                                    background:'rgba(255,255,255,.05)',color:'#fff',fontSize:'12px',letterSpacing:'.1em'}}/>
-                    <button onClick={tryRedeemCode} disabled={codeBusy}
-                      style={{padding:'8px 14px',borderRadius:'8px',border:'none',background:'#7c3aed',
-                              color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer',opacity:codeBusy?.6:1}}>
-                      {window.T.unlock}
+                    <button onClick={tryRedeemCode} disabled={codeBusy} title={window.T.unlock}
+                      style={{width:'36px',height:'36px',flexShrink:0,padding:0,borderRadius:'8px',
+                              border:'none',background:'#7c3aed',color:'#fff',fontSize:'16px',
+                              fontWeight:700,cursor:'pointer',opacity:codeBusy?.6:1,
+                              display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      →
                     </button>
                   </div>
                   {codeMsg && <div style={{color:'#f87171',fontSize:'11px',marginTop:'6px'}}>{codeMsg}</div>}
@@ -2725,6 +2889,10 @@
       };
 
       const ei=tiles.indexOf(null);
+      const voiceSupported = !!(window.SpeechRecognition||window.webkitSpeechRecognition);
+      const trophyLeft   = voiceSupported ? '58px'  : '15px';
+      const tutorialLeft = voiceSupported ? '101px' : '58px';
+      const tutHintLeft  = voiceSupported ? '153px' : '110px';
 
       return (
         <div
@@ -2738,30 +2906,48 @@
         }}>
           <Stars/>
 
-          {/* Help button */}
-          <button className="help-btn" onClick={openTutorial} title={window.T.helpTitle}>?</button>
+          {/* Voz + Help + Trofeo — misma fila, mismo tamaño */}
+          {voiceSupported && (
+            <button id="rr-voice-btn" className="help-btn" onClick={voiceOn?stopVoice:startVoice}
+                    title={voiceOn?window.T.voiceOn:window.T.voiceOff}
+                    style={{left:'15px',
+                            border:`1.5px solid ${voiceOn?'rgba(239,68,68,.6)':'rgba(156,90,255,.45)'}`,
+                            background:voiceOn?'rgba(239,68,68,.15)':'rgba(10,8,24,.9)',
+                            animation:voiceOn?'voicePulse 1.2s ease-in-out infinite':'none'}}>
+              <svg width="17" height="17" viewBox="0 0 475.753212 491.285714">
+                <g transform="translate(0,491.285714) scale(0.1,-0.1)" fill={voiceOn?'#f87171':'#c89fff'} stroke="none">
+                  <path d="M1250 5035 c0 -12 106 -174 150 -230 76 -95 237 -244 336 -312 120 -82 154 -121 154 -176 0 -32 -7 -50 -27 -73 -68 -73 -220 -152 -367 -189 -50 -12 -103 -27 -117 -33 -39 -15 -87 -68 -100 -110 -6 -20 -16 -154 -21 -297 -5 -143 -13 -270 -18 -282 -7 -18 -20 -22 -87 -29 -43 -5 -170 -6 -283 -4 -415 8 -452 7 -490 -14 -90 -48 -161 -127 -192 -216 -27 -74 -30 -121 -14 -200 68 -322 312 -577 689 -716 42 -16 77 -34 77 -40 0 -6 -9 -37 -19 -70 -43 -129 -54 -205 -52 -334 6 -295 7 -273 -27 -342 -36 -74 -99 -141 -162 -173 -88 -44 -139 -50 -417 -50 l-263 0 0 -188 0 -189 298 5 c320 5 369 12 508 69 162 67 308 211 386 378 56 120 79 281 59 416 -15 103 -4 182 49 343 44 137 49 188 24 271 -37 126 -121 199 -279 244 -33 10 -106 40 -163 67 -133 64 -245 168 -292 272 -45 99 -44 99 47 93 212 -15 282 -16 449 -6 222 12 379 39 438 74 85 50 101 112 111 436 8 270 7 267 58 281 137 39 380 186 460 280 90 104 136 255 118 384 -25 180 -92 274 -302 422 -67 48 -149 117 -192 163 l-75 80 -226 0 c-124 0 -226 -2 -226 -5z"/>
+                  <path d="M4336 3635 c-55 -19 -86 -45 -108 -87 -36 -69 -34 -95 20 -265 50 -159 77 -267 109 -443 25 -138 25 -613 0 -755 -51 -287 -119 -511 -222 -731 -156 -333 -352 -592 -661 -874 -58 -53 -73 -73 -82 -110 -30 -124 59 -243 182 -243 64 0 99 21 211 125 349 323 616 715 775 1138 25 69 54 152 64 185 10 33 22 71 27 84 6 14 14 45 19 70 5 25 16 78 25 116 21 96 44 248 56 380 12 124 6 520 -10 605 -6 30 -17 98 -26 150 -30 181 -115 483 -161 571 -17 34 -67 72 -113 88 -43 14 -57 13 -105 -4z"/>
+                  <path d="M3335 3313 c-46 -24 -76 -54 -96 -98 -26 -57 -24 -86 20 -210 70 -198 85 -290 85 -530 0 -180 -3 -226 -23 -323 -68 -338 -250 -659 -497 -878 -120 -105 -138 -133 -137 -209 0 -60 20 -101 68 -143 44 -39 71 -46 141 -38 67 8 85 19 198 120 237 215 422 496 530 805 127 366 144 786 45 1157 -27 105 -86 265 -107 294 -47 63 -159 89 -227 53z"/>
+                  <path d="M2367 3005 c-116 -41 -151 -158 -89 -295 42 -93 56 -163 54 -260 -3 -185 -91 -345 -256 -468 -91 -68 -119 -157 -77 -247 33 -72 86 -105 167 -105 57 0 100 18 173 74 124 95 213 207 281 351 126 267 128 549 5 810 -47 100 -66 120 -122 141 -48 17 -88 17 -136 -1z"/>
+                </g>
+              </svg>
+            </button>
+          )}
+          <button className="help-btn" onClick={()=>setShowScores(true)} style={{left:trophyLeft,fontSize:'17px'}}>🏆</button>
+          <button className="help-btn" onClick={openTutorial} title={window.T.helpTitle} style={{left:tutorialLeft}}>?</button>
           {showTutHint && (
             <div style={{
-              position:'fixed', top:'18px', left:'110px', zIndex:9000,
+              position:'fixed', top:'18px', left:tutHintLeft, zIndex:9000,
               fontFamily:"'Pacifico', cursive", fontSize:'22px',
               color:'#c89fff', textShadow:'0 0 18px rgba(156,90,255,.9), 0 2px 8px rgba(0,0,0,.8)',
               pointerEvents:'none', whiteSpace:'nowrap',
               animation:'tutHintIn 0.3s ease, tutHintOut 0.6s ease 1.6s forwards',
             }}>Tutorial ✨</div>
           )}
-          <button className="help-btn" onClick={()=>setShowScores(true)} style={{left:'15px',fontSize:'17px'}}>🏆</button>
           
 
           {/* Top row: title + leave */}
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',width:'100%',maxWidth:'380px',marginBottom:'16px'}}>
             <div>
               <h1 style={{
-                margin:0,fontSize:'clamp(18px,4.4vw,26px)',fontWeight:900,letterSpacing:'.08em',textTransform:'uppercase',
+                margin:0,fontSize:'clamp(24px,6vw,34px)',fontWeight:900,letterSpacing:'.05em',textTransform:'uppercase',
                 background:'linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A)',
                 backgroundSize:'300% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
+                WebkitTextStroke:'1px #FFD700',
+                filter:'drop-shadow(0 2px 8px rgba(255,215,0,.4))',
                 animation:'shimmer 4s linear infinite',
               }}>Mosaic Champ</h1>
-              <p style={{margin:'2px 0 0',color:'rgba(255,255,255,.3)',fontSize:'11px',letterSpacing:'.15em'}}>{window.T.boardSubtitle(boardSize)}</p>
             </div>
             <button className="leave-btn" onClick={handleLeave}>{window.T.exitBtn}</button>
           </div>
@@ -2775,8 +2961,12 @@
                  style={{display:'flex',alignItems:'center',justifyContent:'center',
                          width:'40px',height:'40px',flexShrink:0,cursor:'pointer',
                          background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
-                         borderRadius:'10px',fontSize:'17px',padding:0}}>
-              📲
+                         borderRadius:'10px',padding:0}}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
+                   strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
             </button>
 
             {/* Nombre — ajustado al texto, sin width:100% */}
@@ -2795,7 +2985,7 @@
           </div>
 
           {/* Stats */}
-          <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'16px',width:'100%',maxWidth:'380px'}}>
             <div style={{display:'flex',gap:'28px',background:'rgba(255,255,255,.06)',borderRadius:'12px',padding:'10px 28px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)'}}>
               {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
                 <div key={s.label} style={{textAlign:'center'}}>
@@ -2804,24 +2994,6 @@
                 </div>
               ))}
             </div>
-            {(window.SpeechRecognition||window.webkitSpeechRecognition) && (
-              <button id="rr-voice-btn" onClick={voiceOn?stopVoice:startVoice} title={voiceOn?window.T.voiceOn:window.T.voiceOff}
-                      style={{width:'40px',height:'40px',borderRadius:'50%',flexShrink:0,
-                              border:`1px solid ${voiceOn?'rgba(239,68,68,.6)':'rgba(156,90,255,.35)'}`,
-                              background:voiceOn?'rgba(239,68,68,.15)':'rgba(255,255,255,.06)',
-                              display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',
-                              animation:voiceOn?'voicePulse 1.2s ease-in-out infinite':'none',
-                              backdropFilter:'blur(8px)',padding:0}}>
-                <svg width="22" height="22" viewBox="0 0 475.753212 491.285714">
-                  <g transform="translate(0,491.285714) scale(0.1,-0.1)" fill={voiceOn?'#f87171':'#c89fff'} stroke="none">
-                    <path d="M1250 5035 c0 -12 106 -174 150 -230 76 -95 237 -244 336 -312 120 -82 154 -121 154 -176 0 -32 -7 -50 -27 -73 -68 -73 -220 -152 -367 -189 -50 -12 -103 -27 -117 -33 -39 -15 -87 -68 -100 -110 -6 -20 -16 -154 -21 -297 -5 -143 -13 -270 -18 -282 -7 -18 -20 -22 -87 -29 -43 -5 -170 -6 -283 -4 -415 8 -452 7 -490 -14 -90 -48 -161 -127 -192 -216 -27 -74 -30 -121 -14 -200 68 -322 312 -577 689 -716 42 -16 77 -34 77 -40 0 -6 -9 -37 -19 -70 -43 -129 -54 -205 -52 -334 6 -295 7 -273 -27 -342 -36 -74 -99 -141 -162 -173 -88 -44 -139 -50 -417 -50 l-263 0 0 -188 0 -189 298 5 c320 5 369 12 508 69 162 67 308 211 386 378 56 120 79 281 59 416 -15 103 -4 182 49 343 44 137 49 188 24 271 -37 126 -121 199 -279 244 -33 10 -106 40 -163 67 -133 64 -245 168 -292 272 -45 99 -44 99 47 93 212 -15 282 -16 449 -6 222 12 379 39 438 74 85 50 101 112 111 436 8 270 7 267 58 281 137 39 380 186 460 280 90 104 136 255 118 384 -25 180 -92 274 -302 422 -67 48 -149 117 -192 163 l-75 80 -226 0 c-124 0 -226 -2 -226 -5z"/>
-                    <path d="M4336 3635 c-55 -19 -86 -45 -108 -87 -36 -69 -34 -95 20 -265 50 -159 77 -267 109 -443 25 -138 25 -613 0 -755 -51 -287 -119 -511 -222 -731 -156 -333 -352 -592 -661 -874 -58 -53 -73 -73 -82 -110 -30 -124 59 -243 182 -243 64 0 99 21 211 125 349 323 616 715 775 1138 25 69 54 152 64 185 10 33 22 71 27 84 6 14 14 45 19 70 5 25 16 78 25 116 21 96 44 248 56 380 12 124 6 520 -10 605 -6 30 -17 98 -26 150 -30 181 -115 483 -161 571 -17 34 -67 72 -113 88 -43 14 -57 13 -105 -4z"/>
-                    <path d="M3335 3313 c-46 -24 -76 -54 -96 -98 -26 -57 -24 -86 20 -210 70 -198 85 -290 85 -530 0 -180 -3 -226 -23 -323 -68 -338 -250 -659 -497 -878 -120 -105 -138 -133 -137 -209 0 -60 20 -101 68 -143 44 -39 71 -46 141 -38 67 8 85 19 198 120 237 215 422 496 530 805 127 366 144 786 45 1157 -27 105 -86 265 -107 294 -47 63 -159 89 -227 53z"/>
-                    <path d="M2367 3005 c-116 -41 -151 -158 -89 -295 42 -93 56 -163 54 -260 -3 -185 -91 -345 -256 -468 -91 -68 -119 -157 -77 -247 33 -72 86 -105 167 -105 57 0 100 18 173 74 124 95 213 207 281 351 126 267 128 549 5 810 -47 100 -66 120 -122 141 -48 17 -88 17 -136 -1z"/>
-                  </g>
-                </svg>
-              </button>
-            )}
           </div>
 
 
@@ -2953,12 +3125,14 @@
       const [playerName, setPlayerName] = useState('');
       const [gameCode,   setGameCode]   = useState('');
       const [level,      setLevel]      = useState(2);
+      const [ephemeral,  setEphemeral]  = useState(false);
 
-      const handleJoin = (name, code, lvl) => {
-        setPlayerName(name); setGameCode(code); setLevel(lvl||2); setPhase('game');
+      const handleJoin = (name, code, lvl, isEphemeral) => {
+        setPlayerName(name); setGameCode(code); setLevel(lvl||2); setEphemeral(!!isEphemeral); setPhase('game');
       };
       const handleLeave = () => {
-        setPhase('lobby'); setPlayerName(''); setGameCode('');
+        if (ephemeral && playerName) window.__fbDeleteEphemeralData?.(playerName);
+        setPhase('lobby'); setPlayerName(''); setGameCode(''); setEphemeral(false);
       };
 
       if (phase === 'lobby') return <Lobby onJoin={handleJoin} />;
