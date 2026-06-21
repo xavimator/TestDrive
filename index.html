@@ -518,6 +518,74 @@
       } catch(e) { return 0; }
     };
 
+    // Progreso de niveles completados en modo solo — guardado por nombre, no por dispositivo,
+    // así viaja entre dispositivos (móvil, tablet, otro navegador…)
+    window.__fbMarkLevelDone = async (name, level) => {
+      try {
+        const key = safeKey(name);
+        const pRef = ref(db, `rubitrack/soloProgress/${key}`);
+        const snap = await get(pRef);
+        const prev = snap.val() || { name, levels: [] };
+        if (!prev.levels.includes(level)) {
+          prev.levels.push(level);
+          await set(pRef, { name, levels: prev.levels });
+        }
+      } catch(e) { console.error('markLevelDone error:', e); }
+    };
+    window.__fbGetSoloLevelsDone = async (name) => {
+      try {
+        const key = safeKey(name);
+        const snap = await get(ref(db, `rubitrack/soloProgress/${key}/levels`));
+        return snap.val() || [];
+      } catch(e) { return []; }
+    };
+
+    // ── Códigos personales de desbloqueo del nivel 8 ──
+    // Cada jugador que cumple las condiciones recibe un código propio (su nombre + dígitos),
+    // válido 1 mes; al caducar se elimina de la base la próxima vez que se intenta usar.
+    const MONTH_MS = 30*24*60*60*1000;
+    function genUnlockCode(name) {
+      const letters = (name||'').toUpperCase().replace(/[^A-Z0-9]/g,'').padEnd(4,'X').slice(0,6);
+      const digits = Array.from({length:4},()=>Math.floor(Math.random()*10)).join('');
+      return letters + digits;
+    }
+    window.__fbGetOrCreateUnlockCode = async (name) => {
+      try {
+        const key = safeKey(name);
+        const idxRef = ref(db, `rubitrack/unlockCodeByName/${key}`);
+        const now = Date.now();
+        const idxSnap = await get(idxRef);
+        const existing = idxSnap.val();
+        if (existing && existing.expiresAt > now) return existing.code;
+        if (existing) await remove(ref(db, `rubitrack/unlockCodes/${existing.code}`)); // caducado: limpiar el viejo
+
+        let code;
+        for (let i=0; i<6; i++) {
+          code = genUnlockCode(name);
+          const snap = await get(ref(db, `rubitrack/unlockCodes/${code}`));
+          if (!snap.exists()) break;
+        }
+        const expiresAt = now + MONTH_MS;
+        await set(ref(db, `rubitrack/unlockCodes/${code}`), { owner: name, expiresAt });
+        await set(idxRef, { code, expiresAt });
+        return code;
+      } catch(e) { console.error('getOrCreateUnlockCode error:', e); return null; }
+    };
+    window.__fbRedeemUnlockCode = async (codeRaw) => {
+      try {
+        const code = codeRaw.trim().toUpperCase();
+        const cRef = ref(db, `rubitrack/unlockCodes/${code}`);
+        const snap = await get(cRef);
+        if (!snap.exists()) return { ok:false, reason:'notfound' };
+        const data = snap.val();
+        if (!data.expiresAt || data.expiresAt < Date.now()) {
+          await remove(cRef); // caducado: se borra de la base
+          return { ok:false, reason:'expired' };
+        }
+        return { ok:true, owner:data.owner };
+      } catch(e) { return { ok:false, reason:'error' }; }
+    };
+
     let scoresUnsub = null;
     window.__fbListenScores = (cb) => {
       if (scoresUnsub) { scoresUnsub(); scoresUnsub = null; }
@@ -638,6 +706,8 @@
         level8CodePlaceholder: 'Código secreto',
         unlock: 'Desbloquear',
         codeWrong: 'Código incorrecto',
+        codeExpired: 'Ese código ha caducado',
+        yourCode: 'Tu código',
         newGame: '🎮 Nueva partida',
         joinWithCode: '🔗 Unirse con código',
         gameCode: 'Código de partida',
@@ -710,6 +780,8 @@
         level8CodePlaceholder: 'Codi secret',
         unlock: 'Desbloqueja',
         codeWrong: 'Codi incorrecte',
+        codeExpired: 'Aquest codi ha caducat',
+        yourCode: 'El teu codi',
         newGame: '🎮 Nova partida',
         joinWithCode: '🔗 Unir-se amb codi',
         gameCode: 'Codi de partida',
@@ -775,6 +847,8 @@
         level8CodePlaceholder: 'Secret code',
         unlock: 'Unlock',
         codeWrong: 'Wrong code',
+        codeExpired: 'That code has expired',
+        yourCode: 'Your code',
         newGame: '🎮 New game',
         joinWithCode: '🔗 Join with code',
         gameCode: 'Game code',
@@ -840,6 +914,8 @@
         level8CodePlaceholder: 'Code secret',
         unlock: 'D\u00e9bloquer',
         codeWrong: 'Code incorrect',
+        codeExpired: 'Ce code a expir\u00e9',
+        yourCode: 'Ton code',
         newGame: '🎮 Nouvelle partie',
         joinWithCode: '🔗 Rejoindre avec un code',
         gameCode: 'Code de partie',
@@ -905,6 +981,8 @@
         level8CodePlaceholder: 'Geheimcode',
         unlock: 'Freischalten',
         codeWrong: 'Falscher Code',
+        codeExpired: 'Dieser Code ist abgelaufen',
+        yourCode: 'Dein Code',
         newGame: '🎮 Neues Spiel',
         joinWithCode: '🔗 Mit Code beitreten',
         gameCode: 'Spielcode',
@@ -970,6 +1048,8 @@
         level8CodePlaceholder: 'C\u00f3digo secreto',
         unlock: 'Desbloquear',
         codeWrong: 'C\u00f3digo incorreto',
+        codeExpired: 'Esse c\u00f3digo expirou',
+        yourCode: 'Teu c\u00f3digo',
         newGame: '🎮 Nova partida',
         joinWithCode: '🔗 Entrar com código',
         gameCode: 'Código da partida',
@@ -1035,6 +1115,8 @@
         level8CodePlaceholder: 'Codice segreto',
         unlock: 'Sblocca',
         codeWrong: 'Codice errato',
+        codeExpired: 'Questo codice \u00e8 scaduto',
+        yourCode: 'Il tuo codice',
         newGame: '🎮 Nuova partita',
         joinWithCode: '🔗 Unisciti con codice',
         gameCode: 'Codice partita',
@@ -1218,17 +1300,17 @@
       animation:widgetIn .5s cubic-bezier(.34,1.4,.64,1);
     }
     #rr-toggle {
-      display:flex; align-items:center; gap:10px;
+      display:flex; flex-direction:column; align-items:center; gap:7px;
       background:rgba(10,8,24,.9); border:1.5px solid rgba(156,90,255,.45); border-radius:14px;
-      padding:8px 14px 8px 10px; cursor:pointer; color:#c89fff;
-      font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+      padding:10px 12px; cursor:pointer; color:#c89fff;
+      font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
       backdrop-filter:blur(14px); transition:background .2s,border-color .2s;
-      user-select:none; white-space:nowrap; box-shadow:0 4px 20px rgba(0,0,0,.4);
+      user-select:none; position:relative; box-shadow:0 4px 20px rgba(0,0,0,.4);
     }
     #rr-toggle:hover { background:rgba(124,58,237,.3); border-color:rgba(156,90,255,.8); }
-    .rr-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; width:36px; }
-    .rr-preview span { display:block; width:10px; height:10px; border-radius:2px; border:1.5px solid #444; transition:background .4s,border-color .4s; }
-    #rr-sync-dot { width:7px; height:7px; border-radius:50%; background:#444; flex-shrink:0; transition:background .4s; }
+    .rr-preview { display:grid; }
+    .rr-preview span { display:block; border-radius:2px; border:1.5px solid #444; transition:background .4s,border-color .4s; }
+    #rr-sync-dot { width:7px; height:7px; border-radius:50%; background:#444; position:absolute; top:8px; right:8px; transition:background .4s; }
     #rr-sync-dot.connected    { background:#22c55e; animation:syncPulse 2s ease-in-out infinite; }
     #rr-sync-dot.disconnected { background:#ef4444; }
     #rr-sync-dot.connecting   { background:#f59e0b; animation:syncPulse .8s ease-in-out infinite; }
@@ -1343,12 +1425,8 @@
   <!-- ══ Pattern Widget ══ -->
   <div id="rr-widget" style="display:none">
     <div id="rr-toggle" onclick="rrToggle()">
-      <div class="rr-preview" id="rr-preview">
-        <span></span><span></span><span></span>
-        <span></span><span></span><span></span>
-        <span></span><span></span><span></span>
-      </div>
       <span id="rr-toggle-label">Pattern</span>
+      <div class="rr-preview" id="rr-preview"></div>
       <div id="rr-sync-dot" class="connecting"></div>
     </div>
     <div id="rr-panel" class="hidden">
@@ -1397,7 +1475,6 @@
       { level:8, special:'cross', boardSize:11, tileMin:19, tileMax:25, hidden:true },
     ];
     window.RR_LEVEL_INFO = (lvl) => window.RR_LEVELS.find(l=>l.level===lvl) || window.RR_LEVELS[1];
-    window.RR_SECRET_CODE = 'PENTA5';
 
     // Nivel 8 — "Mosaic Cross": 5 tableros 5×5 (uno en cada esquina + uno central)
     // dentro de una cuadrícula 11×11, con solape 2×2 en las diagonales y 12 casillas
@@ -1429,6 +1506,47 @@
     document.addEventListener('click', e => {
       if(rrOpen&&!document.getElementById('rr-widget').contains(e.target)){ rrOpen=false; document.getElementById('rr-panel').classList.add('hidden'); }
     });
+
+    // Construye el icono mini del patrón completo (real, no una muestra), con celdas
+    // dimensionadas para que el icono entero mida al menos ~72px de lado (el doble del original).
+    function rrBuildPreview(pattern) {
+      const preview = document.getElementById('rr-preview');
+      if (!preview) return;
+      const n = pattern.length;
+      const isCross = n === window.RR_CROSS_SHAPE.patternIndices.length;
+      const MIN = 72, GAP = 1.5;
+      preview.innerHTML = '';
+
+      if (isCross) {
+        const shape = window.RR_CROSS_SHAPE;
+        const cell = Math.max(4, Math.ceil((MIN - (shape.N-1)*GAP) / shape.N));
+        preview.style.gridTemplateColumns = `repeat(${shape.N}, ${cell}px)`;
+        preview.style.gap = GAP+'px';
+        const validSet = new Set(shape.validIndices);
+        const patSet = new Set(shape.patternIndices);
+        let pi = 0;
+        for (let i=0;i<shape.N*shape.N;i++){
+          const d = document.createElement('span');
+          d.style.width = cell+'px'; d.style.height = cell+'px';
+          if (!validSet.has(i)) { d.style.visibility='hidden'; d.style.border='none'; }
+          else if (patSet.has(i)) { const col = RR_COLORS[pattern[pi++]]; d.style.background=col.bg; d.style.borderColor=col.border; }
+          else { d.style.background='rgba(255,255,255,.05)'; d.style.borderColor='rgba(255,255,255,.08)'; }
+          preview.appendChild(d);
+        }
+      } else {
+        const size = Math.max(1, Math.round(Math.sqrt(n)));
+        const cell = Math.max(6, Math.ceil((MIN - (size-1)*GAP) / size));
+        preview.style.gridTemplateColumns = `repeat(${size}, ${cell}px)`;
+        preview.style.gap = GAP+'px';
+        pattern.forEach(p => {
+          const d = document.createElement('span');
+          d.style.width = cell+'px'; d.style.height = cell+'px';
+          const col = RR_COLORS[p];
+          d.style.background = col.bg; d.style.borderColor = col.border;
+          preview.appendChild(d);
+        });
+      }
+    }
 
     function rrApplyPattern(pattern) {
       window.rrPattern=pattern;
@@ -1467,8 +1585,9 @@
         document.querySelectorAll('#rr-grid .rrcell').forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
       }
 
-      // Icono miniatura: siempre una muestra representativa 3×3
-      document.querySelectorAll('#rr-preview span').forEach((d,i)=>{ const col=RR_COLORS[pattern[i%n]]; d.style.background=col.bg; d.style.borderColor=col.border; });
+      // Icono mini: SIEMPRE el patrón real completo (no una muestra), al menos el doble
+      // de tamaño que el icono original (mínimo ~72px de lado)
+      rrBuildPreview(pattern);
       // Badge de tamaño de tablero
       const badge = document.getElementById('rr-level-badge');
       const lvlInfo = isCross ? window.RR_LEVELS.find(l=>l.special==='cross')
@@ -1639,19 +1758,24 @@
       const nameOk = name.trim().length > 0;
       const [rankName, setRankName] = useState('');
 
-      // ── Nivel 8 oculto: se desbloquea por nombre 'Rubiking', código secreto,
-      // o haber completado en solo los 7 niveles normales ──
+      // ── Nivel 8 oculto: se desbloquea por nombre 'Rubiking', por introducir un código
+      // personal de otro jugador (panel junto al nivel 7), o por haber completado en solo
+      // los 7 niveles normales (progreso guardado en Firebase, viaja entre dispositivos) ──
       const [level8Unlocked, setLevel8Unlocked] = useState(false);
-      const [showCodeBox,    setShowCodeBox]    = useState(false);
+      const [myUnlockCode,   setMyUnlockCode]   = useState('');
+      const [showCodePanel,  setShowCodePanel]  = useState(false);
       const [codeInput,      setCodeInput]      = useState('');
-      const [codeError,      setCodeError]      = useState('');
+      const [codeMsg,        setCodeMsg]        = useState('');
+      const [codeBusy,       setCodeBusy]       = useState(false);
 
-      const checkLevel8 = useCallback(() => {
-        let done = [];
-        try { done = JSON.parse(localStorage.getItem('rr-solo-completed')||'[]'); } catch(e) {}
-        const allDone = [1,2,3,4,5,6,7].every(l=>done.includes(l));
+      const checkLevel8 = useCallback(async () => {
         const isRubiking = name.trim().toLowerCase() === 'rubiking';
         const codeUnlocked = localStorage.getItem('rr-level8-code') === '1';
+        let allDone = false;
+        if (name.trim()) {
+          const done = await window.__fbGetSoloLevelsDone?.(name.trim()) ?? [];
+          allDone = [1,2,3,4,5,6,7].every(l=>done.includes(l));
+        }
         const unlocked = allDone || isRubiking || codeUnlocked;
         if (unlocked) {
           setLevel8Unlocked(true);
@@ -1659,19 +1783,30 @@
             localStorage.setItem('rr-level8-seen','1');
             window.playChime?.();
           }
+          // Cada jugador que llega a las condiciones recibe su propio código (nombre + dígitos),
+          // válido 1 mes, para compartirlo y que otros desbloqueen el nivel.
+          if (name.trim()) {
+            window.__fbGetOrCreateUnlockCode?.(name.trim()).then(c=>{ if (c) setMyUnlockCode(c); });
+          }
         }
-        return unlocked;
       }, [name]);
 
       useEffect(() => { checkLevel8(); }, [checkLevel8]);
 
-      const tryUnlockCode = () => {
-        if (codeInput.trim().toUpperCase() === window.RR_SECRET_CODE) {
+      const tryRedeemCode = async () => {
+        if (!codeInput.trim()) return;
+        setCodeBusy(true); setCodeMsg('');
+        const res = await window.__fbRedeemUnlockCode?.(codeInput);
+        setCodeBusy(false);
+        if (res?.ok) {
           localStorage.setItem('rr-level8-code','1');
-          setCodeError(''); setShowCodeBox(false); setCodeInput('');
+          setCodeInput(''); setCodeMsg('');
+          setShowCodePanel(false);
           checkLevel8();
+        } else if (res?.reason === 'expired') {
+          setCodeMsg(window.T.codeExpired);
         } else {
-          setCodeError(window.T.codeWrong);
+          setCodeMsg(window.T.codeWrong);
         }
       };
 
@@ -1826,8 +1961,14 @@
                       }}>
                       {isSpecial ? '✛' : lv.level}
                       {lv.brainMelt && (
-                        <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
-                                     filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
+                        <>
+                          <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
+                                       filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
+                          <div onClick={(e)=>{e.stopPropagation(); setShowCodePanel(s=>!s); setCodeMsg('');}}
+                               style={{position:'absolute',bottom:'-5px',right:'-5px',width:'14px',height:'14px',
+                                       borderRadius:'50%',background:'rgba(255,255,255,.08)',
+                                       border:'1px solid rgba(255,255,255,.2)',cursor:'pointer'}}/>
+                        </>
                       )}
                     </button>
                   );
@@ -1847,28 +1988,29 @@
                 )}
               </div>
 
-              {!level8Unlocked && (
-                <div style={{marginTop:'10px',textAlign:'center'}}>
-                  <button onClick={()=>setShowCodeBox(s=>!s)}
-                    style={{background:'none',border:'none',color:'rgba(255,255,255,.3)',
-                            fontSize:'11px',cursor:'pointer',textDecoration:'underline'}}>
-                    {window.T.haveCode}
-                  </button>
-                  {showCodeBox && (
-                    <div style={{display:'flex',gap:'6px',marginTop:'8px'}}>
-                      <input value={codeInput} onChange={e=>{setCodeInput(e.target.value);setCodeError('');}}
-                             placeholder={window.T.level8CodePlaceholder}
-                             onKeyDown={e=>e.key==='Enter' && tryUnlockCode()}
-                             style={{flex:1,padding:'8px 10px',borderRadius:'8px',border:'1px solid rgba(255,255,255,.15)',
-                                     background:'rgba(255,255,255,.05)',color:'#fff',fontSize:'12px',letterSpacing:'.1em'}}/>
-                      <button onClick={tryUnlockCode}
-                        style={{padding:'8px 14px',borderRadius:'8px',border:'none',background:'#7c3aed',
-                                color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
-                        {window.T.unlock}
-                      </button>
-                    </div>
-                  )}
-                  {codeError && <div style={{color:'#f87171',fontSize:'11px',marginTop:'6px'}}>{codeError}</div>}
+              {showCodePanel && (
+                <div style={{marginTop:'10px',padding:'12px',borderRadius:'10px',
+                             background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.1)'}}>
+                  <div style={{fontSize:'11px',color:'rgba(255,255,255,.5)',marginBottom:'8px'}}>{window.T.haveCode}</div>
+                  <div style={{display:'flex',gap:'6px'}}>
+                    <input value={codeInput} onChange={e=>{setCodeInput(e.target.value);setCodeMsg('');}}
+                           placeholder={window.T.level8CodePlaceholder}
+                           onKeyDown={e=>e.key==='Enter' && tryRedeemCode()}
+                           style={{flex:1,padding:'8px 10px',borderRadius:'8px',border:'1px solid rgba(255,255,255,.15)',
+                                   background:'rgba(255,255,255,.05)',color:'#fff',fontSize:'12px',letterSpacing:'.1em'}}/>
+                    <button onClick={tryRedeemCode} disabled={codeBusy}
+                      style={{padding:'8px 14px',borderRadius:'8px',border:'none',background:'#7c3aed',
+                              color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer',opacity:codeBusy?.6:1}}>
+                      {window.T.unlock}
+                    </button>
+                  </div>
+                  {codeMsg && <div style={{color:'#f87171',fontSize:'11px',marginTop:'6px'}}>{codeMsg}</div>}
+                </div>
+              )}
+
+              {level8Unlocked && myUnlockCode && (
+                <div style={{marginTop:'8px',fontSize:'11px',color:'rgba(255,255,255,.4)',textAlign:'center'}}>
+                  {window.T.yourCode}: <span style={{color:'#FFD27A',fontWeight:800,letterSpacing:'.1em'}}>{myUnlockCode}</span>
                 </div>
               )}
             </div>
@@ -2540,10 +2682,7 @@
           finishedRef.current=true; setFinished(true);
           const ft=fmt(time+1), fm=moves+1;
           if (activePl.length <= 1 && level >= 1 && level <= 7) {
-            try {
-              const done = JSON.parse(localStorage.getItem('rr-solo-completed')||'[]');
-              if (!done.includes(level)) { done.push(level); localStorage.setItem('rr-solo-completed', JSON.stringify(done)); }
-            } catch(e) {}
+            window.__fbMarkLevelDone?.(playerName, level);
           }
           setTimeout(()=>{
             window.__fbSendFinish?.(playerName, ft, fm);
@@ -2627,31 +2766,18 @@
             <button className="leave-btn" onClick={handleLeave}>{window.T.exitBtn}</button>
           </div>
 
-          {/* Game code + invite + nombre — una fila, tamaños iguales */}
+          {/* Invite + nombre — una fila */}
           <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px',
                        width:'100%',maxWidth:'380px'}}>
 
-            {/* Código */}
-            <div className="game-code-badge" onClick={copyCode} title={window.T.copyTitle}
-                 style={{alignSelf:'stretch',flexShrink:0}}>
-              <div>
-                <div className="code-label">{window.T.gameLabel}</div>
-                <div className="code-value" style={{color:copied?'#22c55e':'#c89fff'}}>
-                  {copied ? window.T.copiedOk : gameCode}
-                </div>
-              </div>
-              <div className="copy-icon">⧉</div>
-            </div>
-
-            {/* Invitar — mismo badge */}
-            <div className="game-code-badge" title={window.T.inviteTitle}
-                 style={{alignSelf:'stretch',flexShrink:0,cursor:'pointer'}}
-                 onClick={()=>setShowInvite(true)}>
-              <div>
-                <div className="code-label">{window.T.inviteLabel}</div>
-                <div className="code-value" style={{fontSize:'15px',letterSpacing:'.05em'}}>{window.T.inviteLink}</div>
-              </div>
-            </div>
+            {/* Invitar — solo icono; el código sólo se ve al abrir este modal */}
+            <button title={window.T.inviteTitle} onClick={()=>setShowInvite(true)}
+                 style={{display:'flex',alignItems:'center',justifyContent:'center',
+                         width:'40px',height:'40px',flexShrink:0,cursor:'pointer',
+                         background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
+                         borderRadius:'10px',fontSize:'17px',padding:0}}>
+              📲
+            </button>
 
             {/* Nombre — ajustado al texto, sin width:100% */}
             <div style={{display:'flex',alignItems:'center',gap:'6px',
@@ -2720,7 +2846,7 @@
                                        color:'rgba(255,255,255,.3)'}}>{n}</div>
                 ))}
               </div>
-              <div style={{display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)'}}>
+              <div style={{position:'relative',display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)'}}>
               {tiles.map((tile,idx)=>{
                 if (tile===undefined) return <div key={`void-${idx}`} style={{width:'var(--tile)',height:'var(--tile)'}}/>;
                 const isCenter = CENTER.includes(idx);
@@ -2765,9 +2891,9 @@
                   </button>
                 );
               })}
+              {finished && <div className="finished-frame"><div className="finished-text">{window.T.finished}</div></div>}
             </div>{/* end grid */}
             </div>{/* end flex row (row labels + grid) */}
-            {finished && <div className="finished-frame"><div className="finished-text">{window.T.finished}</div></div>}
           </div>{/* end board wrapper */}
 
           {/* Reset */}
