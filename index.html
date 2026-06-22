@@ -1897,10 +1897,15 @@
         else { setDoneLevels([]); setLevel8Unlocked(false); }
       }, [name, isRubiking]);
 
-      // Si el nivel seleccionado quedó bloqueado, bajar al mayor nivel desbloqueado
+      // Cuando carga el progreso real, seleccionar el mayor nivel desbloqueado,
+      // pero sin bajar del nivel actual si ya era válido
       useEffect(() => {
         const lv = window.RR_LEVEL_INFO(level);
-        if (lv.special !== 'cross' && level > maxUnlockedLevel(doneLevels)) setLevel(maxUnlockedLevel(doneLevels));
+        const max = maxUnlockedLevel(doneLevels);
+        if (lv.special !== 'cross') {
+          if (level > max) setLevel(max);
+          else if (doneLevels.length > 0 && level < max) setLevel(max); // subir al máximo desbloqueado
+        }
       }, [doneLevels, isRubiking]);
 
       const tryRedeemCode = async () => {
@@ -1955,15 +1960,15 @@
           if (!ok) { setPasswordError(window.T.wrongPassword); return null; }
           const done = await loadProgress(name.trim());
           await checkLevel8(done);
-          return false; // no efímera
+          return { ephemeral: false, done };
         }
         if (password.trim()) {
           await window.__fbClaimAlias?.(name.trim(), password.trim());
           setDoneLevels([]);
-          return false;
+          return { ephemeral: false, done: [] };
         }
         setDoneLevels([]);
-        return true; // sin contraseña → efímera
+        return { ephemeral: true, done: [] }; // sin contraseña → efímera
       };
 
       // Auto-join if URL has ?code=XXXX
@@ -1993,17 +1998,23 @@
         setLoading(true); setError(''); setPasswordError('');
         try {
           await waitForFb();
-          const ephemeral = await resolveAlias();
-          if (ephemeral === null) { setLoading(false); return; }
+          const result = await resolveAlias();
+          if (result === null) { setLoading(false); return; }
+          const { ephemeral, done } = result;
+          // El nivel seleccionado puede no ser accesible aún (estado React desactualizado).
+          // Usamos el progreso real recién cargado para elegir el mayor nivel desbloqueado
+          // si el seleccionado supera ese límite; de lo contrario respetamos la elección.
+          const maxLvl = isRubiking ? 7 : (() => { let l=1; while(l<7 && done.includes(l)) l++; return l; })();
+          const safeLevel = Math.min(level, maxLvl);
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
-          localStorage.setItem('rr-level', String(level));
-          window.__rrLevel = level;
+          localStorage.setItem('rr-level', String(safeLevel));
+          window.__rrLevel = safeLevel;
           await window.__fbJoinGame(code);
           await window.__fbSetMeta?.(name.trim());
-          await window.__fbRegisterLobby?.(code, name.trim(), level);
+          await window.__fbRegisterLobby?.(code, name.trim(), safeLevel);
           window.rrShuffle?.();
-          onJoin(name.trim(), code, level, ephemeral);
+          onJoin(name.trim(), code, safeLevel, ephemeral);
         } catch(e) {
           console.error('handleNew error:', e);
           setError(e.message || window.T.errCreate);
@@ -2019,8 +2030,9 @@
           await waitForFb();
           const exists = await window.__fbGameExists(code);
           if (!exists) { setError(window.T.errNotFound); setLoading(false); return; }
-          const ephemeral = await resolveAlias();
-          if (ephemeral === null) { setLoading(false); return; }
+          const result = await resolveAlias();
+          if (result === null) { setLoading(false); return; }
+          const { ephemeral } = result;
           const joinLevel = await window.__fbGetLobbyLevel?.(code) ?? 2;
           window.__rrLevel = joinLevel;
           localStorage.setItem('rr-player-name', name.trim());
@@ -2038,8 +2050,9 @@
         setLoading(true); setError(''); setPasswordError('');
         try {
           await waitForFb();
-          const ephemeral = await resolveAlias();
-          if (ephemeral === null) { setLoading(false); return; }
+          const result = await resolveAlias();
+          if (result === null) { setLoading(false); return; }
+          const { ephemeral } = result;
           const g = games.find(g=>g.code===code);
           const joinLevel = g?.level || 2;
           window.__rrLevel = joinLevel;
@@ -2864,7 +2877,7 @@
         if (!finishedRef.current && checkMatch(nt,rrPat,CENTER)) {
           finishedRef.current=true; setFinished(true);
           const ft=fmt(time+1), fm=moves+1;
-          if (activePl.length <= 1 && level >= 1 && level <= 7) {
+          if (level >= 1 && level <= 7) {
             window.__fbMarkLevelDone?.(playerName, level);
           }
           setTimeout(()=>{
