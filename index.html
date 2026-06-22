@@ -1277,6 +1277,7 @@
     @keyframes panelIn    { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes level8In   { 0%{transform:scale(0.3) rotate(-25deg);opacity:0} 60%{transform:scale(1.15) rotate(8deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
     @keyframes starTwinkle { 0%,100%{opacity:.15;transform:scale(.5)} 50%{opacity:1;transform:scale(1.2)} }
+    @keyframes levelUpPulse { 0%,100%{box-shadow:0 0 12px rgba(255,215,0,.3)} 50%{box-shadow:0 0 28px rgba(255,215,0,.7)} }
     @keyframes finishPop  { 0%{transform:scale(.5) rotate(-8deg);opacity:0} 70%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
     @keyframes frameIn    { from{opacity:0} to{opacity:1} }
     @keyframes glowPulse  { 0%,100%{filter:drop-shadow(0 0 8px rgba(255,200,80,.4))} 50%{filter:drop-shadow(0 0 20px rgba(255,200,80,.9))} }
@@ -1843,6 +1844,7 @@
 
       const nameOk = name.trim().length > 0;
       const [rankName, setRankName] = useState('');
+      const isRubiking = name.trim().toLowerCase() === 'rubiking';
 
       // ── Nivel 8 oculto: se desbloquea por nombre 'Rubiking', por introducir un código
       // personal de otro jugador (panel junto al nivel 7), o por haber completado en solo
@@ -1853,18 +1855,26 @@
       const [codeInput,      setCodeInput]      = useState('');
       const [codeMsg,        setCodeMsg]        = useState('');
       const [codeBusy,       setCodeBusy]       = useState(false);
-      const [level2Done,     setLevel2Done]     = useState(false);
+      // Niveles 1-7 completados en solo por este jugador (desbloqueo progresivo:
+      // el nivel N requiere haber completado el N-1). Rubiking siempre tiene todo.
+      const [doneLevels,     setDoneLevels]     = useState([]);
+
+      const maxUnlockedLevel = useCallback((done) => {
+        if (isRubiking) return 7;
+        let lvl = 1;
+        while (lvl < 7 && done.includes(lvl)) lvl++;
+        return lvl;
+      }, [isRubiking]);
 
       const checkLevel8 = useCallback(async () => {
-        const isRubiking = name.trim().toLowerCase() === 'rubiking';
         const codeUnlocked = localStorage.getItem('rr-level8-code') === '1';
         let allDone = false;
         if (name.trim()) {
           const done = await window.__fbGetSoloLevelsDone?.(name.trim()) ?? [];
           allDone = [1,2,3,4,5,6,7].every(l=>done.includes(l));
-          setLevel2Done(done.includes(2));
+          setDoneLevels(done);
         } else {
-          setLevel2Done(false);
+          setDoneLevels([]);
         }
         const unlocked = allDone || isRubiking || codeUnlocked;
         if (unlocked) {
@@ -1879,15 +1889,15 @@
             window.__fbGetOrCreateUnlockCode?.(name.trim()).then(c=>{ if (c) setMyUnlockCode(c); });
           }
         }
-      }, [name]);
+      }, [name, isRubiking]);
 
       useEffect(() => { checkLevel8(); }, [checkLevel8]);
 
-      // Si el nivel seleccionado quedó bloqueado (no se ha completado el nivel 2), volver al 2
+      // Si el nivel seleccionado quedó bloqueado, bajar al mayor nivel desbloqueado
       useEffect(() => {
         const lv = window.RR_LEVEL_INFO(level);
-        if (level > 2 && lv.special !== 'cross' && !level2Done) setLevel(2);
-      }, [level2Done]);
+        if (lv.special !== 'cross' && level > maxUnlockedLevel(doneLevels)) setLevel(maxUnlockedLevel(doneLevels));
+      }, [doneLevels, isRubiking]);
 
       const tryRedeemCode = async () => {
         if (!codeInput.trim()) return;
@@ -2096,7 +2106,7 @@
                 {window.RR_LEVELS.filter(lv=>!lv.hidden || level8Unlocked).map(lv=>{
                   const active = level===lv.level;
                   const isSpecial = lv.special==='cross';
-                  const locked = lv.level > 2 && !isSpecial && !level2Done;
+                  const locked = !isSpecial && lv.level > maxUnlockedLevel(doneLevels);
                   return (
                     <button key={lv.level} onClick={()=>{ if(!locked) setLevel(lv.level); }}
                       disabled={locked}
@@ -2567,7 +2577,7 @@
     }
 
     /* ─── Game ─── */
-    function Game({ playerName, gameCode, level, onLeave }) {
+    function Game({ playerName, gameCode, level, onLeave, onLevelUp }) {
       const LV = window.RR_LEVEL_INFO(level);
       const isCross = LV.special === 'cross';
       const boardSize = LV.boardSize, patternSize = LV.patternSize;
@@ -2893,6 +2903,7 @@
       const trophyLeft   = voiceSupported ? '58px'  : '15px';
       const tutorialLeft = voiceSupported ? '101px' : '58px';
       const tutHintLeft  = voiceSupported ? '153px' : '110px';
+      const leaveLeft    = voiceSupported ? '148px' : '105px';
 
       return (
         <div
@@ -2926,6 +2937,11 @@
           )}
           <button className="help-btn" onClick={()=>setShowScores(true)} style={{left:trophyLeft,fontSize:'17px'}}>🏆</button>
           <button className="help-btn" onClick={openTutorial} title={window.T.helpTitle} style={{left:tutorialLeft}}>?</button>
+          <button className="leave-btn" onClick={handleLeave}
+                  style={{position:'fixed',top:'20px',left:leaveLeft,zIndex:301,
+                          padding:'5px 10px',fontSize:'11px'}}>
+            {window.T.exitBtn}
+          </button>
           {showTutHint && (
             <div style={{
               position:'fixed', top:'18px', left:tutHintLeft, zIndex:9000,
@@ -2937,22 +2953,7 @@
           )}
           
 
-          {/* Top row: title + leave */}
-          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',width:'100%',maxWidth:'380px',marginBottom:'16px'}}>
-            <div>
-              <h1 style={{
-                margin:0,fontSize:'clamp(24px,6vw,34px)',fontWeight:900,letterSpacing:'.05em',textTransform:'uppercase',
-                background:'linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A)',
-                backgroundSize:'300% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
-                WebkitTextStroke:'1px #FFD700',
-                filter:'drop-shadow(0 2px 8px rgba(255,215,0,.4))',
-                animation:'shimmer 4s linear infinite',
-              }}>Mosaic Champ</h1>
-            </div>
-            <button className="leave-btn" onClick={handleLeave}>{window.T.exitBtn}</button>
-          </div>
-
-          {/* Invite + nombre — una fila */}
+          {/* Top row: Invite + nombre (sin título ni salir aquí) */}
           <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px',
                        width:'100%',maxWidth:'380px'}}>
 
@@ -3068,10 +3069,37 @@
             </div>{/* end flex row (row labels + grid) */}
           </div>{/* end board wrapper */}
 
-          {/* Reset */}
-          <button onClick={handleReset} style={{marginTop:'18px',padding:'11px 32px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'13px',fontWeight:700,letterSpacing:'.15em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
-            {window.T.newGameBtn}
-          </button>
+          {/* Botones de acción + título */}
+          <div style={{marginTop:'18px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',width:'100%',maxWidth:'380px'}}>
+            <div style={{display:'flex',gap:'10px',alignItems:'center'}}>
+              <button onClick={handleReset}
+                style={{padding:'11px 28px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',
+                        background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'13px',fontWeight:700,
+                        letterSpacing:'.12em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
+                {window.T.newGameBtn}
+              </button>
+              {finished && level < 7 && !window.RR_LEVEL_INFO(level).special && (
+                <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1); }}
+                  style={{padding:'11px 20px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',
+                          fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',
+                          border:'1px solid rgba(255,215,0,.6)',
+                          background:'linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,150,0,.15))',
+                          color:'#FFD700',boxShadow:'0 0 18px rgba(255,215,0,.35)',
+                          animation:'levelUpPulse 1.4s ease-in-out infinite'}}>
+                  ⬆ Level Up
+                </button>
+              )}
+            </div>
+            <h1 style={{
+              margin:'4px 0 0',fontSize:'clamp(17px,4.2vw,24px)',fontWeight:900,letterSpacing:'.05em',
+              textTransform:'uppercase',textAlign:'center',
+              background:'linear-gradient(90deg,#7BAEF5,#E8B800,#FFA85C,#5FD98A)',
+              backgroundSize:'300% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
+              WebkitTextStroke:'1px #FFD700',
+              filter:'drop-shadow(0 2px 6px rgba(255,215,0,.3))',
+              animation:'shimmer 4s linear infinite',
+            }}>Mosaic Champ</h1>
+          </div>
 
           {/* Countdown overlay */}
           {countdown !== null && (
@@ -3134,9 +3162,22 @@
         if (ephemeral && playerName) window.__fbDeleteEphemeralData?.(playerName);
         setPhase('lobby'); setPlayerName(''); setGameCode(''); setEphemeral(false);
       };
+      const handleLevelUp = async (nextLevel) => {
+        // Crea una nueva partida solo con el nivel siguiente
+        try {
+          await window.__fbLeaveGame?.();
+          const code = genCode();
+          window.__rrLevel = nextLevel;
+          await window.__fbJoinGame?.(code);
+          await window.__fbRegisterLobby?.(code, playerName, nextLevel);
+          window.rrShuffle?.();
+          setLevel(nextLevel); setGameCode(code); setPhase('game');
+        } catch(e) { console.error('levelUp error:', e); handleLeave(); }
+      };
 
       if (phase === 'lobby') return <Lobby onJoin={handleJoin} />;
-      return <Game playerName={playerName} gameCode={gameCode} level={level} onLeave={handleLeave} />;
+      return <Game playerName={playerName} gameCode={gameCode} level={level}
+                   onLeave={handleLeave} onLevelUp={handleLevelUp} />;
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
