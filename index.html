@@ -1909,7 +1909,7 @@
           setDoneLevels(initialDoneLevels);
           checkLevel8(initialDoneLevels);
           // Refresca desde Firebase por si se marcó progreso en la partida
-          loadProgress(name.trim()).then(d => { if (d.length > 0) checkLevel8(d); });
+          loadProgress(name.trim()).then(d => { checkLevel8(d); });
         } else {
           setDoneLevels([]);
           setLevel8Unlocked(false);
