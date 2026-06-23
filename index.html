@@ -1924,30 +1924,32 @@
         // No subir automáticamente — que el usuario elija
       }, [doneLevels, isRubiking]);
 
-      const tryRedeemCode = async () => {
+      const tryRedeemCode = useCallback(async () => {
         if (!codeInput.trim()) return;
         // Código maestro local (Easter egg)
         if (codeInput.trim().toLowerCase() === 'm0541cm45t3r') {
           localStorage.setItem('rr-level8-code','1');
+          localStorage.removeItem('rr-level8-seen'); // reset para que suene el chime
           setCodeInput(''); setCodeMsg('');
           setShowCodePanel(false);
-          checkLevel8();
+          await checkLevel8();
           return;
         }
         setCodeBusy(true); setCodeMsg('');
-        const res = await window.__fbRedeemUnlockCode?.(codeInput);
+        const res = await window.__fbRedeemUnlockCode?.(codeInput.trim());
         setCodeBusy(false);
         if (res?.ok) {
           localStorage.setItem('rr-level8-code','1');
+          localStorage.removeItem('rr-level8-seen'); // reset para que suene el chime
           setCodeInput(''); setCodeMsg('');
           setShowCodePanel(false);
-          checkLevel8();
+          await checkLevel8();
         } else if (res?.reason === 'expired') {
           setCodeMsg(window.T.codeExpired);
         } else {
           setCodeMsg(window.T.codeWrong);
         }
-      };
+      }, [codeInput, checkLevel8]);
 
       // Comprobar conflicto de nombre (debounced)
       useEffect(() => {
