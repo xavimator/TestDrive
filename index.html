@@ -2030,8 +2030,9 @@
           // El nivel seleccionado puede no ser accesible aún (estado React desactualizado).
           // Usamos el progreso real recién cargado para elegir el mayor nivel desbloqueado
           // si el seleccionado supera ese límite; de lo contrario respetamos la elección.
+          const isCrossSelected = window.RR_LEVEL_INFO(level)?.special === 'cross';
           const maxLvl = isRubiking ? 7 : (() => { let l=1; while(l<7 && done.includes(l)) l++; return l; })();
-          const safeLevel = Math.min(level, maxLvl);
+          const safeLevel = isCrossSelected ? level : Math.min(level, maxLvl);
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
           localStorage.setItem('rr-level', String(safeLevel));
