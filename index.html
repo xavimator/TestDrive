@@ -3244,8 +3244,16 @@
         setSavedDoneLevels(done||[]); setSavedName(name);
         setPhase('game');
       };
-      const handleLeave = () => {
-        if (ephemeral && playerName) window.__fbDeleteEphemeralData?.(playerName);
+      const handleLeave = async () => {
+        if (ephemeral && playerName) {
+          window.__fbDeleteEphemeralData?.(playerName);
+          setSavedDoneLevels([]);
+        } else if (playerName) {
+          try {
+            const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
+            setSavedDoneLevels(fresh || []);
+          } catch(e) { /* no bloquear la salida */ }
+        }
         setPhase('lobby'); setPlayerName(''); setGameCode(''); setEphemeral(false); setFromInvite(false);
       };
       const handleLevelUp = async (nextLevel) => {
