@@ -1477,6 +1477,7 @@
     .help-btn.green-exit:hover { background:rgba(34,197,94,.22); border-color:rgba(74,222,128,.8); color:#86efac; box-shadow:0 0 16px rgba(74,222,128,.4); }
     @keyframes finishNotifIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
     .finish-notif { animation:finishNotifIn .35s cubic-bezier(.34,1.4,.64,1); background:rgba(6,4,20,.92); border:1.5px solid rgba(34,197,94,.35); border-radius:12px; padding:10px 16px; display:flex; align-items:center; gap:10px; backdrop-filter:blur(12px); box-shadow:0 4px 20px rgba(0,0,0,.5); }
+    #finish-notif-area { min-width:0; width:100%; }
 
     /* ══ Tutorial overlay ══ */
     @keyframes tutDraw   { to { stroke-dashoffset: 0; } }
@@ -1510,6 +1511,7 @@
       <div class="rr-preview" id="rr-preview"></div>
       <div id="rr-sync-dot" class="connecting"></div>
     </div>
+    <div id="finish-notif-area" style="margin-top:8px;display:none;"></div>
     <div id="rr-panel" class="hidden">
       <div id="rr-panel-header">
         <h3 id="rr-panel-title">Pattern</h3>
@@ -1715,10 +1717,16 @@
     let lastResetTs=0;
     window.__fbResetReceived = ts => { if(ts<=lastResetTs)return; lastResetTs=ts; window.dispatchEvent(new CustomEvent('rrGlobalReset',{detail:ts})); };
 
-    // Finish toast — dispara evento para que React lo muestre debajo del patrón
+    // Finish notif — aparece debajo del patrón de muestra (rr-widget)
+    let finishNotifTimer = null;
     window.__fbNotifReceived = item => {
       window.playWhoosh?.();
-      window.dispatchEvent(new CustomEvent('rrFinishNotif', { detail: item }));
+      const area = document.getElementById('finish-notif-area');
+      if (!area) return;
+      if (finishNotifTimer) clearTimeout(finishNotifTimer);
+      area.innerHTML = `<div class="finish-notif"><span style="font-size:18px">🏁</span><div><div style="font-size:12px;font-weight:800;color:#FFD27A;margin-bottom:2px;">${window.T.finishToast(item.name)}</div><div style="font-size:10px;color:rgba(255,255,255,.45)">${window.T.finishToastSub}</div><div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">⏱ ${item.time} · ${item.moves} mov</div></div></div>`;
+      area.style.display = '';
+      finishNotifTimer = setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 5000);
     };
 
     // Connection state
@@ -1906,19 +1914,26 @@
         }
       }, [name, isRubiking]);
 
-      // Cuando carga el progreso real, seleccionar el mayor nivel desbloqueado,
-      // pero sin bajar del nivel actual si ya era válido
+      // Cuando carga el progreso real, ajustar nivel si es necesario.
+      // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
       useEffect(() => {
         const lv = window.RR_LEVEL_INFO(level);
+        if (lv?.special === 'cross') return; // nivel 8 seleccionado: no interferir
         const max = maxUnlockedLevel(doneLevels);
-        if (lv.special !== 'cross') {
-          if (level > max) setLevel(max);
-          else if (doneLevels.length > 0 && level < max) setLevel(max); // subir al máximo desbloqueado
-        }
+        if (level > max) setLevel(max);
+        // No subir automáticamente — que el usuario elija
       }, [doneLevels, isRubiking]);
 
       const tryRedeemCode = async () => {
         if (!codeInput.trim()) return;
+        // Código maestro local (Easter egg)
+        if (codeInput.trim().toLowerCase() === 'm0541cm45t3r') {
+          localStorage.setItem('rr-level8-code','1');
+          setCodeInput(''); setCodeMsg('');
+          setShowCodePanel(false);
+          checkLevel8();
+          return;
+        }
         setCodeBusy(true); setCodeMsg('');
         const res = await window.__fbRedeemUnlockCode?.(codeInput);
         setCodeBusy(false);
@@ -2754,14 +2769,6 @@
         return () => window.removeEventListener('rrPresenceChange', onP);
       }, []);
 
-      useEffect(() => {
-        const onNotif = e => {
-          setFinishNotif(e.detail);
-          setTimeout(() => setFinishNotif(null), 5000);
-        };
-        window.addEventListener('rrFinishNotif', onNotif);
-        return () => window.removeEventListener('rrFinishNotif', onNotif);
-      }, []);
 
       const [voiceOn,    setVoiceOn]    = useState(false);
       const voiceRef = useRef(null);
@@ -3192,23 +3199,7 @@
               filter:'drop-shadow(0 2px 6px rgba(255,215,0,.3))',
               animation:'shimmer 4s linear infinite',
             }}>Mosaic Champ</h1>
-            {finishNotif && (
-              <div className="finish-notif" style={{marginTop:'10px',width:'100%',maxWidth:'340px'}}>
-                <span style={{fontSize:'20px'}}>🏁</span>
-                <div>
-                  <div style={{fontFamily:"'Pacifico',cursive",fontSize:'13px',
-                                background:'linear-gradient(90deg,#FFE566,#FFA85C)',
-                                WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
-                                marginBottom:'2px'}}>
-                    {window.T.finishToast(finishNotif.name)}
-                  </div>
-                  <div style={{fontSize:'11px',color:'rgba(255,255,255,.5)'}}>{window.T.finishToastSub}</div>
-                  <div style={{fontSize:'10px',color:'rgba(255,255,255,.3)',marginTop:'2px'}}>
-                    ⏱ {finishNotif.time} · {finishNotif.moves} mov
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Countdown overlay */}
