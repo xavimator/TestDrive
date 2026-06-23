@@ -1830,7 +1830,7 @@
     }
 
     /* ─── Lobby ─── */
-    function Lobby({ onJoin }) {
+    function Lobby({ onJoin, initialDoneLevels = [], initialName = '' }) {
       const [name,     setName]     = useState(()=>localStorage.getItem('rr-player-name')||'');
       const [joinCode, setJoinCode] = useState('');
       const [showJoin, setShowJoin] = useState(false);
@@ -1892,9 +1892,17 @@
       }, [name, isRubiking, doneLevels]);
 
       // Rubiking: cargar siempre sin contraseña
+      // Para otros jugadores que vuelven del juego, restaurar el progreso guardado
       useEffect(() => {
-        if (isRubiking) { loadProgress(name.trim()).then(d => checkLevel8(d)); }
-        else { setDoneLevels([]); setLevel8Unlocked(false); }
+        if (isRubiking) {
+          loadProgress(name.trim()).then(d => checkLevel8(d));
+        } else if (initialDoneLevels.length > 0 && name.trim() === initialName) {
+          setDoneLevels(initialDoneLevels);
+          checkLevel8(initialDoneLevels);
+        } else {
+          setDoneLevels([]);
+          setLevel8Unlocked(false);
+        }
       }, [name, isRubiking]);
 
       // Cuando carga el progreso real, seleccionar el mayor nivel desbloqueado,
@@ -2014,7 +2022,7 @@
           await window.__fbSetMeta?.(name.trim());
           await window.__fbRegisterLobby?.(code, name.trim(), safeLevel);
           window.rrShuffle?.();
-          onJoin(name.trim(), code, safeLevel, ephemeral);
+          onJoin(name.trim(), code, safeLevel, ephemeral, false, done);
         } catch(e) {
           console.error('handleNew error:', e);
           setError(e.message || window.T.errCreate);
@@ -2032,12 +2040,12 @@
           if (!exists) { setError(window.T.errNotFound); setLoading(false); return; }
           const result = await resolveAlias();
           if (result === null) { setLoading(false); return; }
-          const { ephemeral } = result;
+          const { ephemeral, done } = result;
           const joinLevel = await window.__fbGetLobbyLevel?.(code) ?? 2;
           window.__rrLevel = joinLevel;
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
-          onJoin(name.trim(), code, joinLevel, ephemeral, true); // true = fromInvite
+          onJoin(name.trim(), code, joinLevel, ephemeral, true, done||[]); // true = fromInvite
         } catch(e) {
           console.error('handleJoin error:', e);
           setError(e.message || window.T.errJoin);
@@ -2052,13 +2060,13 @@
           await waitForFb();
           const result = await resolveAlias();
           if (result === null) { setLoading(false); return; }
-          const { ephemeral } = result;
+          const { ephemeral, done } = result;
           const g = games.find(g=>g.code===code);
           const joinLevel = g?.level || 2;
           window.__rrLevel = joinLevel;
           localStorage.setItem('rr-player-name', name.trim());
           await window.__fbJoinGame(code);
-          onJoin(name.trim(), code, joinLevel, ephemeral, true); // true = fromInvite
+          onJoin(name.trim(), code, joinLevel, ephemeral, true, done||[]); // true = fromInvite
         } catch(e) {
           console.error('handleJoinGame error:', e);
           setError(e.message || window.T.errJoinShort);
@@ -3221,16 +3229,20 @@
 
     /* ─── App root ─── */
     function App() {
-      const [phase,       setPhase]      = useState('lobby');
-      const [playerName,  setPlayerName] = useState('');
-      const [gameCode,    setGameCode]   = useState('');
-      const [level,       setLevel]      = useState(2);
-      const [ephemeral,   setEphemeral]  = useState(false);
-      const [fromInvite,  setFromInvite] = useState(false);
+      const [phase,           setPhase]          = useState('lobby');
+      const [playerName,      setPlayerName]      = useState('');
+      const [gameCode,        setGameCode]        = useState('');
+      const [level,           setLevel]           = useState(2);
+      const [ephemeral,       setEphemeral]       = useState(false);
+      const [fromInvite,      setFromInvite]      = useState(false);
+      const [savedDoneLevels, setSavedDoneLevels] = useState([]);
+      const [savedName,       setSavedName]       = useState('');
 
-      const handleJoin = (name, code, lvl, isEphemeral, isInvite) => {
+      const handleJoin = (name, code, lvl, isEphemeral, isInvite, done) => {
         setPlayerName(name); setGameCode(code); setLevel(lvl||2);
-        setEphemeral(!!isEphemeral); setFromInvite(!!isInvite); setPhase('game');
+        setEphemeral(!!isEphemeral); setFromInvite(!!isInvite);
+        setSavedDoneLevels(done||[]); setSavedName(name);
+        setPhase('game');
       };
       const handleLeave = () => {
         if (ephemeral && playerName) window.__fbDeleteEphemeralData?.(playerName);
@@ -3248,7 +3260,7 @@
         } catch(e) { console.error('levelUp error:', e); handleLeave(); }
       };
 
-      if (phase === 'lobby') return <Lobby onJoin={handleJoin} />;
+      if (phase === 'lobby') return <Lobby onJoin={handleJoin} initialDoneLevels={savedDoneLevels} initialName={savedName} />;
       return <Game key={gameCode} playerName={playerName} gameCode={gameCode} level={level}
                    fromInvite={fromInvite} onLeave={handleLeave} onLevelUp={handleLevelUp} />;
     }
