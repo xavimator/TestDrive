@@ -1905,14 +1905,16 @@
       useEffect(() => {
         if (isRubiking) {
           loadProgress(name.trim()).then(d => checkLevel8(d));
-        } else if (initialDoneLevels.length > 0 && name.trim() === initialName) {
+        } else if (name.trim() === initialName && initialName) {
           setDoneLevels(initialDoneLevels);
           checkLevel8(initialDoneLevels);
+          // Refresca desde Firebase por si se marcó progreso en la partida
+          loadProgress(name.trim()).then(d => { if (d.length > 0) checkLevel8(d); });
         } else {
           setDoneLevels([]);
           setLevel8Unlocked(false);
         }
-      }, [name, isRubiking]);
+      }, [name, isRubiking, initialDoneLevels, initialName]);
 
       // Cuando carga el progreso real, ajustar nivel si es necesario.
       // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
