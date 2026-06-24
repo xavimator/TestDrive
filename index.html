@@ -2984,7 +2984,7 @@
         window.__fbLeaveGame?.();
         window.__fbScheduleLobbyDelete?.(gameCode);
         window.rrPattern=[];
-        onLeave();
+        onLeave(finishedRef.current ? level : null);
       };
 
       const ei=tiles.indexOf(null);
@@ -3170,7 +3170,7 @@
                 {window.T.newGameBtn}
               </button>
               {finished && (fromInvite || level <= 7) && !window.RR_LEVEL_INFO(level).special && (
-                <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1); }}
+                <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1, level); }}
                   style={{padding:'11px 20px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',
                           fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',
                           border:'1px solid rgba(255,215,0,.6)',
@@ -3267,28 +3267,31 @@
         setSavedDoneLevels(done||[]); setSavedName(name);
         setPhase('game');
       };
-      const handleLeave = async () => {
+      const handleLeave = async (completedLevel) => {
         if (ephemeral && playerName) {
           window.__fbDeleteEphemeralData?.(playerName);
           setSavedDoneLevels([]);
         } else if (playerName) {
           try {
-            // Pequeña espera para que Firebase confirme el nivel completado antes de leer
-            await new Promise(r => setTimeout(r, 600));
-            const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
-            setSavedDoneLevels(fresh || []);
+            // Si sabemos qué nivel se completó, añadirlo inmediatamente sin esperar Firebase
+            if (completedLevel && completedLevel >= 1 && completedLevel <= 7) {
+              setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
+            } else {
+              // Sin nivel completado conocido, leer Firebase
+              await new Promise(r => setTimeout(r, 600));
+              const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
+              setSavedDoneLevels(fresh || []);
+            }
           } catch(e) { /* no bloquear la salida */ }
         }
         setPhase('lobby'); setPlayerName(''); setGameCode(''); setEphemeral(false); setFromInvite(false);
       };
-      const handleLevelUp = async (nextLevel) => {
+      const handleLevelUp = async (nextLevel, completedLevel) => {
         try {
           await window.__fbLeaveGame?.();
-          // Leer progreso fresco (con pequeña espera para que Firebase confirme el nivel completado)
-          if (playerName) {
-            await new Promise(r => setTimeout(r, 600));
-            const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
-            setSavedDoneLevels(fresh || []);
+          // Actualizar progreso localmente con el nivel recién completado
+          if (completedLevel && completedLevel >= 1 && completedLevel <= 7) {
+            setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
           }
           const code = genCode();
           window.__rrLevel = nextLevel;
