@@ -742,7 +742,7 @@
         wrongPassword: 'Contrase\u00f1a incorrecta',
         namePlaceholder: 'Cómo te llamas…',
         chooseLevel: 'Nivel de dificultad',
-        lockedLevel: 'Completa el nivel 2 para desbloquear',
+        lockedLevel: (n) => `Completa el nivel ${n} para desbloquear`,
         levelShort: (n) => `Nivel ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -821,7 +821,7 @@
         wrongPassword: 'Contrasenya incorrecta',
         namePlaceholder: 'Com et dius…',
         chooseLevel: 'Nivell de dificultat',
-        lockedLevel: 'Completa el nivell 2 per desbloquejar',
+        lockedLevel: (n) => `Completa el nivell ${n} per desbloquejar`,
         levelShort: (n) => `Nivell ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -893,7 +893,7 @@
         wrongPassword: 'Wrong password',
         namePlaceholder: 'What\'s your name…',
         chooseLevel: 'Difficulty level',
-        lockedLevel: 'Complete level 2 to unlock',
+        lockedLevel: (n) => `Complete level ${n} to unlock`,
         levelShort: (n) => `Level ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -965,7 +965,7 @@
         wrongPassword: 'Mot de passe incorrect',
         namePlaceholder: 'Comment tu t\'appelles…',
         chooseLevel: 'Niveau de difficulté',
-        lockedLevel: 'Termine le niveau 2 pour débloquer',
+        lockedLevel: (n) => `Termine le niveau ${n} pour débloquer`,
         levelShort: (n) => `Niveau ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1037,7 +1037,7 @@
         wrongPassword: 'Falsches Passwort',
         namePlaceholder: 'Wie heißt du…',
         chooseLevel: 'Schwierigkeitsgrad',
-        lockedLevel: 'Schließe Level 2 ab, um freizuschalten',
+        lockedLevel: (n) => `Schließe Level ${n} ab, um freizuschalten`,
         levelShort: (n) => `Stufe ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1109,7 +1109,7 @@
         wrongPassword: 'Senha incorreta',
         namePlaceholder: 'Como te chamas…',
         chooseLevel: 'Nível de dificuldade',
-        lockedLevel: 'Completa o nível 2 para desbloquear',
+        lockedLevel: (n) => `Completa o nível ${n} para desbloquear`,
         levelShort: (n) => `Nível ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1181,7 +1181,7 @@
         wrongPassword: 'Password errata',
         namePlaceholder: 'Come ti chiami…',
         chooseLevel: 'Livello di difficoltà',
-        lockedLevel: 'Completa il livello 2 per sbloccare',
+        lockedLevel: (n) => `Completa il livello ${n} per sbloccare`,
         levelShort: (n) => `Livello ${n}`,
         brainMelt: 'Brain Melt',
         mosaicCross: 'Mosaic Cross',
@@ -1869,11 +1869,13 @@
       const [doneLevels,     setDoneLevels]     = useState([]);
 
       const maxUnlockedLevel = useCallback((done) => {
-        if (isRubiking) return 7;
+        if (isRubiking) return 8;
         let lvl = 1;
         while (lvl < 7 && done.includes(lvl)) lvl++;
+        // Si nivel 7 completado Y nivel 8 desbloqueado, el máximo es 8
+        if (lvl === 7 && done.includes(7) && (localStorage.getItem('rr-level8-code') === '1' || level8Unlocked)) lvl = 8;
         return lvl;
-      }, [isRubiking]);
+      }, [isRubiking, level8Unlocked]);
 
       // Carga el progreso del alias desde Firebase y actualiza doneLevels
       const loadProgress = useCallback(async (nameStr) => {
@@ -1886,8 +1888,8 @@
       const checkLevel8 = useCallback(async (done) => {
         const doneList = done ?? doneLevels;
         const codeUnlocked = localStorage.getItem('rr-level8-code') === '1';
-        const allDone = [1,2,3,4,5,6,7].every(l=>doneList.includes(l));
-        const unlocked = allDone || isRubiking || codeUnlocked;
+        const level7Done = doneList.includes(7);
+        const unlocked = level7Done || isRubiking || codeUnlocked;
         if (unlocked) {
           setLevel8Unlocked(true);
           if (!localStorage.getItem('rr-level8-seen')) {
@@ -1900,21 +1902,11 @@
         }
       }, [name, isRubiking, doneLevels]);
 
-      // Rubiking: cargar siempre sin contraseña
-      // Para otros jugadores que vuelven del juego, restaurar el progreso guardado
+      // Carga el progreso desde Firebase siempre que el nombre cambie
       useEffect(() => {
-        if (isRubiking) {
-          loadProgress(name.trim()).then(d => checkLevel8(d));
-        } else if (name.trim() === initialName && initialName) {
-          setDoneLevels(initialDoneLevels);
-          checkLevel8(initialDoneLevels);
-          // Refresca desde Firebase por si se marcó progreso en la partida
-          loadProgress(name.trim()).then(d => { checkLevel8(d); });
-        } else {
-          setDoneLevels([]);
-          setLevel8Unlocked(false);
-        }
-      }, [name, isRubiking, initialDoneLevels, initialName]);
+        if (!name.trim()) { setDoneLevels([]); setLevel8Unlocked(false); return; }
+        loadProgress(name.trim()).then(d => checkLevel8(d));
+      }, [name, isRubiking]);
 
       // Cuando carga el progreso real, ajustar nivel si es necesario.
       // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
@@ -2034,7 +2026,8 @@
           // Usamos el progreso real recién cargado para elegir el mayor nivel desbloqueado
           // si el seleccionado supera ese límite; de lo contrario respetamos la elección.
           const isCrossSelected = window.RR_LEVEL_INFO(level)?.special === 'cross';
-          const maxLvl = isRubiking ? 7 : (() => { let l=1; while(l<7 && done.includes(l)) l++; return l; })();
+          const level8ok = localStorage.getItem('rr-level8-code') === '1';
+          const maxLvl = isRubiking ? 8 : (() => { let l=1; while(l<7 && done.includes(l)) l++; if(l===7&&done.includes(7)&&level8ok) l=8; return l; })();
           const safeLevel = isCrossSelected ? level : Math.min(level, maxLvl);
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
@@ -2162,7 +2155,7 @@
                   return (
                     <button key={lv.level} onClick={()=>{ if(!locked) setLevel(lv.level); }}
                       disabled={locked}
-                      title={locked ? window.T.lockedLevel : isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
+                      title={locked ? window.T.lockedLevel(lv.level-1) : isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
                       style={{
                         position:'relative',padding:'8px 4px',borderRadius:'9px',
                         cursor:locked?'not-allowed':'pointer',
@@ -3173,7 +3166,7 @@
                         letterSpacing:'.12em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
                 {window.T.newGameBtn}
               </button>
-              {finished && (fromInvite || level < 7) && !window.RR_LEVEL_INFO(level).special && (
+              {finished && (fromInvite || level <= 7) && !window.RR_LEVEL_INFO(level).special && (
                 <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1); }}
                   style={{padding:'11px 20px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',
                           fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',
