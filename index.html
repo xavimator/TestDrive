@@ -1920,7 +1920,7 @@
         if (lv?.special === 'cross') return;
         const max = maxUnlockedLevel(doneLevels);
         setLevel(max);
-      }, [doneLevels, isRubiking]);
+      }, [doneLevels, isRubiking, level8Unlocked, maxUnlockedLevel]);
 
       const tryRedeemCode = useCallback(async () => {
         if (!codeInput.trim()) return;
@@ -1930,7 +1930,7 @@
           localStorage.removeItem('rr-level8-seen'); // reset para que suene el chime
           setCodeInput(''); setCodeMsg('');
           setShowCodePanel(false);
-          await checkLevel8();
+          await checkLevel8(doneLevels);
           return;
         }
         setCodeBusy(true); setCodeMsg('');
@@ -1941,7 +1941,7 @@
           localStorage.removeItem('rr-level8-seen'); // reset para que suene el chime
           setCodeInput(''); setCodeMsg('');
           setShowCodePanel(false);
-          await checkLevel8();
+          await checkLevel8(doneLevels);
         } else if (res?.reason === 'expired') {
           setCodeMsg(window.T.codeExpired);
         } else {
@@ -3274,7 +3274,7 @@
         } else if (playerName) {
           try {
             // Si sabemos qué nivel se completó, añadirlo inmediatamente sin esperar Firebase
-            if (completedLevel && completedLevel >= 1 && completedLevel <= 7) {
+            if (completedLevel && completedLevel >= 1 && completedLevel <= 8) {
               setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
             } else {
               // Sin nivel completado conocido, leer Firebase
@@ -3290,7 +3290,7 @@
         try {
           await window.__fbLeaveGame?.();
           // Actualizar progreso localmente con el nivel recién completado
-          if (completedLevel && completedLevel >= 1 && completedLevel <= 7) {
+          if (completedLevel && completedLevel >= 1 && completedLevel <= 8) {
             setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
           }
           const code = genCode();
