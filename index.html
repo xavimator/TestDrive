@@ -1867,6 +1867,9 @@
       // Niveles 1-7 completados en solo por este jugador (desbloqueo progresivo:
       // el nivel N requiere haber completado el N-1). Rubiking siempre tiene todo.
       const [doneLevels,     setDoneLevels]     = useState(initialDoneLevels);
+      // True una vez que la carga de Firebase (o los initialDoneLevels) ha terminado;
+      // evita que el selector salte a nivel 1 mientras los datos viajan por la red.
+      const [progressLoaded, setProgressLoaded] = useState(initialDoneLevels.length > 0);
 
       const maxUnlockedLevel = useCallback((done) => {
         if (isRubiking) return 8;
@@ -1879,7 +1882,7 @@
 
       // Carga el progreso del alias desde Firebase y actualiza doneLevels
       const loadProgress = useCallback(async (nameStr) => {
-        if (!nameStr) { setDoneLevels([]); return []; }
+        if (!nameStr) { setDoneLevels([]); setProgressLoaded(true); return []; }
         const done = await window.__fbGetSoloLevelsDone?.(nameStr) ?? [];
         // Combinar con lo que ya tenemos para no perder progreso recién guardado
         let merged = done;
@@ -1887,6 +1890,7 @@
           merged = [...new Set([...prev, ...done])];
           return merged;
         });
+        setProgressLoaded(true);
         return merged;
       }, []);
 
@@ -1915,12 +1919,14 @@
 
       // Seleccionar siempre el mayor nivel desbloqueado al cargar o cambiar el progreso.
       // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
+      // No tocar si aún no ha terminado la carga de progreso (evita saltar a nivel 1).
       useEffect(() => {
+        if (!progressLoaded) return;
         const lv = window.RR_LEVEL_INFO(level);
         if (lv?.special === 'cross') return;
         const max = maxUnlockedLevel(doneLevels);
         setLevel(max);
-      }, [doneLevels, isRubiking, level8Unlocked, maxUnlockedLevel]);
+      }, [doneLevels, isRubiking, level8Unlocked, maxUnlockedLevel, progressLoaded]);
 
       const tryRedeemCode = useCallback(async () => {
         if (!codeInput.trim()) return;
@@ -3260,6 +3266,20 @@
       const [fromInvite,      setFromInvite]      = useState(false);
       const [savedDoneLevels, setSavedDoneLevels] = useState([]);
       const [savedName,       setSavedName]       = useState('');
+
+      // Precarga el progreso desde Firebase al arrancar si hay nombre guardado en localStorage
+      useEffect(() => {
+        const storedName = localStorage.getItem('rr-player-name');
+        if (!storedName) return;
+        const load = async () => {
+          try {
+            if (!window.__fbReady) await new Promise(r => window.addEventListener('fbReady', r, { once: true }));
+            const done = await window.__fbGetSoloLevelsDone?.(storedName);
+            if (done && done.length > 0) setSavedDoneLevels(done);
+          } catch(e) {}
+        };
+        load();
+      }, []);
 
       const handleJoin = (name, code, lvl, isEphemeral, isInvite, done) => {
         setPlayerName(name); setGameCode(code); setLevel(lvl||2);
