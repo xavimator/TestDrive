@@ -1913,15 +1913,13 @@
         loadProgress(name.trim()).then(d => checkLevel8(d));
       }, [name, isRubiking]);
 
-      // Cuando carga el progreso real, ajustar nivel si es necesario.
+      // Seleccionar siempre el mayor nivel desbloqueado al cargar o cambiar el progreso.
       // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
       useEffect(() => {
         const lv = window.RR_LEVEL_INFO(level);
-        if (lv?.special === 'cross') return; // nivel 8 seleccionado: no interferir
+        if (lv?.special === 'cross') return;
         const max = maxUnlockedLevel(doneLevels);
-        if (level > max) { setLevel(max); return; }
-        // Si el nivel actual ya está completado, avanzar al siguiente desbloqueado
-        if (doneLevels.includes(level)) setLevel(max);
+        setLevel(max);
       }, [doneLevels, isRubiking]);
 
       const tryRedeemCode = useCallback(async () => {
@@ -3286,6 +3284,12 @@
       const handleLevelUp = async (nextLevel) => {
         try {
           await window.__fbLeaveGame?.();
+          // Leer progreso fresco (con pequeña espera para que Firebase confirme el nivel completado)
+          if (playerName) {
+            await new Promise(r => setTimeout(r, 600));
+            const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
+            setSavedDoneLevels(fresh || []);
+          }
           const code = genCode();
           window.__rrLevel = nextLevel;
           await window.__fbJoinGame?.(code);
