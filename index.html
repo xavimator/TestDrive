@@ -1890,6 +1890,18 @@
         return lvl;
       }, [isRubiking, level8Unlocked]);
 
+      // Cuando App actualiza initialDoneLevels (sync Firebase en background), aplicar el merge
+      useEffect(() => {
+        if (!initialDoneLevels.length) return;
+        setDoneLevels(prev => {
+          const merged = [...new Set([...prev, ...initialDoneLevels])];
+          // Solo actualizar si hay cambios reales
+          if (merged.length === prev.length) return prev;
+          return merged;
+        });
+        setProgressLoaded(true);
+      }, [initialDoneLevels]);
+
       // Carga el progreso del alias desde Firebase y actualiza doneLevels
       const loadProgress = useCallback(async (nameStr) => {
         if (!nameStr) { setDoneLevels([]); setProgressLoaded(true); return []; }
@@ -3334,17 +3346,21 @@
           window.__fbDeleteEphemeralData?.(playerName);
           setSavedDoneLevels([]);
         } else if (playerName) {
-          try {
-            // Si sabemos qué nivel se completó, añadirlo inmediatamente sin esperar Firebase
-            if (completedLevel && completedLevel >= 1 && completedLevel <= 8) {
-              setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
-            } else {
-              // Sin nivel completado conocido, leer Firebase
-              await new Promise(r => setTimeout(r, 600));
-              const fresh = await window.__fbGetSoloLevelsDone?.(playerName);
-              setSavedDoneLevels(fresh || []);
-            }
-          } catch(e) { /* no bloquear la salida */ }
+          // Aplicar localmente el nivel completado de inmediato (sin esperar Firebase)
+          if (completedLevel && completedLevel >= 1 && completedLevel <= 8) {
+            setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
+          }
+          // Siempre sincronizar con Firebase en background para capturar
+          // cualquier nivel guardado por autoSolve o timing race
+          const nameSnap = playerName;
+          setTimeout(async () => {
+            try {
+              const fresh = await window.__fbGetSoloLevelsDone?.(nameSnap);
+              if (fresh && fresh.length > 0) {
+                setSavedDoneLevels(prev => [...new Set([...prev, ...fresh])]);
+              }
+            } catch(e) {}
+          }, 800);
         }
         setPhase('lobby'); setPlayerName(''); setGameCode(''); setEphemeral(false); setFromInvite(false);
       };
