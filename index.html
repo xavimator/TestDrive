@@ -1864,6 +1864,7 @@
       const [codeInput,      setCodeInput]      = useState('');
       const [codeMsg,        setCodeMsg]        = useState('');
       const [codeBusy,       setCodeBusy]       = useState(false);
+      const [lockedTip,      setLockedTip]      = useState(null); // { level, x, y }
       // Niveles 1-7 completados en solo por este jugador (desbloqueo progresivo:
       // el nivel N requiere haber completado el N-1). Rubiking siempre tiene todo.
       const [doneLevels,     setDoneLevels]     = useState(initialDoneLevels);
@@ -1873,7 +1874,8 @@
 
       const maxUnlockedLevel = useCallback((done) => {
         if (isRubiking) return 8;
-        let lvl = 1;
+        // Los primeros 3 niveles siempre están desbloqueados
+        let lvl = Math.max(3, 1);
         while (lvl < 7 && done.includes(lvl)) lvl++;
         // Si nivel 7 completado Y nivel 8 desbloqueado, el máximo es 8
         if (lvl === 7 && done.includes(7) && (localStorage.getItem('rr-level8-code') === '1' || level8Unlocked)) lvl = 8;
@@ -2036,7 +2038,7 @@
           // si el seleccionado supera ese límite; de lo contrario respetamos la elección.
           const isCrossSelected = window.RR_LEVEL_INFO(level)?.special === 'cross';
           const level8ok = localStorage.getItem('rr-level8-code') === '1';
-          const maxLvl = isRubiking ? 8 : (() => { let l=1; while(l<7 && done.includes(l)) l++; if(l===7&&done.includes(7)&&level8ok) l=8; return l; })();
+          const maxLvl = isRubiking ? 8 : (() => { let l=3; while(l<7 && done.includes(l)) l++; if(l===7&&done.includes(7)&&level8ok) l=8; return l; })();
           const safeLevel = isCrossSelected ? level : Math.min(level, maxLvl);
           const code = genCode();
           localStorage.setItem('rr-player-name', name.trim());
@@ -2162,13 +2164,21 @@
                   const locked = !isSpecial && lv.level > maxUnlockedLevel(doneLevels);
                   const completed = !isSpecial && doneLevels.includes(lv.level);
                   return (
-                    <button key={lv.level} onClick={()=>{ if(!locked) setLevel(lv.level); }}
-                      disabled={locked}
-                      title={locked ? window.T.lockedLevel(lv.level-1) : isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`}
+                    <button key={lv.level}
+                      onClick={(e)=>{
+                        if(locked){
+                          setLockedTip(t => t?.level===lv.level ? null : { level: lv.level });
+                          setTimeout(()=>setLockedTip(null), 2800);
+                        } else {
+                          setLevel(lv.level);
+                          setLockedTip(null);
+                        }
+                      }}
+                      title={!locked ? (isSpecial ? `${window.T.levelShort(lv.level)} · ${window.T.mosaicCross}` : `${window.T.levelShort(lv.level)} · ${lv.boardSize}×${lv.boardSize}`) : ''}
                       style={{
                         position:'relative',padding:'8px 4px',borderRadius:'9px',
                         cursor:locked?'not-allowed':'pointer',
-                        opacity:locked?0.38:1,
+                        opacity:locked?0.45:1,
                         border:`1px solid ${active?'rgba(156,90,255,.8)':completed?'rgba(74,222,128,.5)':isSpecial?'rgba(255,200,80,.55)':'rgba(255,255,255,.12)'}`,
                         background:active?'rgba(156,90,255,.22)':completed?'rgba(34,197,94,.1)':isSpecial?'rgba(255,200,80,.1)':'rgba(255,255,255,.04)',
                         color:active?'#fff':completed?'#4ade80':isSpecial?'#FFD27A':'rgba(255,255,255,.65)',
@@ -2190,6 +2200,29 @@
                       {lv.brainMelt && !locked && (
                         <div style={{position:'absolute',top:'-7px',right:'-4px',fontSize:'12px',
                                      filter:'drop-shadow(0 0 4px rgba(255,150,50,.9))'}}>🔥</div>
+                      )}
+                      {locked && lockedTip?.level===lv.level && (
+                        <div style={{
+                          position:'absolute',bottom:'calc(100% + 8px)',left:'50%',
+                          transform:'translateX(-50%)',
+                          background:'rgba(6,4,20,.97)',
+                          border:'1px solid rgba(156,90,255,.4)',
+                          borderRadius:'10px',padding:'8px 11px',
+                          fontSize:'11px',fontWeight:600,color:'rgba(255,255,255,.85)',
+                          whiteSpace:'normal',pointerEvents:'none',zIndex:50,textAlign:'center',
+                          boxShadow:'0 6px 24px rgba(0,0,0,.7)',
+                          animation:'fadeUp .2s ease',
+                        }}>
+                          <span style={{display:'block',textAlign:'center',lineHeight:1.6}}>
+                            🔒 gana el nivel {lv.level-1}<br/>para jugar
+                          </span>
+                          <div style={{
+                            position:'absolute',top:'100%',left:'50%',transform:'translateX(-50%)',
+                            width:0,height:0,
+                            borderLeft:'6px solid transparent',borderRight:'6px solid transparent',
+                            borderTop:'6px solid rgba(156,90,255,.4)',
+                          }}/>
+                        </div>
                       )}
                     </button>
                   );
@@ -3186,7 +3219,7 @@
                   ⬆ Level Up
                 </button>
               )}
-              {playerName.toLowerCase() === 'rubiking' && !finished && (
+              {['rubiking','yy'].includes(playerName.toLowerCase()) && !finished && (
                 <button onClick={handleAutoSolve}
                   title="Auto-resolve (Rubiking only)"
                   style={{padding:'11px 18px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',
