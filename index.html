@@ -2016,11 +2016,13 @@
         }
         if (password.trim()) {
           await window.__fbClaimAlias?.(name.trim(), password.trim());
-          setDoneLevels([]);
-          return { ephemeral: false, done: [] };
         }
-        setDoneLevels([]);
-        return { ephemeral: true, done: [] }; // sin contraseña → efímera
+        // Siempre cargar el progreso existente en Firebase, independientemente
+        // de si el alias está reclamado o es una sesión efímera
+        const done = await loadProgress(name.trim());
+        await checkLevel8(done);
+        const ephemeral = !password.trim();
+        return { ephemeral, done };
       };
 
       // Auto-join if URL has ?code=XXXX
