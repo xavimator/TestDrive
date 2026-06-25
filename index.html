@@ -525,10 +525,14 @@
         const key = safeKey(name);
         const pRef = ref(db, `rubitrack/soloProgress/${key}`);
         const snap = await get(pRef);
-        const prev = snap.val() || { name, levels: [] };
-        if (!prev.levels.includes(level)) {
-          prev.levels.push(level);
-          await set(pRef, { name, levels: prev.levels });
+        const raw = snap.val() || { name, levels: [] };
+        // Normalizar por si Firebase devolvió el array como objeto
+        const prevLevels = Array.isArray(raw.levels)
+          ? raw.levels.filter(Boolean)
+          : Object.values(raw.levels || {}).filter(v => typeof v === 'number');
+        if (!prevLevels.includes(level)) {
+          prevLevels.push(level);
+          await set(pRef, { name, levels: prevLevels });
         }
       } catch(e) { console.error('markLevelDone error:', e); }
     };
@@ -536,7 +540,11 @@
       try {
         const key = safeKey(name);
         const snap = await get(ref(db, `rubitrack/soloProgress/${key}/levels`));
-        return snap.val() || [];
+        const val = snap.val();
+        if (!val) return [];
+        // Firebase a veces devuelve arrays como objetos {0:1,1:2,...}; normalizamos
+        if (Array.isArray(val)) return val.filter(Boolean);
+        return Object.values(val).filter(v => typeof v === 'number');
       } catch(e) { return []; }
     };
 
@@ -2944,7 +2952,7 @@
         if (!finishedRef.current && checkMatch(nt,rrPat,CENTER)) {
           finishedRef.current=true; setFinished(true);
           const ft=fmt(time+1), fm=moves+1;
-          if (level >= 1 && level <= 7) {
+          if (level >= 1 && level <= 8) {
             window.__fbMarkLevelDone?.(playerName, level);
           }
           setTimeout(()=>{
@@ -2996,6 +3004,7 @@
             if (checkMatch(prev, rrPat, CENTER)) {
               finishedRef.current = true; setFinished(true);
               const ft = fmt(time), fm = moves;
+              if (level >= 1 && level <= 8) window.__fbMarkLevelDone?.(playerName, level);
               window.__fbSendFinish?.(playerName, ft, fm);
               window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
             }
