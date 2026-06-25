@@ -2160,12 +2160,23 @@
 
               {nameOk && (
                 <div style={{marginTop:'10px'}}>
-                  <input type="password" maxLength={17} value={password}
-                    onChange={e=>{setPassword(e.target.value); setPasswordError('');}}
-                    placeholder={aliasClaimed ? window.T.passwordRequired : window.T.passwordOptional}
-                    style={{width:'100%',boxSizing:'border-box',padding:'9px 12px',borderRadius:'8px',
-                            border:`1px solid ${passwordError?'rgba(248,113,113,.5)':aliasClaimed?'rgba(255,180,0,.35)':'rgba(255,255,255,.12)'}`,
-                            background:'rgba(255,255,255,.04)',color:'#fff',fontSize:'12.5px'}}/>
+                  <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                    <input type="password" maxLength={17} value={password}
+                      onChange={e=>{setPassword(e.target.value); setPasswordError('');}}
+                      onKeyDown={e=>{ if(e.key==='Enter' && password.trim()) { loadProgress(name.trim()).then(d=>checkLevel8(d)); }}}
+                      placeholder={aliasClaimed ? window.T.passwordRequired : window.T.passwordOptional}
+                      style={{flex:1,boxSizing:'border-box',padding:'9px 12px',borderRadius:'8px',
+                              border:`1px solid ${passwordError?'rgba(248,113,113,.5)':aliasClaimed?'rgba(255,180,0,.35)':'rgba(255,255,255,.12)'}`,
+                              background:'rgba(255,255,255,.04)',color:'#fff',fontSize:'12.5px'}}/>
+                    {password.trim() && (
+                      <button onClick={()=>{ loadProgress(name.trim()).then(d=>checkLevel8(d)); setPasswordError(''); }}
+                        style={{padding:'9px 13px',borderRadius:'8px',border:'1px solid rgba(156,90,255,.5)',
+                                background:'rgba(156,90,255,.18)',color:'#fff',fontWeight:700,fontSize:'13px',
+                                cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+                        OK
+                      </button>
+                    )}
+                  </div>
                   {aliasClaimed && !passwordError && (
                     <div style={{marginTop:'5px',fontSize:'10.5px',color:'rgba(255,200,80,.75)'}}>🔒 {window.T.aliasProtected}</div>
                   )}
