@@ -1296,6 +1296,7 @@
     @keyframes playerIn   { from{transform:translateY(-6px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes modalIn    { from{transform:scale(.85);opacity:0} 70%{transform:scale(1.03)} to{transform:scale(1);opacity:1} }
     @keyframes codePop    { from{transform:scale(.8) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+    @keyframes centerPulse { 0%,100%{box-shadow:0 0 0 2px rgba(156,90,255,.5),0 0 12px 2px rgba(156,90,255,.15)} 50%{box-shadow:0 0 0 2px rgba(200,150,255,.95),0 0 28px 6px rgba(156,90,255,.4)} }
 
     .tile-btn  { touch-action:manipulation; -webkit-tap-highlight-color:transparent;
                  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
@@ -1873,6 +1874,7 @@
       const [codeMsg,        setCodeMsg]        = useState('');
       const [codeBusy,       setCodeBusy]       = useState(false);
       const [lockedTip,      setLockedTip]      = useState(null); // { level, x, y }
+      const [fbOnline,       setFbOnline]       = useState(true);  // Firebase conectado
       // Niveles 1-7 completados en solo por este jugador (desbloqueo progresivo:
       // el nivel N requiere haber completado el N-1). Rubiking siempre tiene todo.
       const [doneLevels,     setDoneLevels]     = useState(initialDoneLevels);
@@ -2126,6 +2128,20 @@
         <div className="lobby-wrap">
           <Stars/>
           <div className="lobby-title">Mosaic Champ</div>
+          {!fbOnline && (
+            <div style={{
+              width:'100%',maxWidth:'420px',marginBottom:'10px',
+              padding:'10px 14px',borderRadius:'12px',boxSizing:'border-box',
+              background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.35)',
+              color:'rgba(255,180,180,.9)',fontSize:'12px',fontWeight:600,
+              display:'flex',alignItems:'center',gap:'10px',lineHeight:1.5,
+            }}>
+              <span style={{fontSize:'18px',flexShrink:0}}>⚠️</span>
+              <span>Sin conexión con la base de datos —
+                <span style={{fontWeight:400,opacity:.85}}> no se guardarán ni leerán los progresos.</span>
+              </span>
+            </div>
+          )}
           <div className="lobby-card">
             {/* Name */}
             <div>
@@ -3202,11 +3218,11 @@
                     width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',border:'none',
                     cursor:isAdj?'pointer':'default',
                     background:`linear-gradient(145deg,${c.shine} 0%,${c.bg} 50%,${c.shadow} 100%)`,
-                    boxShadow:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
+                    boxShadow:isCenter?undefined:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
                     transition:'transform .1s,filter .1s',
                     transform:isAdj?'scale(1.02)':'scale(1)',
                     filter:isAdj?'brightness(1.1)':'brightness(1)',
-                    animation:idx===lastMoved?'tileSlide .15s ease':'none',
+                    animation:idx===lastMoved?'tileSlide .15s ease':isCenter?'centerPulse 2.8s ease-in-out infinite':'none',
                     position:'relative',overflow:'hidden',
                   }}>
                     <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',borderRadius:'8px 8px 50% 50%',background:'linear-gradient(to bottom,rgba(255,255,255,.2),transparent)',pointerEvents:'none'}}/>
@@ -3333,6 +3349,13 @@
       const [fromInvite,      setFromInvite]      = useState(false);
       const [savedDoneLevels, setSavedDoneLevels] = useState([]);
       const [savedName,       setSavedName]       = useState('');
+
+      // Escuchar estado de conexión Firebase
+      useEffect(() => {
+        const prev = window.__fbConnectionState;
+        window.__fbConnectionState = (ok) => { setFbOnline(ok); prev?.(ok); };
+        return () => { window.__fbConnectionState = prev; };
+      }, []);
 
       // Precarga el progreso desde Firebase al arrancar si hay nombre guardado en localStorage
       useEffect(() => {
