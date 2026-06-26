@@ -1300,7 +1300,10 @@
 
     .tile-btn  { touch-action:manipulation; -webkit-tap-highlight-color:transparent;
                  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
-                 outline:none; }
+                 outline:none;
+                 -webkit-backface-visibility:hidden; backface-visibility:hidden;
+                 -webkit-transform:translateZ(0); transform:translateZ(0);
+                 isolation:isolate; will-change:transform; }
     .tile-btn:hover  { transform:scale(1.06) !important; filter:brightness(1.25) !important; }
     .tile-btn:active { transform:scale(0.95) !important; }
 
@@ -3199,7 +3202,7 @@
                                        color:'rgba(255,255,255,.3)'}}>{n}</div>
                 ))}
               </div>
-              <div style={{position:'relative',display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)'}}>
+              <div style={{position:'relative',display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)',WebkitTransform:'translateZ(0)',transform:'translateZ(0)',isolation:'isolate'}}>
               {/* Marco de pulso sobre el grupo central */}
               {(() => {
                 if (!patternSize) return null; // nivel cross: forma irregular, sin marco
@@ -3211,11 +3214,11 @@
                   <div style={{
                     position:'absolute',
                     pointerEvents:'none',
-                    top:  `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px) - 5px)`,
-                    left: `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px) - 5px)`,
-                    width:  `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px + 10px)`,
-                    height: `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px + 10px)`,
-                    borderRadius:'12px',
+                    top:  `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px))`,
+                    left: `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px))`,
+                    width:  `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px)`,
+                    height: `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px)`,
+                    borderRadius:'9px',
                     zIndex:10,
                     animation:'centerPulse 2.8s ease-in-out infinite',
                   }}/>
@@ -3241,7 +3244,7 @@
                     background:`linear-gradient(145deg,${c.shine} 0%,${c.bg} 50%,${c.shadow} 100%)`,
                     boxShadow:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
                     transition:'transform .1s,filter .1s',
-                    transform:isAdj?'scale(1.02)':'scale(1)',
+                    transform:isAdj?'scale(1.02) translateZ(0)':'translateZ(0)',
                     filter:isAdj?'brightness(1.1)':'brightness(1)',
                     animation:idx===lastMoved?'tileSlide .15s ease':'none',
                     position:'relative',overflow:'hidden',
