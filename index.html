@@ -1884,6 +1884,9 @@
       // True una vez que la carga de Firebase (o los initialDoneLevels) ha terminado;
       // evita que el selector salte a nivel 1 mientras los datos viajan por la red.
       const [progressLoaded, setProgressLoaded] = useState(initialDoneLevels.length > 0);
+      // True cuando el usuario ha tocado el selector manualmente; evita que el auto-select
+      // sobreescriba su elección al llegar el progreso de Firebase.
+      const [userPickedLevel, setUserPickedLevel] = useState(false);
 
       const maxUnlockedLevel = useCallback((done) => {
         if (isRubiking) return 8;
@@ -1940,20 +1943,21 @@
 
       // Carga el progreso desde Firebase siempre que el nombre cambie
       useEffect(() => {
-        if (!name.trim()) { setDoneLevels([]); setLevel8Unlocked(false); return; }
+        if (!name.trim()) { setDoneLevels([]); setLevel8Unlocked(false); setUserPickedLevel(false); return; }
         loadProgress(name.trim()).then(d => checkLevel8(d));
       }, [name, isRubiking]);
 
-      // Seleccionar siempre el mayor nivel desbloqueado al cargar o cambiar el progreso.
-      // No tocar si el usuario ha seleccionado el nivel 8 (cross) explícitamente.
-      // No tocar si aún no ha terminado la carga de progreso (evita saltar a nivel 1).
+      // Seleccionar el mayor nivel desbloqueado al cargar el progreso, pero solo si el
+      // usuario no ha elegido nivel manualmente. No tocar el nivel 8 (cross) ni si aún
+      // no ha terminado la carga de progreso.
       useEffect(() => {
         if (!progressLoaded) return;
+        if (userPickedLevel) return;
         const lv = window.RR_LEVEL_INFO(level);
         if (lv?.special === 'cross') return;
         const max = maxUnlockedLevel(doneLevels);
         setLevel(max);
-      }, [doneLevels, isRubiking, level8Unlocked, maxUnlockedLevel, progressLoaded]);
+      }, [doneLevels, isRubiking, level8Unlocked, maxUnlockedLevel, progressLoaded, userPickedLevel]);
 
       const tryRedeemCode = useCallback(async () => {
         if (!codeInput.trim()) return;
@@ -2222,7 +2226,7 @@
                           setLockedTip(t => t?.level===lv.level ? null : { level: lv.level });
                           setTimeout(()=>setLockedTip(null), 2800);
                         } else {
-                          setLevel(lv.level);
+                          setLevel(lv.level); setUserPickedLevel(true);
                           setLockedTip(null);
                         }
                       }}
