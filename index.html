@@ -1296,7 +1296,7 @@
     @keyframes playerIn   { from{transform:translateY(-6px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes modalIn    { from{transform:scale(.85);opacity:0} 70%{transform:scale(1.03)} to{transform:scale(1);opacity:1} }
     @keyframes codePop    { from{transform:scale(.8) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
-    @keyframes centerPulse { 0%,100%{box-shadow:0 0 0 2px rgba(156,90,255,.5),0 0 12px 2px rgba(156,90,255,.15)} 50%{box-shadow:0 0 0 2px rgba(200,150,255,.95),0 0 28px 6px rgba(156,90,255,.4)} }
+    @keyframes centerPulse { 0%,100%{box-shadow:0 0 0 2.5px rgba(156,90,255,.45),0 0 10px 2px rgba(156,90,255,.12)} 50%{box-shadow:0 0 0 2.5px rgba(200,150,255,.9),0 0 26px 7px rgba(156,90,255,.38)} }
 
     .tile-btn  { touch-action:manipulation; -webkit-tap-highlight-color:transparent;
                  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
@@ -3200,6 +3200,27 @@
                 ))}
               </div>
               <div style={{position:'relative',display:'grid',gridTemplateColumns:`repeat(${boardSize},var(--tile))`,gap:'5px',padding:'12px',background:'rgba(255,255,255,.04)',borderRadius:'16px',border:'1px solid rgba(255,255,255,.08)',boxShadow:'0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)'}}>
+              {/* Marco de pulso sobre el grupo central */}
+              {(() => {
+                if (!patternSize) return null; // nivel cross: forma irregular, sin marco
+                const gap = 5;
+                const pad = 12;
+                const offset = Math.floor((boardSize - patternSize) / 2);
+                const ps = patternSize;
+                return (
+                  <div style={{
+                    position:'absolute',
+                    pointerEvents:'none',
+                    top:  `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px) - 5px)`,
+                    left: `calc(${pad}px + ${offset} * (var(--tile) + ${gap}px) - 5px)`,
+                    width:  `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px + 10px)`,
+                    height: `calc(${ps} * (var(--tile) + ${gap}px) - ${gap}px + 10px)`,
+                    borderRadius:'12px',
+                    zIndex:10,
+                    animation:'centerPulse 2.8s ease-in-out infinite',
+                  }}/>
+                );
+              })()}
               {tiles.map((tile,idx)=>{
                 if (tile===undefined) return <div key={`void-${idx}`} style={{width:'var(--tile)',height:'var(--tile)'}}/>;
                 const isCenter = CENTER.includes(idx);
@@ -3218,11 +3239,11 @@
                     width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',border:'none',
                     cursor:isAdj?'pointer':'default',
                     background:`linear-gradient(145deg,${c.shine} 0%,${c.bg} 50%,${c.shadow} 100%)`,
-                    boxShadow:isCenter?undefined:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
+                    boxShadow:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
                     transition:'transform .1s,filter .1s',
                     transform:isAdj?'scale(1.02)':'scale(1)',
                     filter:isAdj?'brightness(1.1)':'brightness(1)',
-                    animation:idx===lastMoved?'tileSlide .15s ease':isCenter?'centerPulse 2.8s ease-in-out infinite':'none',
+                    animation:idx===lastMoved?'tileSlide .15s ease':'none',
                     position:'relative',overflow:'hidden',
                   }}>
                     <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',borderRadius:'8px 8px 50% 50%',background:'linear-gradient(to bottom,rgba(255,255,255,.2),transparent)',pointerEvents:'none'}}/>
