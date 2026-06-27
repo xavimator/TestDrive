@@ -335,34 +335,38 @@
     });
 
 
-    // La Marsellesa — primeras 9 notas (Allons en-fants de la Pa-tri-e, le jour)
-    // Melodía en Sol mayor: G4 G4 G4 Eb4 | Bb4 Bb4 Bb4 G4 | C5
-    // Ritmo: corta corta corta larga | corta corta corta larga | larga
+    // La Marsellesa — "Allons enfants de la Patrie, le jour de gloire est arrivé"
+    // Tonalidad Bb mayor. Ritmo exacto del original:
+    // Pickup: Bb4(8) Bb4(8) Bb4(8) | G4(4.) Eb4(8) Eb4(8) | F4(4) F4(4) | Bb4(2) |
+    // "Al  - lons  - en  -  fants      de    la  -  Pa   -  tri  - e"
+    // BPM ~72, compás 4/4
     window.playMarseillaiseHelp = () => play(c => {
-      const BPM = 108;
-      const beat = 60 / BPM;          // duración de negra en segundos
-      // {f: frecuencia Hz, b: duración en beats}
+      const BPM  = 76;
+      const q    = 60 / BPM;   // negra
+      const e    = q / 2;      // corchea
+      const qd   = q * 1.5;    // negra con punto
+      const h    = q * 2;      // blanca
+
+      // {f, dur} — dur en segundos
       const notes = [
-        {f:392, b:0.5}, // G4  Al-
-        {f:392, b:0.5}, // G4  lons
-        {f:392, b:0.5}, // G4  en-
-        {f:311, b:1.0}, // Eb4 fants
-        {f:466, b:0.5}, // Bb4 de
-        {f:466, b:0.5}, // Bb4 la
-        {f:466, b:0.5}, // Bb4 Pa-
-        {f:392, b:1.0}, // G4  tri-
-        {f:523, b:1.5}, // C5  e
+        {f: 466, dur: e  },  // Bb4  "Al-"
+        {f: 466, dur: e  },  // Bb4  "lons"
+        {f: 466, dur: e  },  // Bb4  "en-"
+        {f: 392, dur: qd },  // G4   "fants"   (negra con punto)
+        {f: 311, dur: e  },  // Eb4  "de"
+        {f: 311, dur: e  },  // Eb4  "la"       (corchea — pickup al compás siguiente)
+        {f: 349, dur: q  },  // F4   "Pa-"
+        {f: 349, dur: q  },  // F4   "tri-"
+        {f: 466, dur: h  },  // Bb4  "e"        (blanca)
       ];
 
       let when = c.currentTime + 0.06;
-      notes.forEach(({f, b}) => {
-        const dur = b * beat;
-        const gate = dur * 0.88; // duración con articulación
+      notes.forEach(({f, dur}) => {
+        const gate = dur * 0.86;
 
-        // ── Trombone: sawtooth + lowpass sweeping + vibrato ligero ──
         const osc  = c.createOscillator();
-        const osc2 = c.createOscillator(); // segundo parcial ligeramente desafinado
-        const vib  = c.createOscillator(); // LFO vibrato
+        const osc2 = c.createOscillator();
+        const vib  = c.createOscillator();
         const vibG = c.createGain();
         const lp   = c.createBiquadFilter();
         const g    = c.createGain();
@@ -370,24 +374,21 @@
         osc.type  = 'sawtooth';
         osc2.type = 'sawtooth';
         osc.frequency.value  = f;
-        osc2.frequency.value = f * 1.003; // leve chorus
+        osc2.frequency.value = f * 1.003;
 
-        // Vibrato (entra a mitad de la nota)
         vib.type = 'sine';
         vib.frequency.value = 5.5;
         vibG.gain.setValueAtTime(0, when);
-        vibG.gain.linearRampToValueAtTime(f * 0.008, when + gate * 0.5);
+        vibG.gain.linearRampToValueAtTime(f * 0.008, when + gate * 0.55);
         vib.connect(vibG);
         vibG.connect(osc.frequency);
         vibG.connect(osc2.frequency);
 
-        // Filtro paso-bajo: sweep abierto al ataque, se cierra al final
         lp.type = 'lowpass';
         lp.Q.value = 2.8;
         lp.frequency.setValueAtTime(f * 5.5, when);
         lp.frequency.linearRampToValueAtTime(f * 2.2, when + gate);
 
-        // Envolvente de amplitud tipo trombone: ataque medio, decay breve, sustain, release
         g.gain.setValueAtTime(0, when);
         g.gain.linearRampToValueAtTime(0.32, when + 0.045);
         g.gain.linearRampToValueAtTime(0.26, when + 0.12);
@@ -3184,8 +3185,14 @@
         const nt=[...tiles]; [nt[ei],nt[idx]]=[nt[idx],nt[ei]];
         setTiles(nt); setMoves(m=>m+1); setLastMoved(ei);
         lastMoveTimeRef.current = Date.now();
-        setShowLifesaver(false);
-        setHintMove(null);
+        // Si ya se usaron pistas, mantener el salvavidas y recalcular siguiente movimiento
+        if (usedHints) {
+          const sol = bfsSolve(nt);
+          setHintMove(sol.length > 0 ? sol[0] : null);
+        } else {
+          setShowLifesaver(false);
+          setHintMove(null);
+        }
         sendPresence(true);
         window.__fbUpdateLobbyActivity?.(gameCode);
 
@@ -3221,7 +3228,7 @@
             window.__fbScheduleLobbyDelete?.(gameCode);
           },50);
         }
-      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints]);
+      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints, bfsSolve]);
 
       useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
@@ -3452,14 +3459,8 @@
                         onClick={(e)=>{
                           e.stopPropagation();
                           setUsedHints(true);
-                          // Avanzar al siguiente paso de la solución
-                          setTiles(prev => {
-                            const sol = bfsSolve(prev);
-                            // sol[0] es el tile a mover ahora; sol[1] sería el siguiente
-                            if (sol.length > 1) setHintMove(sol[1]);
-                            else setHintMove(null);
-                            return prev;
-                          });
+                          // hintMove ya está pre-cargado al aparecer el salvavidas;
+                          // no lo cambiamos aquí — se actualiza cuando el jugador mueve
                         }}
                         style={{
                           position:'absolute',inset:0,width:'100%',height:'100%',
