@@ -1888,6 +1888,14 @@
       // sobreescriba su elección al llegar el progreso de Firebase.
       const [userPickedLevel, setUserPickedLevel] = useState(false);
 
+
+      // Escuchar estado de conexión Firebase
+      useEffect(() => {
+        const prev = window.__fbConnectionState;
+        window.__fbConnectionState = (ok) => { setFbOnline(ok); prev?.(ok); };
+        setFbOnline(window.__fbConnected ?? null);
+        return () => { window.__fbConnectionState = prev; };
+      }, []);
       const maxUnlockedLevel = useCallback((done) => {
         if (isRubiking) return 8;
         // Los primeros 3 niveles siempre están desbloqueados
@@ -3378,15 +3386,6 @@
       const [savedDoneLevels, setSavedDoneLevels] = useState([]);
       const [savedName,       setSavedName]       = useState('');
 
-      // Escuchar estado de conexión Firebase
-      // Escuchar estado de conexión Firebase
-      useEffect(() => {
-        const prev = window.__fbConnectionState;
-        window.__fbConnectionState = (ok) => { setFbOnline(ok); prev?.(ok); };
-        // Sincronizar estado actual al montar (fbConnected puede ya tener valor)
-        setFbOnline(window.__fbConnected ?? null);
-        return () => { window.__fbConnectionState = prev; };
-      }, []);
 
       // Precarga el progreso desde Firebase al arrancar si hay nombre guardado en localStorage
       useEffect(() => {
