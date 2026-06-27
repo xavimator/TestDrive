@@ -2906,15 +2906,23 @@
         return [];
       }, [rrPat, CENTER, boardSize, mask]);
 
-      // ── Idle timer: 5s sin mover cerca del hueco → mostrar salvavidas ──
+      // ── Idle timer: 5s sin mover → mostrar salvavidas + pre-cargar primera pista ──
       useEffect(() => {
         if (finished || countdown !== null) { setShowLifesaver(false); return; }
         const tick = () => {
-          if (Date.now() - lastMoveTimeRef.current >= 5000) setShowLifesaver(true);
+          if (Date.now() - lastMoveTimeRef.current >= 5000 && !showLifesaver) {
+            setShowLifesaver(true);
+            // Pre-calcular primera pista al aparecer el salvavidas
+            setTiles(prev => {
+              const sol = bfsSolve(prev);
+              if (sol.length > 0) setHintMove(sol[0]);
+              return prev;
+            });
+          }
         };
         hintIdleRef.current = setInterval(tick, 500);
         return () => clearInterval(hintIdleRef.current);
-      }, [finished, countdown]);
+      }, [finished, countdown, showLifesaver, bfsSolve]);
 
       const startCountdown = useCallback(() => {
         clearInterval(timerRef.current); timerRef.current = null;
@@ -3402,8 +3410,14 @@
                         onClick={(e)=>{
                           e.stopPropagation();
                           setUsedHints(true);
-                          const sol = bfsSolve(tiles);
-                          if (sol.length > 0) setHintMove(sol[0]);
+                          // Avanzar al siguiente paso de la solución
+                          setTiles(prev => {
+                            const sol = bfsSolve(prev);
+                            // sol[0] es el tile a mover ahora; sol[1] sería el siguiente
+                            if (sol.length > 1) setHintMove(sol[1]);
+                            else setHintMove(null);
+                            return prev;
+                          });
                         }}
                         style={{
                           position:'absolute',inset:0,width:'100%',height:'100%',
