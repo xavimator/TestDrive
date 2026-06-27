@@ -2898,49 +2898,44 @@
       // ── BFS solver: devuelve lista de índices de tile que hay que mover (en orden) ──
       const bfsSolve = useCallback((currentTiles) => {
         if (!rrPat.length || !CENTER.length) return [];
-        // Estado objetivo: fichas centrales con los colores del patrón.
-        // Sólo resolvemos los movimientos necesarios para poner cada ficha central en su sitio.
-        // Usamos IDA* ligero: BFS sobre el tablero completo sería muy costoso; en su lugar
-        // calculamos el siguiente movimiento óptimo mirando 1 paso: qué tile adyacente al hueco
-        // acerca más fichas centrales a su posición correcta.
         const size = boardSize;
-        const total = size * size;
-        // Reconstruir qué colorId debe estar en cada posición central
-        const targetColor = {}; // posición → colorId
+        // Objetivo: qué colorId debe ir en cada posición central
+        const targetColor = {};
         CENTER.forEach((pos, i) => { if (rrPat[i] !== undefined) targetColor[pos] = RR_IDS[rrPat[i]]; });
 
-        // Greedy BFS de profundidad limitada (max 120 movimientos)
-        const encode = (t, e) => t.map(x => x ? x.colorId[0]+x.num : '_').join(',') + '|' + e;
-        const start = [...currentTiles];
-        const startE = start.indexOf(null);
-        const queue = [{ t: start, e: startE, path: [] }];
-        const visited = new Set([encode(start, startE)]);
-        const goal = (t) => CENTER.every((pos, i) => t[pos] && t[pos].colorId === RR_IDS[rrPat[i]]);
-        if (goal(start)) return [];
+        const emptyIdx = currentTiles.indexOf(null);
+        if (emptyIdx === -1) return [];
 
-        const MAX_NODES = 3000;
-        let nodes = 0;
-        while (queue.length && nodes < MAX_NODES) {
-          const { t, e, path } = queue.shift();
-          nodes++;
-          const r = Math.floor(e / size), col = e % size;
-          const nbrs = [];
-          if (r > 0) nbrs.push(e - size);
-          if (r < size - 1) nbrs.push(e + size);
-          if (col > 0) nbrs.push(e - 1);
-          if (col < size - 1) nbrs.push(e + 1);
-          const valid = mask ? nbrs.filter(p => mask.has(p)) : nbrs;
-          for (const nb of valid) {
-            const nt = [...t]; [nt[e], nt[nb]] = [nt[nb], nt[e]];
-            if (goal(nt)) return [...path, nb];
-            const key = encode(nt, nb);
-            if (!visited.has(key) && path.length < 60) {
-              visited.add(key);
-              queue.push({ t: nt, e: nb, path: [...path, nb] });
-            }
-          }
+        // Vecinos válidos del hueco
+        const r = Math.floor(emptyIdx / size), col = emptyIdx % size;
+        const nbrs = [];
+        if (r > 0) nbrs.push(emptyIdx - size);
+        if (r < size - 1) nbrs.push(emptyIdx + size);
+        if (col > 0) nbrs.push(emptyIdx - 1);
+        if (col < size - 1) nbrs.push(emptyIdx + 1);
+        const valid = mask ? nbrs.filter(p => mask.has(p)) : nbrs;
+        if (!valid.length) return [];
+
+        // Contar fichas centrales en posición correcta ANTES
+        const scoreBefore = CENTER.reduce((acc, pos) => {
+          return acc + (currentTiles[pos] && currentTiles[pos].colorId === targetColor[pos] ? 1 : 0);
+        }, 0);
+
+        // Evaluar cada movimiento posible: elegir el que más mejora (o menos empeora)
+        let best = null, bestScore = -Infinity;
+        for (const nb of valid) {
+          const nt = [...currentTiles]; [nt[emptyIdx], nt[nb]] = [nt[nb], nt[emptyIdx]];
+          const score = CENTER.reduce((acc, pos) => {
+            return acc + (nt[pos] && nt[pos].colorId === targetColor[pos] ? 1 : 0);
+          }, 0);
+          // Bonus si la ficha movida va a una posición central correcta
+          const bonus = (CENTER.includes(emptyIdx) && nt[emptyIdx] && nt[emptyIdx].colorId === targetColor[emptyIdx]) ? 2 : 0;
+          const total = score + bonus;
+          if (total > bestScore) { bestScore = total; best = nb; }
         }
-        return [];
+        // Si ningún movimiento mejora, elegir el que menos empeora
+        // pero evitar el que acaba de hacerse (lastMoved) si hay alternativa
+        return best !== null ? [best] : [valid[0]];
       }, [rrPat, CENTER, boardSize, mask]);
 
       // ── Idle timer: 5s sin mover → mostrar salvavidas + pre-cargar primera pista ──
