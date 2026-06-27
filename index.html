@@ -708,6 +708,17 @@
         .catch(()=>{});
     };
 
+    // Borra todas las entradas del lobby donde host === name (para level up)
+    window.__fbDeleteLobbyByHost = async (name) => {
+      try {
+        const snap = await get(ref(db, 'rubitrack/lobby'));
+        snap.forEach(child => {
+          if (child.val()?.host === name)
+            remove(ref(db, `rubitrack/lobby/${child.key}`)).catch(()=>{});
+        });
+      } catch(e) {}
+    };
+
     let gamesUnsub = null;
     window.__fbListenGames = (cb) => {
       const lobbyRef = ref(db, 'rubitrack/lobby');
@@ -2084,6 +2095,7 @@
           localStorage.setItem('rr-level', String(safeLevel));
           window.__rrLevel = safeLevel;
           await window.__fbJoinGame(code);
+          await window.__fbDeleteLobbyByHost?.(name.trim());
           await window.__fbSetMeta?.(name.trim());
           await window.__fbRegisterLobby?.(code, name.trim(), safeLevel);
           window.rrShuffle?.();
@@ -3433,6 +3445,8 @@
       const handleLevelUp = async (nextLevel, completedLevel) => {
         try {
           await window.__fbLeaveGame?.();
+          // Borrar todas las partidas anteriores del lobby para este jugador
+          await window.__fbDeleteLobbyByHost?.(playerName);
           // Actualizar progreso localmente con el nivel recién completado
           if (completedLevel && completedLevel >= 1 && completedLevel <= 8) {
             setSavedDoneLevels(prev => [...new Set([...prev, completedLevel])]);
