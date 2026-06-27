@@ -3394,25 +3394,6 @@
 
           </div>
 
-          {/* Stats + Nuevo reto — misma fila, mismo alto */}
-          <div style={{display:'flex',alignItems:'stretch',gap:'10px',marginBottom:'16px',width:'100%',maxWidth:'380px'}}>
-            <div style={{display:'flex',gap:'20px',background:'rgba(255,255,255,.06)',borderRadius:'10px',
-                         padding:'11px 20px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)',
-                         flexShrink:0}}>
-              {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
-                <div key={s.label} style={{textAlign:'center'}}>
-                  <div style={{fontSize:'20px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
-                  <div style={{fontSize:'9px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-            <button onClick={handleReset}
-              style={{flex:1,padding:'11px 16px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',
-                      background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'12px',fontWeight:700,
-                      letterSpacing:'.10em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
-              {window.T.newGameBtn}
-            </button>
-          </div>
 
 
           {/* Board */}
@@ -3541,6 +3522,26 @@
 
           {/* Botones de acción + título */}
           <div style={{marginTop:'18px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',width:'100%',maxWidth:'380px'}}>
+
+            {/* Stats + Nuevo reto — misma fila, mismo alto */}
+            <div style={{display:'flex',alignItems:'stretch',gap:'10px',width:'100%'}}>
+              <div style={{display:'flex',gap:'20px',background:'rgba(255,255,255,.06)',borderRadius:'10px',
+                           padding:'11px 20px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)',
+                           flexShrink:0}}>
+                {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
+                  <div key={s.label} style={{textAlign:'center'}}>
+                    <div style={{fontSize:'20px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
+                    <div style={{fontSize:'9px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={handleReset}
+                style={{flex:1,padding:'11px 16px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',
+                        background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'12px',fontWeight:700,
+                        letterSpacing:'.10em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
+                {window.T.newGameBtn}
+              </button>
+            </div>
             <div style={{display:'flex',gap:'10px',alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
               {finished && (fromInvite || level <= 7) && !window.RR_LEVEL_INFO(level).special && (
                 <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1, level); }}
