@@ -1743,7 +1743,7 @@
 
     // Connection state
     window.__fbConnectionState = function(ok) {
-      fbConnected=ok;
+      fbConnected=ok; window.__fbConnected=ok;
       const dot=document.getElementById('rr-sync-dot');
       const dotp=document.getElementById('rr-sync-dot-panel');
       const status=document.getElementById('rr-status-text');
@@ -1877,7 +1877,7 @@
       const [codeMsg,        setCodeMsg]        = useState('');
       const [codeBusy,       setCodeBusy]       = useState(false);
       const [lockedTip,      setLockedTip]      = useState(null); // { level, x, y }
-      const [fbOnline,       setFbOnline]       = useState(true);  // Firebase conectado
+      const [fbOnline,       setFbOnline]       = useState(null)  ;  // Firebase conectado
       // Niveles 1-7 completados en solo por este jugador (desbloqueo progresivo:
       // el nivel N requiere haber completado el N-1). Rubiking siempre tiene todo.
       const [doneLevels,     setDoneLevels]     = useState(initialDoneLevels);
@@ -2135,7 +2135,7 @@
         <div className="lobby-wrap">
           <Stars/>
           <div className="lobby-title">Mosaic Champ</div>
-          {!fbOnline && (
+          {fbOnline === false && (
             <div style={{
               width:'100%',maxWidth:'420px',marginBottom:'10px',
               padding:'10px 14px',borderRadius:'12px',boxSizing:'border-box',
@@ -3379,9 +3379,12 @@
       const [savedName,       setSavedName]       = useState('');
 
       // Escuchar estado de conexión Firebase
+      // Escuchar estado de conexión Firebase
       useEffect(() => {
         const prev = window.__fbConnectionState;
         window.__fbConnectionState = (ok) => { setFbOnline(ok); prev?.(ok); };
+        // Sincronizar estado actual al montar (fbConnected puede ya tener valor)
+        setFbOnline(window.__fbConnected ?? null);
         return () => { window.__fbConnectionState = prev; };
       }, []);
 
