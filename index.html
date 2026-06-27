@@ -335,35 +335,29 @@
     });
 
 
-    // La Marsellesa — "Allons enfants de la Patrie, le jour de gloire est arrivé"
-    // Tonalidad Bb mayor. Ritmo exacto del original:
-    // Pickup: Bb4(8) Bb4(8) Bb4(8) | G4(4.) Eb4(8) Eb4(8) | F4(4) F4(4) | Bb4(2) |
-    // "Al  - lons  - en  -  fants      de    la  -  Pa   -  tri  - e"
-    // BPM ~72, compás 4/4
+    // La Marsellesa — primeras 9 notas del MIDI original (Re mayor, 105 BPM)
+    // D4 D4 D4 G4 G4 A4 A4 D5 B4  — "Al-lons-en-fants-de-la-Pa-tri-e"
     window.playMarseillaiseHelp = () => play(c => {
-      const BPM  = 76;
-      const q    = 60 / BPM;   // negra
-      const e    = q / 2;      // corchea
-      const qd   = q * 1.5;    // negra con punto
-      const h    = q * 2;      // blanca
-
-      // {f, dur} — dur en segundos
+      const BPM = 105;
+      const q   = 60 / BPM;
+      const e   = q * 0.25;   // corchea
+      const ed  = q * 0.75;   // corchea con punto
+      const qd  = q * 1.5;    // negra con punto
       const notes = [
-        {f: 466, dur: e  },  // Bb4  "Al-"
-        {f: 466, dur: e  },  // Bb4  "lons"
-        {f: 466, dur: e  },  // Bb4  "en-"
-        {f: 392, dur: qd },  // G4   "fants"   (negra con punto)
-        {f: 311, dur: e  },  // Eb4  "de"
-        {f: 311, dur: e  },  // Eb4  "la"       (corchea — pickup al compás siguiente)
-        {f: 349, dur: q  },  // F4   "Pa-"
-        {f: 349, dur: q  },  // F4   "tri-"
-        {f: 466, dur: h  },  // Bb4  "e"        (blanca)
+        {f: 293.66, dur: e  },  // D4  "Al-"
+        {f: 293.66, dur: ed },  // D4  "lons"
+        {f: 293.66, dur: e  },  // D4  "en-"
+        {f: 392.00, dur: q  },  // G4  "fants"
+        {f: 392.00, dur: q  },  // G4  "de"
+        {f: 440.00, dur: q  },  // A4  "la"
+        {f: 440.00, dur: q  },  // A4  "Pa-"
+        {f: 587.33, dur: qd },  // D5  "tri-"
+        {f: 493.88, dur: q  },  // B4  "e"
       ];
 
       let when = c.currentTime + 0.06;
       notes.forEach(({f, dur}) => {
         const gate = dur * 0.86;
-
         const osc  = c.createOscillator();
         const osc2 = c.createOscillator();
         const vib  = c.createOscillator();
@@ -399,7 +393,6 @@
         osc.start(when);  osc.stop(when + gate + 0.02);
         osc2.start(when); osc2.stop(when + gate + 0.02);
         vib.start(when);  vib.stop(when + gate + 0.02);
-
         when += dur;
       });
     });
