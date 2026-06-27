@@ -2952,16 +2952,13 @@
         const tick = () => {
           if (Date.now() - lastMoveTimeRef.current >= 5000 && !showLifesaverRef.current) {
             setShowLifesaver(true);
-            setTiles(prev => {
-              const sol = bfsSolve(prev);
-              if (sol.length > 0) setHintMove(sol[0]);
-              return prev;
-            });
+            // NO pre-cargamos hintMove aquí — solo aparece el icono salvavidas
+            // hintMove se calcula al pulsar el botón
           }
         };
         hintIdleRef.current = setInterval(tick, 500);
         return () => clearInterval(hintIdleRef.current);
-      }, [finished, countdown, bfsSolve]);
+      }, [finished, countdown]);
 
       const startCountdown = useCallback(() => {
         clearInterval(timerRef.current); timerRef.current = null;
@@ -3450,8 +3447,11 @@
                         onClick={(e)=>{
                           e.stopPropagation();
                           setUsedHints(true);
-                          // hintMove ya está pre-cargado al aparecer el salvavidas;
-                          // no lo cambiamos aquí — se actualiza cuando el jugador mueve
+                          setTiles(prev => {
+                            const sol = bfsSolve(prev);
+                            if (sol.length > 0) setHintMove(sol[0]);
+                            return prev;
+                          });
                         }}
                         style={{
                           position:'absolute',inset:0,width:'100%',height:'100%',
