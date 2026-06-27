@@ -338,7 +338,7 @@
     // La Marsellesa — primeras 9 notas del MIDI original (Re mayor, 105 BPM)
     // D4 D4 D4 G4 G4 A4 A4 D5 B4  — "Al-lons-en-fants-de-la-Pa-tri-e"
     window.playMarseillaiseHelp = () => play(c => {
-      const BPM = 105;
+      const BPM = 210;
       const q   = 60 / BPM;
       const e   = q * 0.25;   // corchea
       const ed  = q * 0.75;   // corchea con punto
@@ -352,7 +352,8 @@
         {f: 440.00, dur: q  },  // A4  "la"
         {f: 440.00, dur: q  },  // A4  "Pa-"
         {f: 587.33, dur: qd },  // D5  "tri-"
-        {f: 493.88, dur: q  },  // B4  "e"
+        {f: 493.88, dur: q*0.5},// B4  "e"
+        {f: 392.00, dur: ed },  // G4  "le"
       ];
 
       let when = c.currentTime + 0.06;
@@ -2943,12 +2944,14 @@
       }, [rrPat, CENTER, boardSize, mask]);
 
       // ── Idle timer: 5s sin mover → mostrar salvavidas + pre-cargar primera pista ──
+      const showLifesaverRef = useRef(false);
+      useEffect(() => { showLifesaverRef.current = showLifesaver; }, [showLifesaver]);
+
       useEffect(() => {
         if (finished || countdown !== null) { setShowLifesaver(false); return; }
         const tick = () => {
-          if (Date.now() - lastMoveTimeRef.current >= 5000 && !showLifesaver) {
+          if (Date.now() - lastMoveTimeRef.current >= 5000 && !showLifesaverRef.current) {
             setShowLifesaver(true);
-            // Pre-calcular primera pista al aparecer el salvavidas
             setTiles(prev => {
               const sol = bfsSolve(prev);
               if (sol.length > 0) setHintMove(sol[0]);
@@ -2958,7 +2961,7 @@
         };
         hintIdleRef.current = setInterval(tick, 500);
         return () => clearInterval(hintIdleRef.current);
-      }, [finished, countdown, showLifesaver, bfsSolve]);
+      }, [finished, countdown, bfsSolve]);
 
       const startCountdown = useCallback(() => {
         clearInterval(timerRef.current); timerRef.current = null;
@@ -3178,14 +3181,9 @@
         const nt=[...tiles]; [nt[ei],nt[idx]]=[nt[idx],nt[ei]];
         setTiles(nt); setMoves(m=>m+1); setLastMoved(ei);
         lastMoveTimeRef.current = Date.now();
-        // Si ya se usaron pistas, mantener el salvavidas y recalcular siguiente movimiento
-        if (usedHints) {
-          const sol = bfsSolve(nt);
-          setHintMove(sol.length > 0 ? sol[0] : null);
-        } else {
-          setShowLifesaver(false);
-          setHintMove(null);
-        }
+        // Siempre apagar salvavidas al mover; el idle timer lo reactiva a los 5s
+        setShowLifesaver(false);
+        setHintMove(null);
         sendPresence(true);
         window.__fbUpdateLobbyActivity?.(gameCode);
 
@@ -3221,7 +3219,7 @@
             window.__fbScheduleLobbyDelete?.(gameCode);
           },50);
         }
-      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints, bfsSolve]);
+      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints]);
 
       useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
