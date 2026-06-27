@@ -333,6 +333,33 @@
         osc.start(when); osc.stop(when + 0.38);
       });
     });
+
+
+    // La Marsellesa — primeras 9 notas
+    window.playMarseillaiseHelp = () => play(c => {
+      // Allons enfants de la Patrie…
+      // G4 G4 G4 Eb4 | Bb4 Bb4 Bb4 G4 | C5
+      const notes = [
+        {f:392,d:0.22},{f:392,d:0.22},{f:392,d:0.22},
+        {f:311,d:0.44},
+        {f:466,d:0.22},{f:466,d:0.22},{f:466,d:0.22},
+        {f:392,d:0.44},
+        {f:523,d:0.55},
+      ];
+      let when = c.currentTime + 0.05;
+      notes.forEach(({f,d}) => {
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = f;
+        g.gain.setValueAtTime(0, when);
+        g.gain.linearRampToValueAtTime(0.28, when + 0.012);
+        g.gain.setValueAtTime(0.25, when + d - 0.04);
+        g.gain.exponentialRampToValueAtTime(0.001, when + d);
+        osc.connect(g); g.connect(c.destination);
+        osc.start(when); osc.stop(when + d + 0.01);
+        when += d + 0.04;
+      });
+    });
   })();
   </script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -1308,6 +1335,8 @@
     @keyframes modalIn    { from{transform:scale(.85);opacity:0} 70%{transform:scale(1.03)} to{transform:scale(1);opacity:1} }
     @keyframes codePop    { from{transform:scale(.8) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
     @keyframes centerPulse { 0%,100%{box-shadow:0 0 0 2.5px rgba(156,90,255,.45),0 0 10px 2px rgba(156,90,255,.12)} 50%{box-shadow:0 0 0 2.5px rgba(200,150,255,.9),0 0 26px 7px rgba(156,90,255,.38)} }
+    @keyframes hintPulse { 0%,100%{background:rgba(0,180,255,.10);border-color:rgba(0,200,255,.4)} 50%{background:rgba(0,200,255,.25);border-color:rgba(0,230,255,.9)} }
+    @keyframes hintTilePulse { 0%,100%{filter:brightness(1.1)} 50%{filter:brightness(1.5) drop-shadow(0 0 8px rgba(0,220,255,.8))} }
 
     .tile-btn  { touch-action:manipulation; -webkit-tap-highlight-color:transparent;
                  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
@@ -2017,11 +2046,33 @@
       }, [name, nameOk]);
 
       // Alias protegido por contraseña (debounced)
-      const [aliasClaimed, setAliasClaimed] = useState(false);
-      const [password,     setPassword]     = useState('');
-      const [passwordError,setPasswordError]= useState('');
+      const [aliasClaimed,  setAliasClaimed]  = useState(false);
+      const [password,      setPassword]      = useState('');
+      const [passwordError, setPasswordError] = useState('');
+      // True cuando la sesión de contraseña está activa (no hay que volver a escribirla)
+      const [passSession,   setPassSession]   = useState(false);
+
+      // Al montar: restaurar sesión si existe y no han pasado 30s desde que salió
       useEffect(() => {
-        setPassword(''); setPasswordError('');
+        try {
+          const raw = sessionStorage.getItem('rr-pass-session');
+          if (!raw) return;
+          const { savedName, savedPass, leaveTime } = JSON.parse(raw);
+          const elapsed = leaveTime ? (Date.now() - leaveTime) : 0;
+          const storedName = localStorage.getItem('rr-player-name') || '';
+          if (savedName && savedPass && storedName === savedName && elapsed < 30000) {
+            setPassword(savedPass);
+            setPassSession(true);
+          } else {
+            sessionStorage.removeItem('rr-pass-session');
+          }
+        } catch(e) {}
+      }, []);
+
+      useEffect(() => {
+        setPasswordError('');
+        if (passSession) return; // no limpiar si hay sesión activa
+        setPassword('');
         if (!nameOk) { setAliasClaimed(false); return; }
         const t = setTimeout(async () => {
           if (!window.__fbReady) return;
@@ -2029,7 +2080,7 @@
           setAliasClaimed(claimed);
         }, 600);
         return () => clearTimeout(t);
-      }, [name, nameOk]);
+      }, [name, nameOk, passSession]);
 
       // Verifica la contraseña (si el alias está reclamado) o la reclama (si se ha escrito una
       // contraseña para un alias libre). Devuelve si la sesión debe tratarse como efímera
@@ -2205,23 +2256,46 @@
                 <div style={{marginTop:'10px'}}>
                   <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
                     <input type="password" maxLength={17} value={password}
-                      onChange={e=>{setPassword(e.target.value); setPasswordError('');}}
-                      onKeyDown={e=>{ if(e.key==='Enter' && password.trim()) { loadProgress(name.trim()).then(d=>checkLevel8(d)); }}}
+                      disabled={passSession}
+                      onChange={e=>{setPassword(e.target.value); setPasswordError(''); setPassSession(false);}}
+                      onKeyDown={e=>{ if(e.key==='Enter' && password.trim() && !passSession) {
+                        loadProgress(name.trim()).then(d=>checkLevel8(d));
+                        sessionStorage.setItem('rr-pass-session', JSON.stringify({ savedName: name.trim(), savedPass: password.trim(), leaveTime: null }));
+                        setPassSession(true);
+                      }}}
                       placeholder={aliasClaimed ? window.T.passwordRequired : window.T.passwordOptional}
                       style={{flex:1,boxSizing:'border-box',padding:'9px 12px',borderRadius:'8px',
-                              border:`1px solid ${passwordError?'rgba(248,113,113,.5)':aliasClaimed?'rgba(255,180,0,.35)':'rgba(255,255,255,.12)'}`,
-                              background:'rgba(255,255,255,.04)',color:'#fff',fontSize:'12.5px'}}/>
-                    {password.trim() && (
-                      <button onClick={()=>{ loadProgress(name.trim()).then(d=>checkLevel8(d)); setPasswordError(''); }}
+                              border:`1px solid ${passwordError?'rgba(248,113,113,.5)':passSession?'rgba(100,200,100,.35)':aliasClaimed?'rgba(255,180,0,.35)':'rgba(255,255,255,.12)'}`,
+                              background: passSession ? 'rgba(100,200,100,.06)' : 'rgba(255,255,255,.04)',
+                              color:'#fff',fontSize:'12.5px',opacity: passSession ? 0.6 : 1}}/>
+                    {passSession ? (
+                      <button onClick={()=>{
+                          sessionStorage.removeItem('rr-pass-session');
+                          setPassSession(false); setPassword(''); setPasswordError('');
+                        }}
+                        title="Desconectar sesión"
+                        style={{padding:'9px 13px',borderRadius:'8px',border:'1px solid rgba(239,68,68,.5)',
+                                background:'rgba(239,68,68,.18)',color:'#fff',fontWeight:700,fontSize:'16px',
+                                cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      </button>
+                    ) : password.trim() ? (
+                      <button onClick={()=>{
+                          loadProgress(name.trim()).then(d=>checkLevel8(d));
+                          sessionStorage.setItem('rr-pass-session', JSON.stringify({ savedName: name.trim(), savedPass: password.trim(), leaveTime: null }));
+                          setPassSession(true); setPasswordError('');
+                        }}
                         style={{padding:'9px 13px',borderRadius:'8px',border:'1px solid rgba(156,90,255,.5)',
                                 background:'rgba(156,90,255,.18)',color:'#fff',fontWeight:700,fontSize:'13px',
                                 cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
                         OK
                       </button>
-                    )}
+                    ) : null}
                   </div>
                   {aliasClaimed && !passwordError && (
-                    <div style={{marginTop:'5px',fontSize:'10.5px',color:'rgba(255,200,80,.75)'}}>🔒 {window.T.aliasProtected}</div>
+                    <div style={{marginTop:'5px',fontSize:'10.5px',color: passSession ? 'rgba(100,200,100,.8)' : 'rgba(255,200,80,.75)'}}>
+                      {passSession ? '✓ Sesión activa' : `🔒 ${window.T.aliasProtected}`}
+                    </div>
                   )}
                   {passwordError && (
                     <div style={{marginTop:'5px',fontSize:'10.5px',color:'#f87171'}}>{passwordError}</div>
@@ -2763,6 +2837,11 @@
       const [tutHl,       setTutHl]        = useState(null);
       const [showTutHint, setShowTutHint]  = useState(true);
       const [countdown,   setCountdown]    = useState(null);
+      const [showLifesaver, setShowLifesaver] = useState(false);
+      const [hintMove,      setHintMove]      = useState(null);
+      const [usedHints,     setUsedHints]     = useState(false);
+      const hintIdleRef     = useRef(null);
+      const lastMoveTimeRef = useRef(Date.now());
       const timerRef    = useRef(null);
       const finishedRef = useRef(false);
       const presenceRef = useRef(null);
@@ -2778,6 +2857,64 @@
           `clamp(${LV.tileMin}px, calc((100vw - 64px)/${boardSize}), ${LV.tileMax}px)`);
         return () => { document.documentElement.style.setProperty('--tile', 'clamp(50px,calc((100vw - 64px)/5),62px)'); };
       }, [level]);
+
+      // ── BFS solver: devuelve lista de índices de tile que hay que mover (en orden) ──
+      const bfsSolve = useCallback((currentTiles) => {
+        if (!rrPat.length || !CENTER.length) return [];
+        // Estado objetivo: fichas centrales con los colores del patrón.
+        // Sólo resolvemos los movimientos necesarios para poner cada ficha central en su sitio.
+        // Usamos IDA* ligero: BFS sobre el tablero completo sería muy costoso; en su lugar
+        // calculamos el siguiente movimiento óptimo mirando 1 paso: qué tile adyacente al hueco
+        // acerca más fichas centrales a su posición correcta.
+        const size = boardSize;
+        const total = size * size;
+        // Reconstruir qué colorId debe estar en cada posición central
+        const targetColor = {}; // posición → colorId
+        CENTER.forEach((pos, i) => { if (rrPat[i] !== undefined) targetColor[pos] = RR_IDS[rrPat[i]]; });
+
+        // Greedy BFS de profundidad limitada (max 120 movimientos)
+        const encode = (t, e) => t.map(x => x ? x.colorId[0]+x.num : '_').join(',') + '|' + e;
+        const start = [...currentTiles];
+        const startE = start.indexOf(null);
+        const queue = [{ t: start, e: startE, path: [] }];
+        const visited = new Set([encode(start, startE)]);
+        const goal = (t) => CENTER.every((pos, i) => t[pos] && t[pos].colorId === RR_IDS[rrPat[i]]);
+        if (goal(start)) return [];
+
+        const MAX_NODES = 3000;
+        let nodes = 0;
+        while (queue.length && nodes < MAX_NODES) {
+          const { t, e, path } = queue.shift();
+          nodes++;
+          const r = Math.floor(e / size), col = e % size;
+          const nbrs = [];
+          if (r > 0) nbrs.push(e - size);
+          if (r < size - 1) nbrs.push(e + size);
+          if (col > 0) nbrs.push(e - 1);
+          if (col < size - 1) nbrs.push(e + 1);
+          const valid = mask ? nbrs.filter(p => mask.has(p)) : nbrs;
+          for (const nb of valid) {
+            const nt = [...t]; [nt[e], nt[nb]] = [nt[nb], nt[e]];
+            if (goal(nt)) return [...path, nb];
+            const key = encode(nt, nb);
+            if (!visited.has(key) && path.length < 60) {
+              visited.add(key);
+              queue.push({ t: nt, e: nb, path: [...path, nb] });
+            }
+          }
+        }
+        return [];
+      }, [rrPat, CENTER, boardSize, mask]);
+
+      // ── Idle timer: 5s sin mover cerca del hueco → mostrar salvavidas ──
+      useEffect(() => {
+        if (finished || countdown !== null) { setShowLifesaver(false); return; }
+        const tick = () => {
+          if (Date.now() - lastMoveTimeRef.current >= 5000) setShowLifesaver(true);
+        };
+        hintIdleRef.current = setInterval(tick, 500);
+        return () => clearInterval(hintIdleRef.current);
+      }, [finished, countdown]);
 
       const startCountdown = useCallback(() => {
         clearInterval(timerRef.current); timerRef.current = null;
@@ -2996,6 +3133,9 @@
         const movedTile = tiles[idx];
         const nt=[...tiles]; [nt[ei],nt[idx]]=[nt[idx],nt[ei]];
         setTiles(nt); setMoves(m=>m+1); setLastMoved(ei);
+        lastMoveTimeRef.current = Date.now();
+        setShowLifesaver(false);
+        setHintMove(null);
         sendPresence(true);
         window.__fbUpdateLobbyActivity?.(gameCode);
 
@@ -3023,6 +3163,7 @@
           if (level >= 1 && level <= 8) {
             window.__fbMarkLevelDone?.(playerName, level);
           }
+          if (usedHints) window.playMarseillaiseHelp?.();
           setTimeout(()=>{
             window.__fbSendFinish?.(playerName, ft, fm);
             window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
@@ -3030,13 +3171,15 @@
             window.__fbScheduleLobbyDelete?.(gameCode);
           },50);
         }
-      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn]);
+      }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints]);
 
       useEffect(() => { handleTileRef.current = handleTile; }, [handleTile]);
 
       const doLocalReset = () => {
         setTiles(shuffle(buildSolved(boardSize, mask), boardSize, 300, mask)); setMoves(0); setFinished(false);
         setLastMoved(null); finishedRef.current=false; nearWinSentRef.current=false;
+        setUsedHints(false); setHintMove(null); setShowLifesaver(false);
+        lastMoveTimeRef.current = Date.now();
         window.__fbUpdatePresence?.(SESSION_UID, playerName, false);
         startCountdown();
       };
@@ -3251,7 +3394,34 @@
               {tiles.map((tile,idx)=>{
                 if (tile===undefined) return <div key={`void-${idx}`} style={{width:'var(--tile)',height:'var(--tile)'}}/>;
                 const isCenter = CENTER.includes(idx);
-                if(tile===null) return <div key="empty" data-tut={isCenter?'center':undefined} style={{width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',background:'rgba(0,0,0,.3)',border:'2px dashed rgba(255,255,255,.08)'}}/>;
+                if(tile===null) {
+                  const isHintTile = false; // el hueco no se pista, sino el tile a mover
+                  return <div key="empty" data-tut={isCenter?'center':undefined} style={{position:'relative',width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',background:'rgba(0,0,0,.3)',border:'2px dashed rgba(255,255,255,.08)'}}>
+                    {showLifesaver && !finished && (
+                      <button
+                        onClick={(e)=>{
+                          e.stopPropagation();
+                          setUsedHints(true);
+                          const sol = bfsSolve(tiles);
+                          if (sol.length > 0) setHintMove(sol[0]);
+                        }}
+                        style={{
+                          position:'absolute',inset:0,width:'100%',height:'100%',
+                          background:'rgba(0,180,255,.13)',border:'2px solid rgba(0,200,255,.5)',
+                          borderRadius:'8px',cursor:'pointer',display:'flex',
+                          alignItems:'center',justifyContent:'center',
+                          animation:'hintPulse 1.1s ease-in-out infinite',
+                          zIndex:20,
+                        }}>
+                        <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="rgba(0,220,255,.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 8v4"/>
+                          <circle cx="12" cy="16" r="1" fill="rgba(0,220,255,.9)" stroke="none"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>;
+                }
                 const c=colorMap[tile.colorId], isAdj=canMove(idx,ei,boardSize,mask);
                 const col = idx % boardSize;
                 const row = Math.floor(idx / boardSize);
@@ -3266,11 +3436,13 @@
                     width:'var(--tile)',height:'var(--tile)',borderRadius:'8px',border:'none',
                     cursor:isAdj?'pointer':'default',
                     background:`linear-gradient(145deg,${c.shine} 0%,${c.bg} 50%,${c.shadow} 100%)`,
-                    boxShadow:`0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
-                    transition:'transform .1s,filter .1s',
+                    boxShadow:idx===hintMove
+                      ? `0 4px 0 ${c.shadow},0 0 0 3px rgba(0,220,255,.9),0 0 18px rgba(0,220,255,.7),inset 0 1px 0 rgba(255,255,255,.25)`
+                      : `0 4px 0 ${c.shadow},0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25)`,
+                    transition:'transform .1s,filter .1s,box-shadow .2s',
                     transform:isAdj?'scale(1.02) translateZ(0)':'translateZ(0)',
                     filter:isAdj?'brightness(1.1)':'brightness(1)',
-                    animation:idx===lastMoved?'tileSlide .15s ease':'none',
+                    animation:idx===lastMoved?'tileSlide .15s ease':idx===hintMove?'hintTilePulse 0.9s ease-in-out infinite':'none',
                     position:'relative',overflow:'hidden',
                   }}>
                     <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',borderRadius:'8px 8px 50% 50%',background:'linear-gradient(to bottom,rgba(255,255,255,.2),transparent)',pointerEvents:'none'}}/>
@@ -3292,7 +3464,7 @@
                   </button>
                 );
               })}
-              {finished && <div className="finished-frame"><div className="finished-text">{window.T.finished}</div></div>}
+              {finished && <div className="finished-frame"><div className="finished-text">{window.T.finished}</div>{usedHints && <div style={{fontSize:'clamp(9px,2.2vw,13px)',color:'rgba(255,255,255,.55)',fontStyle:'italic',marginTop:'4px',letterSpacing:'.04em',fontFamily:"'Trebuchet MS',sans-serif"}}>…with a little help</div>}</div>}
             </div>{/* end grid */}
             </div>{/* end flex row (row labels + grid) */}
           </div>{/* end board wrapper */}
