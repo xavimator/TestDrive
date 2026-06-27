@@ -888,6 +888,7 @@
         tutStep1: 'Crea este patrón',
         tutStep2: (n) => `En estas ${n} fichas centrales.<br/>¡Suerte!`,
         tutStep3: 'También mueve con voz,<br/>¡di el código de ficha!',
+        tutStep4: 'Si llevas 5s parado,<br/>aparece una pista 💡',
         tutContinue: 'TOCA PARA CONTINUAR ›',
         tutClose: 'TOCA PARA CERRAR ×',
         // Alert
@@ -961,6 +962,7 @@
         tutStep1: 'Crea aquest patró',
         tutStep2: (n) => `En aquestes ${n} fitxes centrals.<br/>Bona sort!`,
         tutStep3: 'Mou fitxes amb la teva veu.<br/>Digues la coordenada, ex. "A3"',
+        tutStep4: 'Si esperes 5s sense moure,<br/>apareix una pista 💡',
         tutContinue: 'TOCA PER CONTINUAR ›',
         tutClose: 'TOCA PER TANCAR ×',
         linkCopied: 'Enllaç copiat!',
@@ -1033,6 +1035,7 @@
         tutStep1: 'Create this pattern',
         tutStep2: (n) => `In these ${n} central tiles.<br/>Good luck!`,
         tutStep3: 'Move tiles with your voice.<br/>Say the coordinate, e.g. "A3"',
+        tutStep4: 'After 5s idle,<br/>a hint appears 💡',
         tutContinue: 'TAP TO CONTINUE ›',
         tutClose: 'TAP TO CLOSE ×',
         linkCopied: 'Link copied!',
@@ -1105,6 +1108,7 @@
         tutStep1: 'Crée ce motif',
         tutStep2: (n) => `Dans ces ${n} cases centrales.<br/>Bonne chance !`,
         tutStep3: 'Déplace les cases avec ta voix.<br/>Dis la coordonnée, ex. « A3 »',
+        tutStep4: 'Après 5s sans bouger,<br/>un indice apparaît 💡',
         tutContinue: 'APPUIE POUR CONTINUER ›',
         tutClose: 'APPUIE POUR FERMER ×',
         linkCopied: 'Lien copié !',
@@ -1177,6 +1181,7 @@
         tutStep1: 'Erstelle dieses Muster',
         tutStep2: (n) => `In diesen ${n} mittleren Feldern.<br/>Viel Glück!`,
         tutStep3: 'Bewege Felder mit deiner Stimme.<br/>Sag die Koordinate, z. B. „A3"',
+        tutStep4: 'Nach 5s ohne Zug<br/>erscheint ein Hinweis 💡',
         tutContinue: 'TIPPE UM FORTZUFAHREN ›',
         tutClose: 'TIPPE UM ZU SCHLIEẞEN ×',
         linkCopied: 'Link kopiert!',
@@ -1249,6 +1254,7 @@
         tutStep1: 'Cria este padrão',
         tutStep2: (n) => `Nestas ${n} peças centrais.<br/>Boa sorte!`,
         tutStep3: 'Mova peças com a sua voz.<br/>Diga a coordenada, ex. "A3"',
+        tutStep4: 'Após 5s parado,<br/>aparece uma dica 💡',
         tutContinue: 'TOCA PARA CONTINUAR ›',
         tutClose: 'TOCA PARA FECHAR ×',
         linkCopied: 'Link copiado!',
@@ -1321,6 +1327,7 @@
         tutStep1: 'Crea questo pattern',
         tutStep2: (n) => `In queste ${n} tessere centrali.<br/>Buona fortuna!`,
         tutStep3: 'Muovi le tessere con la voce.<br/>Pronuncia la coordinata, es. "A3"',
+        tutStep4: 'Dopo 5s fermi,<br/>appare un suggerimento 💡',
         tutContinue: 'TOCCA PER CONTINUARE ›',
         tutClose: 'TOCCA PER CHIUDERE ×',
         linkCopied: 'Link copiato!',
@@ -2742,7 +2749,8 @@
 
       const handleClick = () => {
         if (step === 1) onNext(2);
-        else if (step === 2) { if (voice) onNext(3); else onClose(); }
+        else if (step === 2) { if (voice) onNext(3); else onNext(4); }
+        else if (step === 3) onNext(4);
         else onClose();
       };
 
@@ -2840,11 +2848,23 @@
             </div>
           )}
 
+          {/* label – step 4: hint tip */}
+          {step===4 && (
+            <div style={{position:'absolute',left:'50%',top:'50%',
+                         transform:'translate(-50%,-50%)',pointerEvents:'none',
+                         color:'#FFD700',fontSize:'clamp(15px,3.5vw,20px)',fontWeight:800,
+                         textShadow:'0 0 30px rgba(255,215,0,.95),0 2px 10px rgba(0,0,0,.9)',
+                         letterSpacing:'.03em',textAlign:'center',maxWidth:'280px',
+                         animation:'tutFadeUp .45s ease .3s both'}}>
+              <span dangerouslySetInnerHTML={{__html: window.T.tutStep4}}/>
+            </div>
+          )}
+
           {/* hint */}
           <div style={{position:'absolute',bottom:22,left:'50%',transform:'translateX(-50%)',
                        color:'rgba(255,255,255,.28)',fontSize:'11px',letterSpacing:'.14em',
                        pointerEvents:'none'}}>
-            {(step===1 || (step===2 && voice)) ? window.T.tutContinue : window.T.tutClose}
+            {(step===1 || (step===2 && voice) || step===3) ? window.T.tutContinue : window.T.tutClose}
           </div>
         </div>
       );
@@ -3200,16 +3220,17 @@
         if (!finishedRef.current && checkMatch(nt,rrPat,CENTER)) {
           finishedRef.current=true; setFinished(true);
           const ft=fmt(time+1), fm=moves+1;
-          if (level >= 1 && level <= 8) {
-            window.__fbMarkLevelDone?.(playerName, level);
+          if (usedHints) {
+            window.playMarseillaiseHelp?.();
+          } else {
+            if (level >= 1 && level <= 8) window.__fbMarkLevelDone?.(playerName, level);
+            setTimeout(()=>{
+              window.__fbSendFinish?.(playerName, ft, fm);
+              window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
+              window.__fbUpdateScore?.(playerName, time+1, fm, activePl.length > 1);
+              window.__fbScheduleLobbyDelete?.(gameCode);
+            },50);
           }
-          if (usedHints) window.playMarseillaiseHelp?.();
-          setTimeout(()=>{
-            window.__fbSendFinish?.(playerName, ft, fm);
-            window.__fbUpdateFinishPresence?.(SESSION_UID, playerName, ft, fm);
-            window.__fbUpdateScore?.(playerName, time+1, fm, activePl.length > 1);
-            window.__fbScheduleLobbyDelete?.(gameCode);
-          },50);
         }
       }, [tiles, finished, countdown, rrPat, time, moves, sendPresence, gameCode, voiceOn, usedHints]);
 
@@ -3343,11 +3364,10 @@
           )}
           
 
-          {/* Top row: Invite + nombre (sin título ni salir aquí) */}
-          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'14px',
+          {/* Top row: Invite + nombre — encima del tablero */}
+          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px',
                        width:'100%',maxWidth:'380px'}}>
 
-            {/* Invitar — solo icono; el código sólo se ve al abrir este modal */}
             <button title={window.T.inviteTitle} onClick={()=>setShowInvite(true)}
                  style={{display:'flex',alignItems:'center',justifyContent:'center',
                          width:'40px',height:'40px',flexShrink:0,cursor:'pointer',
@@ -3360,7 +3380,6 @@
               </svg>
             </button>
 
-            {/* Nombre — ajustado al texto, sin width:100% */}
             <div style={{display:'flex',alignItems:'center',gap:'6px',
                          background:'rgba(255,255,255,.05)',borderRadius:'10px',
                          padding:'7px 12px',border:'1px solid rgba(255,255,255,.1)',
@@ -3375,16 +3394,24 @@
 
           </div>
 
-          {/* Stats */}
-          <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'16px',width:'100%',maxWidth:'380px'}}>
-            <div style={{display:'flex',gap:'28px',background:'rgba(255,255,255,.06)',borderRadius:'12px',padding:'10px 28px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)'}}>
+          {/* Stats + Nuevo reto — misma fila, mismo alto */}
+          <div style={{display:'flex',alignItems:'stretch',gap:'10px',marginBottom:'16px',width:'100%',maxWidth:'380px'}}>
+            <div style={{display:'flex',gap:'20px',background:'rgba(255,255,255,.06)',borderRadius:'10px',
+                         padding:'11px 20px',border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(8px)',
+                         flexShrink:0}}>
               {[{label:window.T.moves,value:moves},{label:window.T.time,value:fmt(time)}].map(s=>(
                 <div key={s.label} style={{textAlign:'center'}}>
-                  <div style={{fontSize:'22px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
-                  <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
+                  <div style={{fontSize:'20px',fontWeight:800,color:'#fff',lineHeight:1}}>{s.value}</div>
+                  <div style={{fontSize:'9px',color:'rgba(255,255,255,.4)',letterSpacing:'.12em',marginTop:'2px'}}>{s.label}</div>
                 </div>
               ))}
             </div>
+            <button onClick={handleReset}
+              style={{flex:1,padding:'11px 16px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',
+                      background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'12px',fontWeight:700,
+                      letterSpacing:'.10em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
+              {window.T.newGameBtn}
+            </button>
           </div>
 
 
@@ -3515,12 +3542,6 @@
           {/* Botones de acción + título */}
           <div style={{marginTop:'18px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',width:'100%',maxWidth:'380px'}}>
             <div style={{display:'flex',gap:'10px',alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
-              <button onClick={handleReset}
-                style={{padding:'11px 28px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.15)',
-                        background:'rgba(255,255,255,.07)',color:'#fff',fontSize:'13px',fontWeight:700,
-                        letterSpacing:'.12em',cursor:'pointer',transition:'all .2s',textTransform:'uppercase'}}>
-                {window.T.newGameBtn}
-              </button>
               {finished && (fromInvite || level <= 7) && !window.RR_LEVEL_INFO(level).special && (
                 <button onClick={()=>{ if(typeof onLevelUp==='function') onLevelUp(level+1, level); }}
                   style={{padding:'11px 20px',borderRadius:'10px',cursor:'pointer',fontSize:'13px',
