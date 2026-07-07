@@ -118,6 +118,30 @@
   }
   #toast.show{opacity:1; transform:translate(-50%,0);}
 
+  /* ---- Grebble panel, floats under the toolbar ---- */
+  #grebble-panel{
+    position:absolute; top:86px; left:50%; transform:translate(-50%,-8px);
+    display:none; align-items:center; gap:10px; z-index:15;
+    background:rgba(17,23,43,.95); border:1px solid var(--line);
+    border-radius:12px; padding:9px 16px;
+    opacity:0; transition:opacity .2s ease, transform .2s ease;
+  }
+  #grebble-panel.visible{ display:flex; opacity:1; transform:translate(-50%,0); }
+  #grebble-label{ font-size:11px; color:var(--dim); letter-spacing:.04em; }
+  #grebble-count{ font-size:12px; color:var(--ink); font-weight:700; min-width:1.6em; text-align:right; }
+  #grebble-slider{
+    -webkit-appearance:none; appearance:none; width:140px; height:4px;
+    border-radius:2px; background:var(--line); outline:none; cursor:pointer;
+  }
+  #grebble-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%;
+    background:#d8fff5; border:2px solid #0c3c3c; cursor:pointer;
+  }
+  #grebble-slider::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%;
+    background:#d8fff5; border:2px solid #0c3c3c; cursor:pointer;
+  }
+
   /* ---- Mode badge, bottom-right ---- */
   #modebadge{
     position:absolute; right:18px; bottom:16px; z-index:10;
@@ -149,6 +173,7 @@
       <div class="grp">
         <button id="btn-move" class="icon" disabled title="Mover"><svg viewBox="0 0 24 24"><path d="M12 2l3 3h-2v5h5v-2l3 3-3 3v-2h-5v5h2l-3 3-3-3h2v-5H7v2l-3-3 3-3v2h5V5h-2l3-3z"/></svg></button>
         <button id="btn-rotate" class="icon" disabled title="Rotar"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 7.6 5.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polygon points="21,3 21,10 14,7"/></svg></button>
+        <button id="btn-grebble" class="icon" disabled title="Grebble: detalle de superficie"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.7"/><circle cx="16" cy="8" r="1.7"/><circle cx="8" cy="16" r="1.7"/><circle cx="16" cy="16" r="1.7"/><circle cx="12" cy="12" r="1.7"/></svg></button>
       </div>
       <div class="grp top-only">
         <button id="btn-symmetry" class="icon" title="Simetría: izquierda-derecha"><svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/></svg></button>
@@ -180,6 +205,12 @@
   <div id="modebadge">Modo: <b id="modelabel">Dibujar</b> · Vista: <b id="viewlabel">Superior</b><br>Objetos: <b id="objcount">0</b></div>
 
   <div id="toast"></div>
+
+  <div id="grebble-panel">
+    <span id="grebble-label">Grebble</span>
+    <input type="range" id="grebble-slider" min="0" max="60" step="1" value="18">
+    <span id="grebble-count">18</span>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
@@ -333,10 +364,12 @@
   const helpSlideEl = document.getElementById('help-slide');
   const helpDotsEl = document.getElementById('help-dots');
   const HELP_SLIDES = [
-    '✏ Dibuja un triángulo, un círculo o una línea',
+    '✏ Dibuja un triángulo, un círculo, un rectángulo o una línea',
+    '🎲 El intérprete es un poco aleatorio: cada trazo puede volverse una figura distinta cada vez',
     '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
     '☝ En Seleccionar: toca un objeto, arrastra para mover o rotar',
     '🤏 Pellizca con 2 dedos sobre un objeto seleccionado para cambiar su tamaño',
+    '🔩 Con un objeto seleccionado, el botón Grebble cubre su superficie de pequeños cubos y cilindros — ajusta la cantidad con el slider',
     '⬛ Cambia entre vista superior, frontal, lateral o perspectiva',
     '🖼 📦 También puedes importar una imagen o un modelo .obj / .stl',
     '🖐 Mantén pulsado 1s sobre el lienzo para ver los controles'
@@ -518,7 +551,9 @@
     // closed path's simplified list repeats start≈end, so real corner count is verts-1
     let corners = verts - 1;
     if (corners === 3) return {type:'triangle', box, points: pts};
+    if (corners === 4) return {type:'quad', box, points: pts};
     if (circularity > 0.55) return {type:'circle', box, points: pts};
+    if (corners >= 5) return {type:'quad', box, points: pts}; // many-sided blob -> boxy default
     return {type:'triangle', box, points: pts}; // sensible default for any other closed blob
   }
 
@@ -530,6 +565,7 @@
     const s = o.mesh.scale.y;
     if (o.type==='circle') return u.baseRadius*s;
     if (o.type==='triangle') return (u.baseHeight*s)/2;
+    if (o.type==='quad') return (u.baseHeight*s)/2;
     if (o.type==='line') return u.baseRadius*s;
     return null; // imported/custom meshes: geometry already rests at 0 locally
   }
@@ -539,6 +575,28 @@
     const c = restCoord(o);
     if (c !== null) o.mesh.position[ax] = c;
   }
+
+  /* ---- Familias de variantes: el intérprete elige al azar dentro de cada familia ---- */
+  const TRIANGLE_VARIANTS = [
+    (r,h) => new THREE.CylinderGeometry(r, r, h, 3),     // prisma triangular
+    (r,h) => new THREE.ConeGeometry(r*1.05, h, 24),      // cono
+    (r,h) => new THREE.ConeGeometry(r*1.15, h, 4)        // pirámide
+  ];
+  const CIRCLE_VARIANTS = [
+    (r) => new THREE.SphereGeometry(r, 26, 18),                        // esfera
+    (r) => new THREE.CylinderGeometry(r, r, r*1.5, 26),                 // cilindro
+    (r) => new THREE.TorusGeometry(r*0.68, r*0.28, 12, 28),             // anillo/toro
+    (r) => new THREE.ConeGeometry(r, r*1.7, 22)                         // cono
+  ];
+  const QUAD_VARIANTS = [
+    (w,h,d) => new THREE.BoxGeometry(w, h, d),                                       // caja
+    (w,h,d) => new THREE.CylinderGeometry(Math.max(w,d)/2, Math.max(w,d)/2, h, 4)     // prisma cuadrado
+  ];
+  const LINE_VARIANTS = [
+    (r,len) => new THREE.CylinderGeometry(r, r, len, 14),   // cilindro fino
+    (r,len) => new THREE.BoxGeometry(r*1.8, len, r*1.8)     // barra fina
+  ];
+  function pickVariant(pool){ return pool[Math.floor(Math.random()*pool.length)]; }
 
   function spawn(shape){
     const box = shape.box;
@@ -553,8 +611,26 @@
       color = 0xf0a339;
       baseRadius = Math.max(((box.w+box.h)/4)*SCALE, 0.45);
       baseHeight = Math.max(box.h*SCALE*1.3, 0.9);
-      const geo = new THREE.CylinderGeometry(baseRadius, baseRadius, baseHeight, 3);
+      const build = pickVariant(TRIANGLE_VARIANTS);
+      const geo = build(baseRadius, baseHeight);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.45, metalness:.15}));
+      const bx = (box.minX+box.maxX)/2, by = (box.minY+box.maxY)/2;
+      const first = (shape.points && shape.points[0]) || {x:bx+1, y:by};
+      const ang = Math.atan2(first.y-by, first.x-bx);
+      if (axis === 'y'){ mesh.rotation.y = -ang; }
+      else if (axis === 'z'){ mesh.rotation.z = ang; }
+      else { mesh.rotation.x = ang; }
+      mesh.position.copy(hitPoint);
+      mesh.position[axis] = baseHeight/2;
+    } else if (shape.type === 'quad'){
+      color = 0xd8659b;
+      const w = Math.max(box.w*SCALE, 0.5);
+      const d = Math.max(box.h*SCALE, 0.5);
+      baseRadius = Math.max((w+d)/4, 0.3);
+      baseHeight = Math.max(((w+d)/2)*1.05, 0.6);
+      const build = pickVariant(QUAD_VARIANTS);
+      const geo = build(w, baseHeight, d);
+      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.5, metalness:.12}));
       const bx = (box.minX+box.maxX)/2, by = (box.minY+box.maxY)/2;
       const first = (shape.points && shape.points[0]) || {x:bx+1, y:by};
       const ang = Math.atan2(first.y-by, first.x-bx);
@@ -566,7 +642,8 @@
     } else if (shape.type === 'circle'){
       color = 0x3fc7e0;
       baseRadius = Math.max(((box.w+box.h)/4)*SCALE, 0.4);
-      const geo = new THREE.SphereGeometry(baseRadius, 28, 20);
+      const build = pickVariant(CIRCLE_VARIANTS);
+      const geo = build(baseRadius);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.35, metalness:.15}));
       mesh.position.copy(hitPoint);
       mesh.position[axis] = baseRadius;
@@ -575,7 +652,8 @@
       baseRadius = 0.09;
       const length = Math.max(dist(shape.start, shape.end)*SCALE, 1.1);
       baseHeight = length;
-      const geo = new THREE.CylinderGeometry(baseRadius, baseRadius, length, 14);
+      const build = pickVariant(LINE_VARIANTS);
+      const geo = build(baseRadius, length);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.4, metalness:.2}));
       const ang = Math.atan2(shape.end.y - shape.start.y, shape.end.x - shape.start.x);
       if (axis === 'y'){
@@ -594,7 +672,7 @@
     }
 
     mesh.castShadow = true;
-    mesh.userData = {baseRadius, baseHeight, baseColor: color, restAxis: axis};
+    mesh.userData = {baseRadius, baseHeight, baseColor: color, restAxis: axis, greebles: [], grebbleCount: 0};
     scene.add(mesh);
     const obj = {mesh, type: shape.type};
     objects.push(obj);
@@ -604,6 +682,83 @@
 
   function updateCount(){
     document.getElementById('objcount').textContent = objects.length;
+  }
+
+  /* ============ GREBBLE: detalle de superficie (cubos/cilindros) ============ */
+  function buildGrebblePiece(){
+    const size = 0.05 + Math.random()*0.09;
+    const height = size*(0.8+Math.random()*1.3);
+    const isCube = Math.random() < 0.55;
+    let geo;
+    if (isCube){
+      geo = new THREE.BoxGeometry(size, height, size);
+    } else {
+      const rad = size*0.5;
+      geo = new THREE.CylinderGeometry(rad, rad*(0.85+Math.random()*0.3), height, 10);
+    }
+    const color = isCube ? 0x0c3c3c : 0xbfeee0;
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.5, metalness:.25}));
+    mesh.castShadow = true;
+    mesh.userData.grebbleHeight = height;
+    return mesh;
+  }
+
+  function clearGrebbles(obj){
+    const list = obj.mesh.userData.greebles;
+    if (!list || !list.length) return;
+    for (const g of list){
+      obj.mesh.remove(g);
+      g.geometry.dispose();
+      g.material.dispose();
+    }
+    obj.mesh.userData.greebles = [];
+  }
+
+  function applyGrebble(obj, count){
+    clearGrebbles(obj);
+    obj.mesh.userData.greebles = [];
+    obj.mesh.userData.grebbleCount = count;
+    if (count <= 0) return;
+    obj.mesh.updateMatrixWorld(true);
+    const geo = obj.mesh.geometry;
+    geo.computeBoundingSphere();
+    const bs = geo.boundingSphere;
+    if (!bs) return;
+    const center = bs.center.clone();
+    const R = bs.radius*3 + 2;
+
+    const rc = new THREE.Raycaster();
+    let placed = 0, attempts = 0;
+    const maxAttempts = count*15;
+
+    while (placed < count && attempts < maxAttempts){
+      attempts++;
+      const dir = new THREE.Vector3(Math.random()*2-1, Math.random()*2-1, Math.random()*2-1).normalize();
+      const originLocal = center.clone().add(dir.clone().multiplyScalar(R));
+      const originWorld = obj.mesh.localToWorld(originLocal.clone());
+      const targetWorld = obj.mesh.localToWorld(center.clone());
+      const rayDir = targetWorld.clone().sub(originWorld).normalize();
+      rc.set(originWorld, rayDir);
+      rc.near = 0.001;
+      rc.far = R*2.5;
+      const hits = rc.intersectObject(obj.mesh, false);
+      if (!hits.length || !hits[0].face) continue;
+      const hit = hits[0];
+      const localPoint = obj.mesh.worldToLocal(hit.point.clone());
+      const localNormal = hit.face.normal.clone().normalize();
+
+      const piece = buildGrebblePiece();
+      const h = piece.userData.grebbleHeight;
+      piece.position.copy(localPoint).add(localNormal.clone().multiplyScalar(h*0.42));
+      const yAxis = new THREE.Vector3(0,1,0);
+      const q = new THREE.Quaternion().setFromUnitVectors(yAxis, localNormal);
+      piece.quaternion.copy(q);
+      piece.rotateY((Math.random()-0.5)*Math.PI*2);
+
+      obj.mesh.add(piece);
+      obj.mesh.userData.greebles.push(piece);
+      placed++;
+    }
   }
 
   /* ============ IMPORT: DRAWING/IMAGE -> FIGURE ============ */
@@ -818,10 +973,15 @@
     }
     selected = null;
     setTransformButtonsEnabled(false);
+    const gp = document.getElementById('grebble-panel');
+    const gb = document.getElementById('btn-grebble');
+    if (gp) gp.classList.remove('visible');
+    if (gb) gb.classList.remove('active');
   }
   function setTransformButtonsEnabled(on){
-    ['btn-move','btn-rotate','btn-delete'].forEach(id=>{
-      document.getElementById(id).disabled = !on;
+    ['btn-move','btn-rotate','btn-delete','btn-grebble'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.disabled = !on;
     });
   }
 
@@ -930,6 +1090,33 @@
     objects.length = 0;
     deselect();
     updateCount();
+  });
+
+  const btnGrebble = document.getElementById('btn-grebble');
+  const grebblePanel = document.getElementById('grebble-panel');
+  const grebbleSlider = document.getElementById('grebble-slider');
+  const grebbleCountEl = document.getElementById('grebble-count');
+  btnGrebble.addEventListener('click', ()=>{
+    if (!selected) return;
+    const willShow = !grebblePanel.classList.contains('visible');
+    grebblePanel.classList.toggle('visible', willShow);
+    btnGrebble.classList.toggle('active', willShow);
+    if (willShow){
+      const current = selected.mesh.userData.grebbleCount || 0;
+      const startVal = current || parseInt(grebbleSlider.value, 10) || 18;
+      grebbleSlider.value = startVal;
+      grebbleCountEl.textContent = startVal;
+      if (!current){
+        applyGrebble(selected, startVal);
+        toast('Grebble aplicado');
+      }
+    }
+  });
+  grebbleSlider.addEventListener('input', ()=>{
+    grebbleCountEl.textContent = grebbleSlider.value;
+    if (selected){
+      applyGrebble(selected, parseInt(grebbleSlider.value, 10));
+    }
   });
   btnImportImage.addEventListener('click', ()=> fileImage.click());
   fileImage.addEventListener('change', (e)=>{
