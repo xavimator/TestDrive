@@ -67,7 +67,7 @@
   button.icon.active{ background:#0c3c3c; color:#d8fff5; font-weight:400; box-shadow:0 4px 0 rgba(0,0,0,.28), 0 0 0 4px rgba(255,255,255,.55); }
   button.icon:disabled{ box-shadow:0 4px 0 rgba(0,0,0,.15); }
   .top-only{display:none;}
-  #toolbar.mode-top .top-only{display:flex;}
+  #toolbar.mode-sketch.view-ortho .top-only{display:flex;}
   .sketch-only{display:none;}
   #toolbar.mode-sketch .sketch-only{display:flex;}
   button.cta{
@@ -139,12 +139,16 @@
       <div class="grp">
         <button id="btn-draw" class="icon active" title="Dibujar"><svg viewBox="0 0 24 24"><g transform="rotate(45 12 12)"><rect x="9" y="1" width="6" height="3"/><rect x="9" y="4" width="6" height="14" rx="1"/><polygon points="9,18 15,18 12,22"/></g></svg></button>
         <button id="btn-select" class="icon" title="Seleccionar"><svg viewBox="0 0 24 24"><path d="M4 2l14 14-5 1 3 6-3 1-3-6-4 4V2z"/></svg></button>
-        <button id="btn-top" class="icon" title="Vista superior"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></button>
+      </div>
+      <div class="grp">
+        <button id="btn-view-top" class="icon active" title="Vista superior"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></button>
+        <button id="btn-view-front" class="icon" title="Vista frontal"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button>
+        <button id="btn-view-side" class="icon" title="Vista lateral"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 8l5-3v14l-5-3V8z"/></svg></button>
+        <button id="btn-view-persp" class="icon" title="Perspectiva"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 2v10M3 7l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       </div>
       <div class="grp">
         <button id="btn-move" class="icon" disabled title="Mover"><svg viewBox="0 0 24 24"><path d="M12 2l3 3h-2v5h5v-2l3 3-3 3v-2h-5v5h2l-3 3-3-3h2v-5H7v2l-3-3 3-3v2h5V5h-2l3-3z"/></svg></button>
         <button id="btn-rotate" class="icon" disabled title="Rotar"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 7.6 5.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polygon points="21,3 21,10 14,7"/></svg></button>
-        <button id="btn-scale" class="icon" disabled title="Escalar"><svg viewBox="0 0 24 24"><path d="M3 3h7v2H6.4L11 9.6 9.6 11 5 6.4V10H3V3z"/><path d="M21 21h-7v-2h3.6L13 13.4 14.4 12 19 16.6V13h2v8z"/></svg></button>
       </div>
       <div class="grp top-only">
         <button id="btn-symmetry" class="icon" title="Simetría: izquierda-derecha"><svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/></svg></button>
@@ -173,7 +177,7 @@
     <div id="help-dots"></div>
   </div>
 
-  <div id="modebadge">Modo: <b id="modelabel">Dibujar</b><br>Objetos: <b id="objcount">0</b></div>
+  <div id="modebadge">Modo: <b id="modelabel">Dibujar</b> · Vista: <b id="viewlabel">Superior</b><br>Objetos: <b id="objcount">0</b></div>
 
   <div id="toast"></div>
 </div>
@@ -194,31 +198,56 @@
   scene.fog = new THREE.Fog(0x0b1020, 18, 42);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 200);
-  const TOP_HALF = 15;
-  const camTop = new THREE.OrthographicCamera(-TOP_HALF, TOP_HALF, TOP_HALF, -TOP_HALF, 0.1, 100);
-  camTop.position.set(0, 30, 0);
-  camTop.up.set(0, 0, -1);
-  camTop.lookAt(0, 0, 0);
-  let activeCam = camera; // swapped to camTop while in top-view mode
+  const ORTHO_HALF = 15;
+  const camOrtho = new THREE.OrthographicCamera(-ORTHO_HALF, ORTHO_HALF, ORTHO_HALF, -ORTHO_HALF, 0.1, 100);
+  let activeCam = camera; // swapped to camOrtho for top/front/side views
+
+  function applyView(v){
+    if (v === 'top'){
+      camOrtho.position.set(0,30,0); camOrtho.up.set(0,0,-1); camOrtho.lookAt(0,0,0);
+      activeCam = camOrtho;
+    } else if (v === 'front'){
+      camOrtho.position.set(0,0,30); camOrtho.up.set(0,1,0); camOrtho.lookAt(0,0,0);
+      activeCam = camOrtho;
+    } else if (v === 'side'){
+      camOrtho.position.set(30,0,0); camOrtho.up.set(0,1,0); camOrtho.lookAt(0,0,0);
+      activeCam = camOrtho;
+    } else {
+      activeCam = camera; // perspective
+    }
+  }
+  function axisForView(v){ return v === 'front' ? 'z' : v === 'side' ? 'x' : 'y'; }
+  function freeAxesForView(v){
+    const d = axisForView(v);
+    return ['x','y','z'].filter(a=>a!==d);
+  }
+  function getPlacementPlane(v){
+    if (v === 'front') return new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+    if (v === 'side') return new THREE.Plane(new THREE.Vector3(1,0,0), 0);
+    return new THREE.Plane(new THREE.Vector3(0,1,0), 0); // top & perspective -> ground
+  }
 
   /* ============ STATE ============ */
-  let mode = 'draw';            // 'draw' | 'select' | 'top'
-  let transformMode = 'move';   // 'move' | 'rotate' | 'scale'
+  let mode = 'draw';            // 'draw' (sketch) | 'select'
+  let view = 'top';             // 'top' | 'front' | 'side' | 'perspective'
+  let transformMode = 'move';   // 'move' | 'rotate'
   const objects = [];           // {mesh, type}
   let selected = null;
 
   let symmetryMode = 'h';       // 'none' | 'h' | 'v' | 'both'
-  let topCurrent = null;        // {points:[...]} stroke being drawn (draw or top mode)
+  let topCurrent = null;        // {points:[...]} stroke being drawn
   let topStrokes = [];          // accumulated {points, color} until conversion
 
   let orbiting = false, lastX=0, lastY=0;
   let dragging = false, dragStart = {x:0,y:0};
-  let initialScale = null, initialRotY = 0;
+  let initialRot = 0;
 
   let pressTimer = null, pressStart = {x:0,y:0};
 
+  const activePointers = new Map(); // pointerId -> {x,y}, for 2-finger pinch-to-scale
+  let pinchStartDist = null, pinchStartScale = null;
+
   const raycaster = new THREE.Raycaster();
-  const groundPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
 
   const renderer = new THREE.WebGLRenderer({canvas: sceneCanvas, antialias:true, alpha:false});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
@@ -265,22 +294,22 @@
   }
   updateCamera();
 
-  function updateTopCamFrustum(){
+  function updateOrthoFrustum(){
     const aspect = window.innerWidth/window.innerHeight;
-    camTop.left = -TOP_HALF*aspect;
-    camTop.right = TOP_HALF*aspect;
-    camTop.top = TOP_HALF;
-    camTop.bottom = -TOP_HALF;
-    camTop.updateProjectionMatrix();
+    camOrtho.left = -ORTHO_HALF*aspect;
+    camOrtho.right = ORTHO_HALF*aspect;
+    camOrtho.top = ORTHO_HALF;
+    camOrtho.bottom = -ORTHO_HALF;
+    camOrtho.updateProjectionMatrix();
   }
 
   function resize(){
     const w = window.innerWidth, h = window.innerHeight;
     camera.aspect = w/h; camera.updateProjectionMatrix();
-    updateTopCamFrustum();
+    updateOrthoFrustum();
     renderer.setSize(w,h);
     overlay.width = w; overlay.height = h;
-    if (mode === 'top') redrawTopCanvas();
+    if (mode === 'draw') redrawTopCanvas();
   }
   window.addEventListener('resize', resize);
   resize();
@@ -306,8 +335,9 @@
   const HELP_SLIDES = [
     '✏ Dibuja un triángulo, un círculo o una línea',
     '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
-    '☝ En Seleccionar: toca un objeto y usa Mover, Rotar o Escalar',
-    '▦ Vista superior: dibujo libre y simétrico',
+    '☝ En Seleccionar: toca un objeto, arrastra para mover o rotar',
+    '🤏 Pellizca con 2 dedos sobre un objeto seleccionado para cambiar su tamaño',
+    '⬛ Cambia entre vista superior, frontal, lateral o perspectiva',
     '🖼 📦 También puedes importar una imagen o un modelo .obj / .stl',
     '🖐 Mantén pulsado 1s sobre el lienzo para ver los controles'
   ];
@@ -344,11 +374,11 @@
     );
   }
 
-  function screenToGround(clientX, clientY){
+  function screenToWorld(clientX, clientY){
     const m = ndc(clientX, clientY);
     raycaster.setFromCamera(m, activeCam);
     const pt = new THREE.Vector3();
-    const hit = raycaster.ray.intersectPlane(groundPlane, pt);
+    const hit = raycaster.ray.intersectPlane(getPlacementPlane(view), pt);
     return hit ? pt : null;
   }
 
@@ -389,7 +419,7 @@
     octx.stroke();
   }
   function drawTopGuides(){
-    if (mode !== 'top') return;
+    if (mode !== 'draw' || view === 'perspective') return;
     const W = overlay.width, H = overlay.height;
     octx.save();
     octx.setLineDash([6,6]);
@@ -408,8 +438,7 @@
     drawTopGuides();
     for (const s of topStrokes) drawStrokePath(s.points, s.color);
   }
-  function enterSketchMode(m){
-    activeCam = (m === 'top') ? camTop : camera;
+  function enterSketchMode(){
     redrawTopCanvas();
   }
   function exitSketchMode(){
@@ -496,20 +525,27 @@
   /* ============ SPAWNING SHAPES ============ */
   const SCALE = 0.016; // pixels -> world units
 
-  function restY(o){
+  function restCoord(o){
     const u = o.mesh.userData;
     const s = o.mesh.scale.y;
     if (o.type==='circle') return u.baseRadius*s;
     if (o.type==='triangle') return (u.baseHeight*s)/2;
     if (o.type==='line') return u.baseRadius*s;
-    return o.mesh.position.y; // imported/custom meshes: geometry already rests at y=0 locally
+    return null; // imported/custom meshes: geometry already rests at 0 locally
+  }
+  function applyRest(o){
+    const ax = o.mesh.userData.restAxis;
+    if (!ax) return;
+    const c = restCoord(o);
+    if (c !== null) o.mesh.position[ax] = c;
   }
 
   function spawn(shape){
     const box = shape.box;
     const cx = (box.minX+box.maxX)/2, cy = (box.minY+box.maxY)/2;
-    const posGround = screenToGround(cx, cy);
-    if (!posGround){ toast('No pude ubicar el punto en el suelo, intenta de nuevo'); return; }
+    const hitPoint = screenToWorld(cx, cy);
+    if (!hitPoint){ toast('No pude ubicar el punto, intenta de nuevo'); return; }
+    const axis = axisForView(view);
 
     let mesh, color, baseRadius=0.5, baseHeight=1;
 
@@ -521,14 +557,19 @@
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.45, metalness:.15}));
       const bx = (box.minX+box.maxX)/2, by = (box.minY+box.maxY)/2;
       const first = (shape.points && shape.points[0]) || {x:bx+1, y:by};
-      mesh.rotation.y = -Math.atan2(first.y-by, first.x-bx);
-      mesh.position.set(posGround.x, baseHeight/2, posGround.z);
+      const ang = Math.atan2(first.y-by, first.x-bx);
+      if (axis === 'y'){ mesh.rotation.y = -ang; }
+      else if (axis === 'z'){ mesh.rotation.z = ang; }
+      else { mesh.rotation.x = ang; }
+      mesh.position.copy(hitPoint);
+      mesh.position[axis] = baseHeight/2;
     } else if (shape.type === 'circle'){
       color = 0x3fc7e0;
       baseRadius = Math.max(((box.w+box.h)/4)*SCALE, 0.4);
       const geo = new THREE.SphereGeometry(baseRadius, 28, 20);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.35, metalness:.15}));
-      mesh.position.set(posGround.x, baseRadius, posGround.z);
+      mesh.position.copy(hitPoint);
+      mesh.position[axis] = baseRadius;
     } else { // line
       color = 0x4fd6a4;
       baseRadius = 0.09;
@@ -537,16 +578,23 @@
       const geo = new THREE.CylinderGeometry(baseRadius, baseRadius, length, 14);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.4, metalness:.2}));
       const ang = Math.atan2(shape.end.y - shape.start.y, shape.end.x - shape.start.x);
-      mesh.rotation.z = Math.PI/2;   // lay cylinder flat, now runs along world X
-      mesh.rotateY(-ang);            // point it along the drawn direction
-      const startG = screenToGround(shape.start.x, shape.start.y);
-      const endG = screenToGround(shape.end.x, shape.end.y);
-      const mid = startG && endG ? startG.clone().add(endG).multiplyScalar(0.5) : posGround;
-      mesh.position.set(mid.x, baseRadius, mid.z);
+      if (axis === 'y'){
+        mesh.rotation.z = Math.PI/2;  // Y is the cylinder's own length axis -> flip it into the free plane first
+        mesh.rotateY(-ang);
+      } else if (axis === 'z'){
+        mesh.rotation.z = -ang;       // length (Y) is already in the free (X,Y) plane
+      } else {
+        mesh.rotation.x = ang;        // length (Y) is already in the free (Y,Z) plane
+      }
+      const startPt = screenToWorld(shape.start.x, shape.start.y);
+      const endPt = screenToWorld(shape.end.x, shape.end.y);
+      const mid = startPt && endPt ? startPt.clone().add(endPt).multiplyScalar(0.5) : hitPoint;
+      mesh.position.copy(mid);
+      mesh.position[axis] = baseRadius;
     }
 
     mesh.castShadow = true;
-    mesh.userData = {baseRadius, baseHeight, baseColor: color};
+    mesh.userData = {baseRadius, baseHeight, baseColor: color, restAxis: axis};
     scene.add(mesh);
     const obj = {mesh, type: shape.type};
     objects.push(obj);
@@ -617,8 +665,7 @@
     const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0xd8a6ff, roughness:.5, metalness:.1}));
     mesh.castShadow = true;
     mesh.userData = {custom:true};
-    const spawnPos = screenToGround(window.innerWidth/2, window.innerHeight/2) || new THREE.Vector3(0,0,0);
-    mesh.position.set(spawnPos.x, 0, spawnPos.z);
+    mesh.position.set(0, 0, 0);
 
     scene.add(mesh);
     const obj = {mesh, type:'imported'};
@@ -745,7 +792,7 @@
     const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0xffd166, roughness:.45, metalness:.15}));
     mesh.castShadow = true;
     mesh.userData = {custom:true};
-    const spawnPos = screenToGround(window.innerWidth/2, window.innerHeight/2) || new THREE.Vector3(0,0,0);
+    const spawnPos = new THREE.Vector3(0,0,0);
     mesh.position.set(spawnPos.x, 0, spawnPos.z);
     scene.add(mesh);
     const obj = {mesh, type:'imported'};
@@ -773,19 +820,21 @@
     setTransformButtonsEnabled(false);
   }
   function setTransformButtonsEnabled(on){
-    ['btn-move','btn-rotate','btn-scale','btn-delete'].forEach(id=>{
+    ['btn-move','btn-rotate','btn-delete'].forEach(id=>{
       document.getElementById(id).disabled = !on;
     });
   }
 
-  /* ============ MODE / TOOLBAR WIRING ============ */
+  /* ============ MODE / VIEW / TOOLBAR WIRING ============ */
   const toolbarEl = document.getElementById('toolbar');
   const btnDraw = document.getElementById('btn-draw');
   const btnSelect = document.getElementById('btn-select');
-  const btnTop = document.getElementById('btn-top');
+  const btnViewTop = document.getElementById('btn-view-top');
+  const btnViewFront = document.getElementById('btn-view-front');
+  const btnViewSide = document.getElementById('btn-view-side');
+  const btnViewPersp = document.getElementById('btn-view-persp');
   const btnMove = document.getElementById('btn-move');
   const btnRotate = document.getElementById('btn-rotate');
-  const btnScale = document.getElementById('btn-scale');
   const btnDelete = document.getElementById('btn-delete');
   const btnClear = document.getElementById('btn-clear');
   const btnSymmetry = document.getElementById('btn-symmetry');
@@ -796,28 +845,36 @@
   const fileImage = document.getElementById('file-image');
   const fileModel = document.getElementById('file-model');
   const modeLabel = document.getElementById('modelabel');
+  const viewLabel = document.getElementById('viewlabel');
 
   function setMode(m){
     const prev = mode;
-    const wasSketch = (prev === 'draw' || prev === 'top');
-    const willSketch = (m === 'draw' || m === 'top');
     mode = m;
     btnDraw.classList.toggle('active', m==='draw');
     btnSelect.classList.toggle('active', m==='select');
-    btnTop.classList.toggle('active', m==='top');
-    toolbarEl.classList.toggle('mode-top', m==='top');
-    toolbarEl.classList.toggle('mode-sketch', willSketch);
+    toolbarEl.classList.toggle('mode-sketch', m==='draw');
     overlay.classList.toggle('mode-select', m==='select');
-    modeLabel.textContent = m==='draw' ? 'Dibujar' : m==='select' ? 'Seleccionar' : 'Vista superior';
+    modeLabel.textContent = m==='draw' ? 'Dibujar' : 'Seleccionar';
     if (m !== 'select') deselect();
-    if (wasSketch && prev !== m) exitSketchMode();
-    if (willSketch) enterSketchMode(m);
+    if (prev === 'draw' && m !== 'draw') exitSketchMode();
+    if (m === 'draw') enterSketchMode();
+  }
+  function setView(v){
+    if (mode === 'draw' && v !== view) exitSketchMode();
+    view = v;
+    applyView(v);
+    btnViewTop.classList.toggle('active', v==='top');
+    btnViewFront.classList.toggle('active', v==='front');
+    btnViewSide.classList.toggle('active', v==='side');
+    btnViewPersp.classList.toggle('active', v==='perspective');
+    toolbarEl.classList.toggle('view-ortho', v!=='perspective');
+    viewLabel.textContent = v==='top' ? 'Superior' : v==='front' ? 'Frontal' : v==='side' ? 'Lateral' : 'Perspectiva';
+    if (mode === 'draw') enterSketchMode();
   }
   function setTransformMode(tm){
     transformMode = tm;
     btnMove.classList.toggle('active', tm==='move');
     btnRotate.classList.toggle('active', tm==='rotate');
-    btnScale.classList.toggle('active', tm==='scale');
   }
 
   const SYM_ORDER = ['h','v','both','none'];
@@ -831,10 +888,12 @@
 
   btnDraw.addEventListener('click', ()=>setMode('draw'));
   btnSelect.addEventListener('click', ()=>setMode('select'));
-  btnTop.addEventListener('click', ()=>setMode('top'));
+  btnViewTop.addEventListener('click', ()=>setView('top'));
+  btnViewFront.addEventListener('click', ()=>setView('front'));
+  btnViewSide.addEventListener('click', ()=>setView('side'));
+  btnViewPersp.addEventListener('click', ()=>setView('perspective'));
   btnMove.addEventListener('click', ()=>setTransformMode('move'));
   btnRotate.addEventListener('click', ()=>setTransformMode('rotate'));
-  btnScale.addEventListener('click', ()=>setTransformMode('scale'));
   btnSymmetry.addEventListener('click', ()=>{
     const i = SYM_ORDER.indexOf(symmetryMode);
     symmetryMode = SYM_ORDER[(i+1) % SYM_ORDER.length];
@@ -908,14 +967,25 @@
     }
   });
   setTransformMode('move');
+  setView('top');
   setMode('draw');
 
   /* ============ POINTER EVENTS (unified) ============ */
   overlay.addEventListener('contextmenu', e=>e.preventDefault());
 
   overlay.addEventListener('pointerdown', (e)=>{
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (activePointers.size >= 2){
+      clearTimeout(pressTimer); pressTimer = null;
+      orbiting = false; dragging = false; topCurrent = null;
+      const pts = Array.from(activePointers.values());
+      pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;
+      pinchStartScale = selected ? selected.mesh.scale.clone() : null;
+      return;
+    }
+
     if (e.button === 2){
-      if (mode !== 'top'){ orbiting = true; lastX=e.clientX; lastY=e.clientY; }
+      if (view === 'perspective'){ orbiting = true; lastX=e.clientX; lastY=e.clientY; }
       return;
     }
     if (e.button !== 0) return;
@@ -924,7 +994,7 @@
     clearTimeout(pressTimer);
     pressTimer = setTimeout(()=>{ pressTimer=null; toggleToolbar(); }, 1000);
 
-    if (mode === 'draw' || mode === 'top'){
+    if (mode === 'draw'){
       topCurrent = {points: [{x:e.clientX, y:e.clientY}]};
     } else {
       const hit = pickObject(e.clientX, e.clientY);
@@ -932,8 +1002,7 @@
         select(hit);
         dragging = true;
         dragStart = {x:e.clientX, y:e.clientY};
-        initialScale = hit.mesh.scale.clone();
-        initialRotY = hit.mesh.rotation.y;
+        initialRot = hit.mesh.rotation[axisForView(view)];
       } else {
         deselect();
       }
@@ -941,6 +1010,21 @@
   });
 
   overlay.addEventListener('pointermove', (e)=>{
+    if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+    if (activePointers.size >= 2){
+      if (pinchStartDist && pinchStartScale && selected){
+        const pts = Array.from(activePointers.values());
+        const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+        const factor = Math.max(0.25, Math.min(4.5, d/pinchStartDist));
+        selected.mesh.scale.set(
+          pinchStartScale.x*factor, pinchStartScale.y*factor, pinchStartScale.z*factor
+        );
+        applyRest(selected);
+      }
+      return;
+    }
+
     if (pressTimer && Math.hypot(e.clientX-pressStart.x, e.clientY-pressStart.y) > 6){
       clearTimeout(pressTimer);
       pressTimer = null;
@@ -955,12 +1039,12 @@
       return;
     }
 
-    if ((mode==='draw' || mode==='top') && topCurrent){
+    if (mode==='draw' && topCurrent){
       const pts = topCurrent.points;
       pts.push({x:e.clientX, y:e.clientY});
       const n = pts.length;
       drawSeg(pts[n-2], pts[n-1], '#7dd3fc');
-      if (mode==='top'){
+      if (view !== 'perspective'){
         for (const kind of getMirrorKinds()){
           drawSeg(mirrorPoint(pts[n-2], kind), mirrorPoint(pts[n-1], kind), 'rgba(167,139,250,0.85)');
         }
@@ -970,35 +1054,31 @@
 
     if (mode==='select' && dragging && selected){
       if (transformMode === 'move'){
-        const p = screenToGround(e.clientX, e.clientY);
+        const p = screenToWorld(e.clientX, e.clientY);
         if (p){
-          selected.mesh.position.x = p.x;
-          selected.mesh.position.z = p.z;
+          const [a1,a2] = freeAxesForView(view);
+          selected.mesh.position[a1] = p[a1];
+          selected.mesh.position[a2] = p[a2];
         }
       } else if (transformMode === 'rotate'){
         const dx = e.clientX - dragStart.x;
-        selected.mesh.rotation.y = initialRotY + dx*0.012;
-      } else if (transformMode === 'scale'){
-        const dy = dragStart.y - e.clientY;
-        const factor = Math.max(0.25, Math.min(4.5, 1 + dy*0.006));
-        selected.mesh.scale.set(
-          initialScale.x*factor, initialScale.y*factor, initialScale.z*factor
-        );
-        selected.mesh.position.y = restY(selected);
+        selected.mesh.rotation[axisForView(view)] = initialRot + dx*0.012;
       }
     }
   });
 
   overlay.addEventListener('pointerup', (e)=>{
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
     clearTimeout(pressTimer);
     pressTimer = null;
     if (orbiting){ orbiting=false; return; }
 
-    if ((mode==='draw' || mode==='top') && topCurrent){
+    if (mode==='draw' && topCurrent){
       const pts = topCurrent.points;
       if (pts.length >= 3){
         topStrokes.push({points: pts, color: '#7dd3fc'});
-        if (mode === 'top'){
+        if (view !== 'perspective'){
           for (const kind of getMirrorKinds()){
             topStrokes.push({points: pts.map(p=>mirrorPoint(p,kind)), color: 'rgba(167,139,250,0.85)'});
           }
@@ -1010,7 +1090,16 @@
     dragging = false;
   });
 
-  overlay.addEventListener('pointerleave', ()=>{
+  overlay.addEventListener('pointercancel', (e)=>{
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
+    orbiting=false; dragging=false;
+    if (topCurrent){ topCurrent=null; redrawTopCanvas(); }
+  });
+
+  overlay.addEventListener('pointerleave', (e)=>{
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
     clearTimeout(pressTimer);
     pressTimer = null;
     orbiting=false; dragging=false;
@@ -1018,12 +1107,20 @@
   });
 
   overlay.addEventListener('wheel', (e)=>{
-    if (mode === 'top'){
-      camTop.zoom = Math.max(0.4, Math.min(3, camTop.zoom - e.deltaY*0.001));
-      camTop.updateProjectionMatrix();
-    } else {
+    if (mode === 'select' && selected && e.ctrlKey){
+      const factor = e.deltaY < 0 ? 1.06 : 0.94;
+      const newScale = Math.max(0.25, Math.min(4.5, selected.mesh.scale.x*factor));
+      selected.mesh.scale.set(newScale, newScale, newScale);
+      applyRest(selected);
+      e.preventDefault();
+      return;
+    }
+    if (view === 'perspective'){
       radius += e.deltaY*0.012;
       updateCamera();
+    } else {
+      camOrtho.zoom = Math.max(0.4, Math.min(3, camOrtho.zoom - e.deltaY*0.001));
+      camOrtho.updateProjectionMatrix();
     }
     e.preventDefault();
   }, {passive:false});
