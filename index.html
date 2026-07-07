@@ -279,6 +279,8 @@
   let dragging = false, dragStart = {x:0,y:0};
   let initialRot = 0;
   let initialScale = 1;
+  let activeAxis = null; // null | 'x' | 'y' | 'z' — eje bloqueado por el manipulador
+  let axisDragStartValue = 0, axisDragStartRot = 0, axisDragStartScale = 1, axisScreenPerUnit = null;
 
   let pressTimer = null, pressStart = {x:0,y:0};
 
@@ -317,6 +319,71 @@
   const grid = new THREE.GridHelper(60, 60, 0x2a3660, 0x1a2340);
   grid.position.y = 0.001;
   scene.add(grid);
+
+  /* ---- Manipulador de ejes (gizmo): elige X/Y/Z antes de mover/rotar/escalar ---- */
+  const gizmo = new THREE.Group();
+  gizmo.visible = false;
+  gizmo.renderOrder = 999;
+  scene.add(gizmo);
+
+  const AXIS_COLOR = { x: 0xff4d4d, y: 0x4dff8f, z: 0x4d9fff };
+  const AXIS_COLOR_ACTIVE = 0xffee55;
+  const axisHandles = {};
+
+  function buildAxisHandle(axis){
+    const dir = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
+    const grp = new THREE.Group();
+    const color = AXIS_COLOR[axis];
+
+    const shaftMat = new THREE.MeshBasicMaterial({color, depthTest:false, transparent:true, opacity:0.95});
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.78, 10), shaftMat);
+    shaft.position.y = 0.39;
+
+    const headMat = new THREE.MeshBasicMaterial({color, depthTest:false, transparent:true, opacity:0.95});
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.26, 14), headMat);
+    head.position.y = 0.78 + 0.13;
+
+    // hitbox invisible más ancho, para que sea fácil tocarlo con el dedo
+    const hit = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.17, 0.17, 1.05, 8),
+      new THREE.MeshBasicMaterial({visible:false})
+    );
+    hit.position.y = 0.52;
+    hit.userData.axis = axis;
+
+    grp.add(shaft, head, hit);
+    grp.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir));
+    gizmo.add(grp);
+    axisHandles[axis] = {shaft, head, hit};
+  }
+  ['x','y','z'].forEach(buildAxisHandle);
+
+  function setGizmoHighlight(axis){
+    ['x','y','z'].forEach(a=>{
+      const c = (a === axis) ? AXIS_COLOR_ACTIVE : AXIS_COLOR[a];
+      axisHandles[a].shaft.material.color.setHex(c);
+      axisHandles[a].head.material.color.setHex(c);
+    });
+  }
+
+  function updateGizmo(){
+    if (!selected || mode !== 'select'){ gizmo.visible = false; return; }
+    gizmo.visible = true;
+    gizmo.position.copy(selected.mesh.position);
+    let radius = 1;
+    try {
+      selected.mesh.geometry.computeBoundingSphere();
+      const bs = selected.mesh.geometry.boundingSphere;
+      if (bs) radius = bs.radius * Math.max(selected.mesh.scale.x, selected.mesh.scale.y, selected.mesh.scale.z);
+    } catch(e){}
+    gizmo.scale.setScalar(Math.min(Math.max(radius*1.6, 0.9), 6));
+    setGizmoHighlight(activeAxis);
+  }
+
+  function worldToScreen(v){
+    const p = v.clone().project(activeCam);
+    return { x: (p.x*0.5+0.5)*window.innerWidth, y: (1-(p.y*0.5+0.5))*window.innerHeight };
+  }
 
   /* ---- Orbit camera (custom, no addons) ---- */
   const target = new THREE.Vector3(0,1,0);
@@ -380,7 +447,7 @@
   window.addEventListener('resize', resize);
   resize();
 
-  (function loop(){ renderer.render(scene, activeCam); requestAnimationFrame(loop); })();
+  (function loop(){ updateGizmo(); renderer.render(scene, activeCam); requestAnimationFrame(loop); })();
 
   /* ============ HELPERS ============ */
   function toast(msg){
@@ -404,6 +471,7 @@
     '🔺 El botón de Figura básica elige cuál de esas 4 formas se usará',
     '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
     '☝ En Seleccionar: toca un objeto, arrastra para mover o rotar',
+    '🎯 Sobre el objeto aparecen 3 flechas (X rojo, Y verde, Z azul): tócala para bloquear ese eje antes de mover/rotar/escalar; tócala de nuevo para soltarlo',
     '📐 Con el botón Escalar activo: toca el objeto y arrastra para cambiar su tamaño',
     '🤏 O pellizca con 2 dedos sobre un objeto seleccionado para escalarlo (según la vista)',
     '🔩 Activa el botón Grebble para cubrir de pequeños cubos y cilindros cada objeto que conviertas — ajusta la cantidad con el slider',
@@ -1031,6 +1099,7 @@
     selected = obj;
     obj.mesh.material.emissive = new THREE.Color(0xffffff);
     obj.mesh.material.emissiveIntensity = 0.35;
+    activeAxis = null;
     setTransformButtonsEnabled(true);
   }
   function deselect(){
@@ -1038,6 +1107,7 @@
       selected.mesh.material.emissiveIntensity = 0;
     }
     selected = null;
+    activeAxis = null;
     setTransformButtonsEnabled(false);
   }
   function setTransformButtonsEnabled(on){
@@ -1268,6 +1338,30 @@
     if (mode === 'draw'){
       topCurrent = {points: [{x:e.clientX, y:e.clientY}]};
     } else {
+      let gizmoAxis = null;
+      if (selected && gizmo.visible){
+        const m = ndc(e.clientX, e.clientY);
+        raycaster.setFromCamera(m, activeCam);
+        const hitMeshes = ['x','y','z'].map(a=>axisHandles[a].hit);
+        const ghits = raycaster.intersectObjects(hitMeshes, false);
+        if (ghits.length) gizmoAxis = ghits[0].object.userData.axis;
+      }
+      if (gizmoAxis){
+        activeAxis = (activeAxis === gizmoAxis) ? null : gizmoAxis;
+        toast(activeAxis ? ('Eje ' + activeAxis.toUpperCase() + ' bloqueado') : 'Eje libre');
+        dragging = !!activeAxis;
+        dragStart = {x:e.clientX, y:e.clientY};
+        if (activeAxis){
+          axisDragStartValue = selected.mesh.position[activeAxis];
+          axisDragStartRot = selected.mesh.rotation[activeAxis];
+          axisDragStartScale = selected.mesh.scale[activeAxis];
+          const dirVec = new THREE.Vector3(activeAxis==='x'?1:0, activeAxis==='y'?1:0, activeAxis==='z'?1:0);
+          const p0 = worldToScreen(selected.mesh.position);
+          const p1 = worldToScreen(selected.mesh.position.clone().addScaledVector(dirVec, 1));
+          axisScreenPerUnit = {x:p1.x-p0.x, y:p1.y-p0.y};
+        }
+        return;
+      }
       const hit = pickObject(e.clientX, e.clientY);
       if (hit){
         select(hit);
@@ -1275,6 +1369,15 @@
         dragStart = {x:e.clientX, y:e.clientY};
         initialRot = hit.mesh.rotation[axisForView(view)];
         initialScale = hit.mesh.scale.x;
+        if (activeAxis){
+          axisDragStartValue = hit.mesh.position[activeAxis];
+          axisDragStartRot = hit.mesh.rotation[activeAxis];
+          axisDragStartScale = hit.mesh.scale[activeAxis];
+          const dirVec = new THREE.Vector3(activeAxis==='x'?1:0, activeAxis==='y'?1:0, activeAxis==='z'?1:0);
+          const p0 = worldToScreen(hit.mesh.position);
+          const p1 = worldToScreen(hit.mesh.position.clone().addScaledVector(dirVec, 1));
+          axisScreenPerUnit = {x:p1.x-p0.x, y:p1.y-p0.y};
+        }
       } else {
         deselect();
       }
@@ -1351,7 +1454,25 @@
     }
 
     if (mode==='select' && dragging && selected){
-      if (transformMode === 'move'){
+      if (activeAxis){
+        if (transformMode === 'move'){
+          if (axisScreenPerUnit){
+            const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+            const pxPerUnit = Math.hypot(axisScreenPerUnit.x, axisScreenPerUnit.y) || 1;
+            const dirX = axisScreenPerUnit.x/pxPerUnit, dirY = axisScreenPerUnit.y/pxPerUnit;
+            const scalarPx = dx*dirX + dy*dirY;
+            selected.mesh.position[activeAxis] = axisDragStartValue + scalarPx/pxPerUnit;
+          }
+        } else if (transformMode === 'rotate'){
+          const dx = e.clientX - dragStart.x;
+          selected.mesh.rotation[activeAxis] = axisDragStartRot + dx*0.012;
+        } else if (transformMode === 'scale'){
+          const dx = e.clientX - dragStart.x;
+          const factor = Math.max(0.15, Math.min(6, axisDragStartScale * Math.exp(dx*0.006)));
+          selected.mesh.scale[activeAxis] = factor;
+          applyRest(selected);
+        }
+      } else if (transformMode === 'move'){
         const p = screenToWorld(e.clientX, e.clientY);
         if (p){
           const [a1,a2] = freeAxesForView(view);
