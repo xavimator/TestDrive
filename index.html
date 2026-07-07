@@ -25,23 +25,19 @@
   /* ---- Top bar: drafting-table control strip ---- */
   #hud{
     position:absolute; top:0; left:0; right:0;
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:center;
     padding:14px 18px; z-index:10; pointer-events:none;
   }
-  .brand{
-    pointer-events:auto;
-    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--dim);
-  }
-  .brand b{color:var(--ink); letter-spacing:.02em;}
-  .brand .rule{display:inline-block;width:22px;height:1px;background:var(--line);margin:0 8px;vertical-align:middle;}
 
   #toolbar{
-    pointer-events:auto;
-    display:flex; gap:10px; align-items:center;
+    pointer-events:none;
+    display:flex; gap:14px; align-items:center;
     background:rgba(17,23,43,.9); border:1px solid var(--line);
-    border-radius:10px; padding:6px; backdrop-filter: blur(6px);
+    border-radius:20px; padding:10px; backdrop-filter: blur(6px);
+    opacity:0; transform:translateY(-8px);
+    transition:opacity .2s ease, transform .2s ease;
   }
+  #toolbar.visible{ opacity:1; transform:translateY(0); pointer-events:auto; }
   .grp{display:flex; gap:2px; padding:0 6px; border-right:1px solid var(--line);}
   .grp:last-child{border-right:none;}
   button{
@@ -56,10 +52,20 @@
   button:disabled:hover{background:transparent; color:var(--dim);}
 
   button.icon{
-    width:34px; height:34px; padding:0;
+    box-sizing:border-box; width:56px; height:56px; padding:0; line-height:1;
     display:flex; align-items:center; justify-content:center;
-    font-size:16px;
+    font-size:22px; border-radius:50%; aspect-ratio:1/1;
+    background:#0c3c3c; color:#d8fff5;
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:0 4px 0 rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.12);
+    transition:transform .15s ease, filter .15s ease, box-shadow .15s ease;
   }
+  button.icon i{ font-size:1em; }
+  button.icon svg{ width:1.4em; height:1.4em; fill:currentColor; overflow:visible; display:block; }
+  button.icon:hover{ transform:translateY(-3px) scale(1.08); filter:brightness(1.12); }
+  button.icon:active{ transform:translateY(2px) scale(0.92); filter:brightness(0.92); box-shadow:0 1px 0 rgba(0,0,0,.28); }
+  button.icon.active{ background:#0c3c3c; color:#d8fff5; font-weight:400; box-shadow:0 4px 0 rgba(0,0,0,.28), 0 0 0 4px rgba(255,255,255,.55); }
+  button.icon:disabled{ box-shadow:0 4px 0 rgba(0,0,0,.15); }
   .top-only{display:none;}
   #toolbar.mode-top .top-only{display:flex;}
   .sketch-only{display:none;}
@@ -71,14 +77,36 @@
 
   /* ---- Legend, bottom-left ---- */
   #legend{
-    position:absolute; left:18px; bottom:16px; z-index:10;
+    position:absolute; left:18px; bottom:60px; z-index:10;
+    max-width:260px;
     font-size:11px; color:var(--dim); line-height:1.9;
     background:rgba(17,23,43,.72); border:1px solid var(--line);
     border-radius:10px; padding:12px 14px;
+    opacity:0; transform:translateY(6px); pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
   }
-  #legend .row{display:flex; align-items:center; gap:8px;}
-  #legend .sw{width:10px;height:10px;border-radius:2px;flex:none;}
-  #legend .hint{margin-top:8px; color:#54608a; font-size:10.5px;}
+  #legend.visible{ opacity:1; transform:translateY(0); pointer-events:auto; }
+  #help-slide{
+    font-size:17px; font-weight:700; color:var(--ink); line-height:1.4;
+    min-height:64px; display:flex; align-items:center;
+    opacity:1; transform:translateY(0);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  #help-slide.fade{ opacity:0; transform:translateY(8px); }
+  #help-dots{ display:flex; gap:6px; justify-content:center; margin-top:10px; }
+  #help-dots span{ width:6px; height:6px; border-radius:50%; background:var(--line); transition:background .2s; }
+  #help-dots span.on{ background:var(--accent); }
+
+  #btn-help{
+    position:absolute; left:18px; bottom:16px; z-index:11;
+    width:34px; height:34px; border-radius:50%; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:700;
+    background:#0c3c3c; color:#d8fff5;
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:0 3px 0 rgba(0,0,0,.28);
+  }
+  #btn-help:active{ transform:translateY(2px); box-shadow:none; }
 
   /* ---- Toast ---- */
   #toast{
@@ -107,33 +135,31 @@
   <canvas id="overlay"></canvas>
 
   <div id="hud">
-    <div class="brand"><b>BOCETO 3D</b><span class="rule"></span>trazo &rarr; sólido</div>
-
     <div id="toolbar">
       <div class="grp">
-        <button id="btn-draw" class="active">✏ Dibujar</button>
-        <button id="btn-select">☝ Seleccionar</button>
-        <button id="btn-top">▦ Vista superior</button>
+        <button id="btn-draw" class="icon active" title="Dibujar"><svg viewBox="0 0 24 24"><g transform="rotate(45 12 12)"><rect x="9" y="1" width="6" height="3"/><rect x="9" y="4" width="6" height="14" rx="1"/><polygon points="9,18 15,18 12,22"/></g></svg></button>
+        <button id="btn-select" class="icon" title="Seleccionar"><svg viewBox="0 0 24 24"><path d="M4 2l14 14-5 1 3 6-3 1-3-6-4 4V2z"/></svg></button>
+        <button id="btn-top" class="icon" title="Vista superior"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></button>
       </div>
       <div class="grp">
-        <button id="btn-move" class="icon" disabled title="Mover">⇔</button>
-        <button id="btn-rotate" class="icon" disabled title="Rotar">⟳</button>
-        <button id="btn-scale" class="icon" disabled title="Escalar">⤢</button>
+        <button id="btn-move" class="icon" disabled title="Mover"><svg viewBox="0 0 24 24"><path d="M12 2l3 3h-2v5h5v-2l3 3-3 3v-2h-5v5h2l-3 3-3-3h2v-5H7v2l-3-3 3-3v2h5V5h-2l3-3z"/></svg></button>
+        <button id="btn-rotate" class="icon" disabled title="Rotar"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 7.6 5.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polygon points="21,3 21,10 14,7"/></svg></button>
+        <button id="btn-scale" class="icon" disabled title="Escalar"><svg viewBox="0 0 24 24"><path d="M3 3h7v2H6.4L11 9.6 9.6 11 5 6.4V10H3V3z"/><path d="M21 21h-7v-2h3.6L13 13.4 14.4 12 19 16.6V13h2v8z"/></svg></button>
       </div>
       <div class="grp top-only">
-        <button id="btn-symmetry" class="icon" title="Simetría: izquierda-derecha">⟷</button>
+        <button id="btn-symmetry" class="icon" title="Simetría: izquierda-derecha"><svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/></svg></button>
       </div>
       <div class="grp sketch-only">
-        <button id="btn-clear-sketch" class="icon danger" title="Borrar boceto">⌫</button>
-        <button id="btn-convert" class="cta" title="Convertir el boceto en objetos 3D">⇪ Convertir a 3D</button>
+        <button id="btn-clear-sketch" class="icon" title="Borrar boceto"><svg viewBox="0 0 24 24"><g transform="rotate(45 12 12)"><rect x="4" y="8" width="16" height="8" rx="2"/><rect x="4" y="8" width="6" height="8" rx="2" opacity="0.5"/></g></svg></button>
+        <button id="btn-convert" class="icon" title="Convertir a 3D"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 2v10M3 7l9 5 9-5M12 12v10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
       </div>
       <div class="grp">
-        <button id="btn-import-image" class="icon" title="Importar dibujo (imagen)">🖼</button>
-        <button id="btn-import-model" class="icon" title="Importar modelo (.obj / .stl)">📦</button>
+        <button id="btn-import-image" class="icon" title="Importar dibujo (imagen)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M4 17l5-5 3 3 4-5 5 6.5V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1z"/></svg></button>
+        <button id="btn-import-model" class="icon" title="Importar modelo (.obj / .stl)"><svg viewBox="0 0 24 24"><path d="M4 9h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z" opacity="0.9"/><path d="M2 9l4-5h4l2 3 2-3h4l4 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
       </div>
       <div class="grp">
-        <button id="btn-delete" class="icon danger" disabled title="Eliminar seleccionado">🗑</button>
-        <button id="btn-clear" class="icon danger" title="Borrar todo">✕</button>
+        <button id="btn-delete" class="icon" disabled title="Eliminar seleccionado"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.2 13.1A2 2 0 0 1 15.8 22H8.2a2 2 0 0 1-2-1.9L5 7z"/><path d="M9 4h6l1 3H8l1-3z"/><rect x="3" y="7" width="18" height="2"/></svg></button>
+        <button id="btn-clear" class="icon" title="Borrar todo"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/></svg></button>
       </div>
     </div>
   </div>
@@ -141,12 +167,10 @@
   <input type="file" id="file-image" accept="image/*" style="display:none">
   <input type="file" id="file-model" accept=".obj,.stl" style="display:none">
 
+  <button id="btn-help" title="Ayuda">?</button>
   <div id="legend">
-    <div class="row"><span class="sw" style="background:var(--amber)"></span> Triángulo → prisma</div>
-    <div class="row"><span class="sw" style="background:var(--cyan)"></span> Círculo → esfera</div>
-    <div class="row"><span class="sw" style="background:var(--mint)"></span> Línea → cilindro fino</div>
-    <div class="row"><span class="sw" style="background:#d8a6ff"></span> Imagen / modelo importado</div>
-    <div class="hint">Los trazos se guardan — nada se crea hasta pulsar “Convertir a 3D”<br>Clic derecho + arrastrar: orbitar (no en vista superior) · rueda: zoom</div>
+    <div id="help-slide"></div>
+    <div id="help-dots"></div>
   </div>
 
   <div id="modebadge">Modo: <b id="modelabel">Dibujar</b><br>Objetos: <b id="objcount">0</b></div>
@@ -190,6 +214,8 @@
   let orbiting = false, lastX=0, lastY=0;
   let dragging = false, dragStart = {x:0,y:0};
   let initialScale = null, initialRotY = 0;
+
+  let pressTimer = null, pressStart = {x:0,y:0};
 
   const raycaster = new THREE.Raycaster();
   const groundPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
@@ -269,6 +295,47 @@
     clearTimeout(t._h);
     t._h = setTimeout(()=>t.classList.remove('show'), 1600);
   }
+
+  const toolbarFloat = document.getElementById('toolbar');
+  function toggleToolbar(){ toolbarFloat.classList.toggle('visible'); }
+  function hideToolbar(){ toolbarFloat.classList.remove('visible'); }
+
+  const legendEl = document.getElementById('legend');
+  const helpSlideEl = document.getElementById('help-slide');
+  const helpDotsEl = document.getElementById('help-dots');
+  const HELP_SLIDES = [
+    '✏ Dibuja un triángulo, un círculo o una línea',
+    '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
+    '☝ En Seleccionar: toca un objeto y usa Mover, Rotar o Escalar',
+    '▦ Vista superior: dibujo libre y simétrico',
+    '🖼 📦 También puedes importar una imagen o un modelo .obj / .stl',
+    '🖐 Mantén pulsado 1s sobre el lienzo para ver los controles'
+  ];
+  let helpIdx = 0, helpTimer = null;
+  function renderHelpSlide(){
+    helpDotsEl.innerHTML = HELP_SLIDES.map((_,i)=> '<span class="'+(i===helpIdx?'on':'')+'"></span>').join('');
+    helpSlideEl.classList.add('fade');
+    setTimeout(()=>{
+      helpSlideEl.textContent = HELP_SLIDES[helpIdx];
+      helpSlideEl.classList.remove('fade');
+    }, 180);
+  }
+  function startHelpCycle(){
+    helpIdx = 0;
+    renderHelpSlide();
+    clearInterval(helpTimer);
+    helpTimer = setInterval(()=>{
+      helpIdx = (helpIdx+1) % HELP_SLIDES.length;
+      renderHelpSlide();
+    }, 3200);
+  }
+  function stopHelpCycle(){ clearInterval(helpTimer); helpTimer = null; }
+
+  document.getElementById('btn-help').addEventListener('click', ()=>{
+    const willShow = !legendEl.classList.contains('visible');
+    legendEl.classList.toggle('visible');
+    if (willShow) startHelpCycle(); else stopHelpCycle();
+  });
 
   function ndc(clientX, clientY){
     return new THREE.Vector2(
@@ -755,7 +822,12 @@
 
   const SYM_ORDER = ['h','v','both','none'];
   const SYM_LABEL = {h:'Simetría: izquierda-derecha', v:'Simetría: frente-atrás', both:'Simetría: 4 ejes', none:'Sin simetría'};
-  const SYM_ICON = {h:'⟷', v:'↕', both:'✳', none:'⋯'};
+  const SYM_ICON = {
+    h: '<svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/></svg>',
+    v: '<svg viewBox="0 0 24 24"><rect x="2" y="11" width="20" height="2"/><path d="M6 9L12 3l6 6H6z"/><path d="M6 15l6 6 6-6H6z"/></svg>',
+    both: '<svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><rect x="2" y="11" width="20" height="2"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/><path d="M6 9L12 3l6 6H6z" opacity="0.55"/><path d="M6 15l6 6 6-6H6z" opacity="0.55"/></svg>',
+    none: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2"/></svg>'
+  };
 
   btnDraw.addEventListener('click', ()=>setMode('draw'));
   btnSelect.addEventListener('click', ()=>setMode('select'));
@@ -766,7 +838,7 @@
   btnSymmetry.addEventListener('click', ()=>{
     const i = SYM_ORDER.indexOf(symmetryMode);
     symmetryMode = SYM_ORDER[(i+1) % SYM_ORDER.length];
-    btnSymmetry.textContent = SYM_ICON[symmetryMode];
+    btnSymmetry.innerHTML = SYM_ICON[symmetryMode];
     btnSymmetry.title = SYM_LABEL[symmetryMode];
     redrawTopCanvas();
   });
@@ -832,7 +904,7 @@
       r.onerror = () => toast('Error leyendo el archivo .stl');
       r.readAsArrayBuffer(f);
     } else {
-      toast('Formato no soportado — usá .obj o .stl');
+      toast('Formato no soportado — usa .obj o .stl');
     }
   });
   setTransformMode('move');
@@ -847,6 +919,10 @@
       return;
     }
     if (e.button !== 0) return;
+
+    pressStart = {x:e.clientX, y:e.clientY};
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(()=>{ pressTimer=null; toggleToolbar(); }, 1000);
 
     if (mode === 'draw' || mode === 'top'){
       topCurrent = {points: [{x:e.clientX, y:e.clientY}]};
@@ -865,6 +941,11 @@
   });
 
   overlay.addEventListener('pointermove', (e)=>{
+    if (pressTimer && Math.hypot(e.clientX-pressStart.x, e.clientY-pressStart.y) > 6){
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+
     if (orbiting){
       const dx = e.clientX-lastX, dy = e.clientY-lastY;
       theta -= dx*0.006;
@@ -909,6 +990,8 @@
   });
 
   overlay.addEventListener('pointerup', (e)=>{
+    clearTimeout(pressTimer);
+    pressTimer = null;
     if (orbiting){ orbiting=false; return; }
 
     if ((mode==='draw' || mode==='top') && topCurrent){
@@ -928,6 +1011,8 @@
   });
 
   overlay.addEventListener('pointerleave', ()=>{
+    clearTimeout(pressTimer);
+    pressTimer = null;
     orbiting=false; dragging=false;
     if (topCurrent){ topCurrent=null; redrawTopCanvas(); }
   });
