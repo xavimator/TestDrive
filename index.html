@@ -277,6 +277,7 @@
 
   const activePointers = new Map(); // pointerId -> {x,y}, for 2-finger pinch-to-scale
   let pinchStartDist = null, pinchStartScale = null;
+  let twoFingerPrev = null; // {cx,cy,d,ang} previous frame's two-finger touch state (perspective nav)
 
   const raycaster = new THREE.Raycaster();
 
@@ -325,6 +326,21 @@
   }
   updateCamera();
 
+  function panCamera(dxPix, dyPix){
+    const offset = new THREE.Vector3().subVectors(camera.position, target);
+    let d = offset.length();
+    d *= Math.tan((camera.fov/2)*Math.PI/180);
+    const panX = 2*dxPix*d/window.innerHeight;
+    const panY = 2*dyPix*d/window.innerHeight;
+    camera.updateMatrixWorld(true);
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    const move = new THREE.Vector3();
+    move.addScaledVector(right, -panX);
+    move.addScaledVector(camUp, panY);
+    target.add(move);
+  }
+
   function updateOrthoFrustum(){
     const aspect = window.innerWidth/window.innerHeight;
     camOrtho.left = -ORTHO_HALF*aspect;
@@ -369,6 +385,7 @@
     '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
     '☝ En Seleccionar: toca un objeto, arrastra para mover o rotar',
     '🤏 Pellizca con 2 dedos sobre un objeto seleccionado para cambiar su tamaño',
+    '🌀 En Perspectiva: gira con 2 dedos, pellizca para zoom y arrástralos juntos para desplazar la vista',
     '🔩 Con un objeto seleccionado, el botón Grebble cubre su superficie de pequeños cubos y cilindros — ajusta la cantidad con el slider',
     '⬛ Cambia entre vista superior, frontal, lateral o perspectiva',
     '🖼 📦 También puedes importar una imagen o un modelo .obj / .stl',
@@ -1165,6 +1182,7 @@
     if (activePointers.size >= 2){
       clearTimeout(pressTimer); pressTimer = null;
       orbiting = false; dragging = false; topCurrent = null;
+      twoFingerPrev = null;
       const pts = Array.from(activePointers.values());
       pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;
       pinchStartScale = selected ? selected.mesh.scale.clone() : null;
@@ -1200,9 +1218,26 @@
     if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
 
     if (activePointers.size >= 2){
-      if (pinchStartDist && pinchStartScale && selected){
-        const pts = Array.from(activePointers.values());
-        const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      const pts = Array.from(activePointers.values());
+      const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+
+      if (view === 'perspective'){
+        const cx = (pts[0].x+pts[1].x)/2, cy = (pts[0].y+pts[1].y)/2;
+        const ang = Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x);
+        if (twoFingerPrev){
+          const distRatio = d / (twoFingerPrev.d || d);
+          radius = Math.max(4, Math.min(30, radius / distRatio));
+
+          let dAng = ang - twoFingerPrev.ang;
+          if (dAng > Math.PI) dAng -= Math.PI*2;
+          if (dAng < -Math.PI) dAng += Math.PI*2;
+          theta -= dAng;
+
+          panCamera(cx - twoFingerPrev.cx, cy - twoFingerPrev.cy);
+          updateCamera();
+        }
+        twoFingerPrev = {cx, cy, d, ang};
+      } else if (pinchStartDist && pinchStartScale && selected){
         const factor = Math.max(0.25, Math.min(4.5, d/pinchStartDist));
         selected.mesh.scale.set(
           pinchStartScale.x*factor, pinchStartScale.y*factor, pinchStartScale.z*factor
@@ -1256,7 +1291,7 @@
 
   overlay.addEventListener('pointerup', (e)=>{
     activePointers.delete(e.pointerId);
-    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; twoFingerPrev = null; }
     clearTimeout(pressTimer);
     pressTimer = null;
     if (orbiting){ orbiting=false; return; }
@@ -1279,14 +1314,14 @@
 
   overlay.addEventListener('pointercancel', (e)=>{
     activePointers.delete(e.pointerId);
-    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; twoFingerPrev = null; }
     orbiting=false; dragging=false;
     if (topCurrent){ topCurrent=null; redrawTopCanvas(); }
   });
 
   overlay.addEventListener('pointerleave', (e)=>{
     activePointers.delete(e.pointerId);
-    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; }
+    if (activePointers.size < 2){ pinchStartDist = null; pinchStartScale = null; twoFingerPrev = null; }
     clearTimeout(pressTimer);
     pressTimer = null;
     orbiting=false; dragging=false;
