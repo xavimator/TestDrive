@@ -173,7 +173,11 @@
       <div class="grp">
         <button id="btn-move" class="icon" disabled title="Mover"><svg viewBox="0 0 24 24"><path d="M12 2l3 3h-2v5h5v-2l3 3-3 3v-2h-5v5h2l-3 3-3-3h2v-5H7v2l-3-3 3-3v2h5V5h-2l3-3z"/></svg></button>
         <button id="btn-rotate" class="icon" disabled title="Rotar"><svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 7.6 5.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polygon points="21,3 21,10 14,7"/></svg></button>
-        <button id="btn-grebble" class="icon" disabled title="Grebble: detalle de superficie"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.7"/><circle cx="16" cy="8" r="1.7"/><circle cx="8" cy="16" r="1.7"/><circle cx="16" cy="16" r="1.7"/><circle cx="12" cy="12" r="1.7"/></svg></button>
+        <button id="btn-scale" class="icon" disabled title="Escalar: toca y arrastra"><svg viewBox="0 0 24 24"><path d="M4 4h7V6H6v5H4V4z"/><path d="M20 20h-7v-2h5v-5h2v7z"/><path d="M4 20l7-7M13 4l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
+      </div>
+      <div class="grp">
+        <button id="btn-shape" class="icon" title="Figura básica: Prisma"><svg viewBox="0 0 24 24"><path d="M12 2l9 6-9 6-9-6 9-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 6 9-6V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+        <button id="btn-grebble" class="icon" title="Grebble: desactivado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.7"/><circle cx="16" cy="8" r="1.7"/><circle cx="8" cy="16" r="1.7"/><circle cx="16" cy="16" r="1.7"/><circle cx="12" cy="12" r="1.7"/></svg></button>
       </div>
       <div class="grp top-only">
         <button id="btn-symmetry" class="icon" title="Simetría: izquierda-derecha"><svg viewBox="0 0 24 24"><rect x="11" y="2" width="2" height="20"/><path d="M9 6L3 12l6 6V6z"/><path d="M15 6l6 6-6 6V6z"/></svg></button>
@@ -266,12 +270,15 @@
   let selected = null;
 
   let symmetryMode = 'h';       // 'none' | 'h' | 'v' | 'both'
+  let grebbleAutoOn = false;    // si está activo, se añade grebble a cada objeto al convertir
+  let grebbleDensity = 18;      // cantidad de grebble a aplicar
   let topCurrent = null;        // {points:[...]} stroke being drawn
   let topStrokes = [];          // accumulated {points, color} until conversion
 
   let orbiting = false, lastX=0, lastY=0;
   let dragging = false, dragStart = {x:0,y:0};
   let initialRot = 0;
+  let initialScale = 1;
 
   let pressTimer = null, pressStart = {x:0,y:0};
 
@@ -341,6 +348,18 @@
     target.add(move);
   }
 
+  function panOrtho(dxPix, dyPix){
+    camOrtho.updateMatrixWorld(true);
+    const right = new THREE.Vector3().setFromMatrixColumn(camOrtho.matrixWorld, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(camOrtho.matrixWorld, 1);
+    const viewHeightWorld = (camOrtho.top - camOrtho.bottom) / camOrtho.zoom;
+    const worldPerPixel = viewHeightWorld / window.innerHeight;
+    const move = new THREE.Vector3();
+    move.addScaledVector(right, -dxPix*worldPerPixel);
+    move.addScaledVector(up, dyPix*worldPerPixel);
+    camOrtho.position.add(move);
+  }
+
   function updateOrthoFrustum(){
     const aspect = window.innerWidth/window.innerHeight;
     camOrtho.left = -ORTHO_HALF*aspect;
@@ -380,13 +399,16 @@
   const helpSlideEl = document.getElementById('help-slide');
   const helpDotsEl = document.getElementById('help-dots');
   const HELP_SLIDES = [
-    '✏ Dibuja un triángulo, un círculo, un rectángulo o una línea',
-    '🎲 El intérprete es un poco aleatorio: cada trazo puede volverse una figura distinta cada vez',
+    '✏ Dibuja un contorno cerrado (un esbozo libre) o una línea',
+    '📐 Al convertir, la app calcula el volumen del contorno y crea Base, Prisma, Esfera o Cubo',
+    '🔺 El botón de Figura básica elige cuál de esas 4 formas se usará',
     '⇪ Los trazos se guardan — no se crea nada hasta pulsar Convertir',
     '☝ En Seleccionar: toca un objeto, arrastra para mover o rotar',
-    '🤏 Pellizca con 2 dedos sobre un objeto seleccionado para cambiar su tamaño',
+    '📐 Con el botón Escalar activo: toca el objeto y arrastra para cambiar su tamaño',
+    '🤏 O pellizca con 2 dedos sobre un objeto seleccionado para escalarlo (según la vista)',
+    '🔩 Activa el botón Grebble para cubrir de pequeños cubos y cilindros cada objeto que conviertas — ajusta la cantidad con el slider',
     '🌀 En Perspectiva: gira con 2 dedos, pellizca para zoom y arrástralos juntos para desplazar la vista',
-    '🔩 Con un objeto seleccionado, el botón Grebble cubre su superficie de pequeños cubos y cilindros — ajusta la cantidad con el slider',
+    '↔ En Superior y Lateral: pellizca para zoom y arrastra con 2 dedos para desplazar — sin girar',
     '⬛ Cambia entre vista superior, frontal, lateral o perspectiva',
     '🖼 📦 También puedes importar una imagen o un modelo .obj / .stl',
     '🖐 Mantén pulsado 1s sobre el lienzo para ver los controles'
@@ -457,12 +479,12 @@
     return [];
   }
   function drawSeg(a, b, color){
-    octx.strokeStyle = color; octx.lineWidth = 3; octx.lineCap='round'; octx.lineJoin='round';
+    octx.strokeStyle = color; octx.lineWidth = 20; octx.lineCap='round'; octx.lineJoin='round';
     octx.beginPath(); octx.moveTo(a.x,a.y); octx.lineTo(b.x,b.y); octx.stroke();
   }
   function drawStrokePath(points, color){
     if (points.length < 2) return;
-    octx.strokeStyle = color; octx.lineWidth = 3; octx.lineCap='round'; octx.lineJoin='round';
+    octx.strokeStyle = color; octx.lineWidth = 20; octx.lineCap='round'; octx.lineJoin='round';
     octx.beginPath();
     octx.moveTo(points[0].x, points[0].y);
     for (let i=1;i<points.length;i++) octx.lineTo(points[i].x, points[i].y);
@@ -558,20 +580,8 @@
       return null; // open, wobbly -> unrecognized
     }
 
-    // closed shape: circle vs triangle
-    const area = shoelaceArea(pts);
-    const circularity = perim > 0 ? (4*Math.PI*area)/(perim*perim) : 0;
-    if (circularity > 0.72) return {type:'circle', box, points: pts};
-
-    const simplified = douglasPeucker(pts, Math.max(diag*0.07, 6));
-    let verts = simplified.length;
-    // closed path's simplified list repeats start≈end, so real corner count is verts-1
-    let corners = verts - 1;
-    if (corners === 3) return {type:'triangle', box, points: pts};
-    if (corners === 4) return {type:'quad', box, points: pts};
-    if (circularity > 0.55) return {type:'circle', box, points: pts};
-    if (corners >= 5) return {type:'quad', box, points: pts}; // many-sided blob -> boxy default
-    return {type:'triangle', box, points: pts}; // sensible default for any other closed blob
+    // closed shape: footprint used for volume-based reconstruction (see spawn())
+    return {type:'closed', box, points: pts};
   }
 
   /* ============ SPAWNING SHAPES ============ */
@@ -580,11 +590,10 @@
   function restCoord(o){
     const u = o.mesh.userData;
     const s = o.mesh.scale.y;
-    if (o.type==='circle') return u.baseRadius*s;
-    if (o.type==='triangle') return (u.baseHeight*s)/2;
-    if (o.type==='quad') return (u.baseHeight*s)/2;
+    if (o.type==='esfera') return u.baseRadius*s;
+    if (o.type==='base' || o.type==='cubo') return (u.baseHeight*s)/2;
     if (o.type==='line') return u.baseRadius*s;
-    return null; // imported/custom meshes: geometry already rests at 0 locally
+    return null; // prisma (auto-posicionado) e imported/custom meshes: geometry already rests at 0 locally
   }
   function applyRest(o){
     const ax = o.mesh.userData.restAxis;
@@ -594,26 +603,55 @@
   }
 
   /* ---- Familias de variantes: el intérprete elige al azar dentro de cada familia ---- */
-  const TRIANGLE_VARIANTS = [
-    (r,h) => new THREE.CylinderGeometry(r, r, h, 3),     // prisma triangular
-    (r,h) => new THREE.ConeGeometry(r*1.05, h, 24),      // cono
-    (r,h) => new THREE.ConeGeometry(r*1.15, h, 4)        // pirámide
-  ];
-  const CIRCLE_VARIANTS = [
-    (r) => new THREE.SphereGeometry(r, 26, 18),                        // esfera
-    (r) => new THREE.CylinderGeometry(r, r, r*1.5, 26),                 // cilindro
-    (r) => new THREE.TorusGeometry(r*0.68, r*0.28, 12, 28),             // anillo/toro
-    (r) => new THREE.ConeGeometry(r, r*1.7, 22)                         // cono
-  ];
-  const QUAD_VARIANTS = [
-    (w,h,d) => new THREE.BoxGeometry(w, h, d),                                       // caja
-    (w,h,d) => new THREE.CylinderGeometry(Math.max(w,d)/2, Math.max(w,d)/2, h, 4)     // prisma cuadrado
-  ];
+  /* ---- Figura básica activa: el usuario la elige con el botón de figura ---- */
+  let basicShape = 'prisma'; // 'base' | 'prisma' | 'esfera' | 'cubo'
+  const SHAPE_COLORS = { base:0xd8659b, prisma:0xf0a339, esfera:0x3fc7e0, cubo:0x8f7bf2 };
+
   const LINE_VARIANTS = [
     (r,len) => new THREE.CylinderGeometry(r, r, len, 14),   // cilindro fino
     (r,len) => new THREE.BoxGeometry(r*1.8, len, r*1.8)     // barra fina
   ];
   function pickVariant(pool){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+  // Extruye el contorno EXACTO del trazo (proyectado en el plano de la vista activa)
+  // a lo largo del eje de profundidad de esa vista, usando coordenadas de mundo reales.
+  function buildFootprintPrism(points, axis, height){
+    let pts2 = douglasPeucker(points, 4);
+    if (pts2.length > 1 && dist(pts2[0], pts2[pts2.length-1]) < 3) pts2 = pts2.slice(0, -1);
+    if (pts2.length < 3) return null;
+
+    const vec2s = pts2.map(p => new THREE.Vector2(p.x, p.y));
+    let tris;
+    try { tris = THREE.ShapeUtils.triangulateShape(vec2s, []); } catch(e){ return null; }
+    if (!tris || !tris.length) return null;
+
+    const bottomWorld = pts2.map(p => screenToWorld(p.x, p.y));
+    if (bottomWorld.some(p => !p)) return null;
+    const axisVec = new THREE.Vector3(axis==='x'?1:0, axis==='y'?1:0, axis==='z'?1:0);
+    const topWorld = bottomWorld.map(p => p.clone().addScaledVector(axisVec, height));
+
+    const positions = [];
+    const pushTri = (a,b,c) => positions.push(a.x,a.y,a.z, b.x,b.y,b.z, c.x,c.y,c.z);
+    for (const [a,b,c] of tris) pushTri(bottomWorld[a], bottomWorld[c], bottomWorld[b]); // bottom cap
+    for (const [a,b,c] of tris) pushTri(topWorld[a], topWorld[b], topWorld[c]);          // top cap
+    const n = pts2.length;
+    for (let i=0;i<n;i++){ // side walls
+      const j = (i+1)%n;
+      pushTri(bottomWorld[i], bottomWorld[j], topWorld[j]);
+      pushTri(bottomWorld[i], topWorld[j], topWorld[i]);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+    // recenter around the shape's own centroid so move/rotate/scale pivot correctly
+    geo.computeBoundingBox();
+    const c = new THREE.Vector3();
+    geo.boundingBox.getCenter(c);
+    geo.translate(-c.x, -c.y, -c.z);
+    geo.computeVertexNormals();
+    return {geo, center: c};
+  }
 
   function spawn(shape){
     const box = shape.box;
@@ -622,48 +660,59 @@
     if (!hitPoint){ toast('No pude ubicar el punto, intenta de nuevo'); return; }
     const axis = axisForView(view);
 
-    let mesh, color, baseRadius=0.5, baseHeight=1;
+    let mesh, color, baseRadius=0.5, baseHeight=1, objType = shape.type;
 
-    if (shape.type === 'triangle'){
-      color = 0xf0a339;
-      baseRadius = Math.max(((box.w+box.h)/4)*SCALE, 0.45);
-      baseHeight = Math.max(box.h*SCALE*1.3, 0.9);
-      const build = pickVariant(TRIANGLE_VARIANTS);
-      const geo = build(baseRadius, baseHeight);
-      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.45, metalness:.15}));
-      const bx = (box.minX+box.maxX)/2, by = (box.minY+box.maxY)/2;
+    if (shape.type === 'closed'){
+      objType = basicShape;
+      color = SHAPE_COLORS[basicShape];
+      const areaWorld = Math.max(shoelaceArea(shape.points) * SCALE * SCALE, 0.05);
+      const w = Math.max(box.w*SCALE, 0.4);
+      const d = Math.max(box.h*SCALE, 0.4);
+      const refHeight = Math.max(Math.sqrt(areaWorld)*1.1, 0.5);           // "altura" asumida del boceto
+      const targetVolume = Math.max(areaWorld*refHeight, 0.05);            // volumen que debe ocupar el objeto
+
+      const bx = cx, by = cy;
       const first = (shape.points && shape.points[0]) || {x:bx+1, y:by};
       const ang = Math.atan2(first.y-by, first.x-bx);
-      if (axis === 'y'){ mesh.rotation.y = -ang; }
-      else if (axis === 'z'){ mesh.rotation.z = ang; }
-      else { mesh.rotation.x = ang; }
-      mesh.position.copy(hitPoint);
-      mesh.position[axis] = baseHeight/2;
-    } else if (shape.type === 'quad'){
-      color = 0xd8659b;
-      const w = Math.max(box.w*SCALE, 0.5);
-      const d = Math.max(box.h*SCALE, 0.5);
-      baseRadius = Math.max((w+d)/4, 0.3);
-      baseHeight = Math.max(((w+d)/2)*1.05, 0.6);
-      const build = pickVariant(QUAD_VARIANTS);
-      const geo = build(w, baseHeight, d);
-      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.5, metalness:.12}));
-      const bx = (box.minX+box.maxX)/2, by = (box.minY+box.maxY)/2;
-      const first = (shape.points && shape.points[0]) || {x:bx+1, y:by};
-      const ang = Math.atan2(first.y-by, first.x-bx);
-      if (axis === 'y'){ mesh.rotation.y = -ang; }
-      else if (axis === 'z'){ mesh.rotation.z = ang; }
-      else { mesh.rotation.x = ang; }
-      mesh.position.copy(hitPoint);
-      mesh.position[axis] = baseHeight/2;
-    } else if (shape.type === 'circle'){
-      color = 0x3fc7e0;
-      baseRadius = Math.max(((box.w+box.h)/4)*SCALE, 0.4);
-      const build = pickVariant(CIRCLE_VARIANTS);
-      const geo = build(baseRadius);
-      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.35, metalness:.15}));
-      mesh.position.copy(hitPoint);
-      mesh.position[axis] = baseRadius;
+
+      if (basicShape === 'cubo'){
+        const s = Math.cbrt(targetVolume);
+        baseHeight = s;
+        const geo = new THREE.BoxGeometry(s, s, s);
+        mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.5, metalness:.15}));
+        if (axis === 'y'){ mesh.rotation.y = -ang; } else if (axis === 'z'){ mesh.rotation.z = ang; } else { mesh.rotation.x = ang; }
+        mesh.position.copy(hitPoint);
+        mesh.position[axis] = baseHeight/2;
+      } else if (basicShape === 'esfera'){
+        const r = Math.cbrt((3*targetVolume)/(4*Math.PI));
+        baseRadius = r;
+        const geo = new THREE.SphereGeometry(r, 26, 18);
+        mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.35, metalness:.15}));
+        mesh.position.copy(hitPoint);
+        mesh.position[axis] = baseRadius;
+      } else if (basicShape === 'base'){
+        const h = Math.max(targetVolume/(w*d), 0.15);
+        baseHeight = h;
+        const geo = new THREE.BoxGeometry(w, h, d);
+        mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.55, metalness:.1}));
+        if (axis === 'y'){ mesh.rotation.y = -ang; } else if (axis === 'z'){ mesh.rotation.z = ang; } else { mesh.rotation.x = ang; }
+        mesh.position.copy(hitPoint);
+        mesh.position[axis] = baseHeight/2;
+      } else { // prisma: extrusión real del contorno dibujado
+        const built = buildFootprintPrism(shape.points, axis, refHeight);
+        if (!built){ // fallback si el contorno no se pudo triangular
+          const geo = new THREE.BoxGeometry(w, refHeight, d);
+          mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness:.45, metalness:.15}));
+          if (axis === 'y'){ mesh.rotation.y = -ang; } else if (axis === 'z'){ mesh.rotation.z = ang; } else { mesh.rotation.x = ang; }
+          mesh.position.copy(hitPoint);
+          mesh.position[axis] = refHeight/2;
+          baseHeight = refHeight;
+        } else {
+          mesh = new THREE.Mesh(built.geo, new THREE.MeshStandardMaterial({color, roughness:.45, metalness:.15, side: THREE.DoubleSide}));
+          mesh.position.copy(built.center);
+          baseHeight = refHeight;
+        }
+      }
     } else { // line
       color = 0x4fd6a4;
       baseRadius = 0.09;
@@ -691,7 +740,7 @@
     mesh.castShadow = true;
     mesh.userData = {baseRadius, baseHeight, baseColor: color, restAxis: axis, greebles: [], grebbleCount: 0};
     scene.add(mesh);
-    const obj = {mesh, type: shape.type};
+    const obj = {mesh, type: objType};
     objects.push(obj);
     updateCount();
     return obj;
@@ -990,13 +1039,9 @@
     }
     selected = null;
     setTransformButtonsEnabled(false);
-    const gp = document.getElementById('grebble-panel');
-    const gb = document.getElementById('btn-grebble');
-    if (gp) gp.classList.remove('visible');
-    if (gb) gb.classList.remove('active');
   }
   function setTransformButtonsEnabled(on){
-    ['btn-move','btn-rotate','btn-delete','btn-grebble'].forEach(id=>{
+    ['btn-move','btn-rotate','btn-scale','btn-delete'].forEach(id=>{
       const el = document.getElementById(id);
       if (el) el.disabled = !on;
     });
@@ -1012,6 +1057,7 @@
   const btnViewPersp = document.getElementById('btn-view-persp');
   const btnMove = document.getElementById('btn-move');
   const btnRotate = document.getElementById('btn-rotate');
+  const btnScale = document.getElementById('btn-scale');
   const btnDelete = document.getElementById('btn-delete');
   const btnClear = document.getElementById('btn-clear');
   const btnSymmetry = document.getElementById('btn-symmetry');
@@ -1052,6 +1098,7 @@
     transformMode = tm;
     btnMove.classList.toggle('active', tm==='move');
     btnRotate.classList.toggle('active', tm==='rotate');
+    btnScale.classList.toggle('active', tm==='scale');
   }
 
   const SYM_ORDER = ['h','v','both','none'];
@@ -1063,6 +1110,15 @@
     none: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2"/></svg>'
   };
 
+  const SHAPE_ORDER = ['prisma','base','esfera','cubo'];
+  const SHAPE_LABEL = {prisma:'Figura básica: Prisma', base:'Figura básica: Base', esfera:'Figura básica: Esfera', cubo:'Figura básica: Cubo'};
+  const SHAPE_ICON = {
+    prisma: '<svg viewBox="0 0 24 24"><path d="M12 2l9 6-9 6-9-6 9-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 6 9-6V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    base: '<svg viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.6"/></svg>',
+    esfera: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/></svg>',
+    cubo: '<svg viewBox="0 0 24 24"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 2v20M4 6.5L12 11l8-4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>'
+  };
+
   btnDraw.addEventListener('click', ()=>setMode('draw'));
   btnSelect.addEventListener('click', ()=>setMode('select'));
   btnViewTop.addEventListener('click', ()=>setView('top'));
@@ -1071,12 +1127,21 @@
   btnViewPersp.addEventListener('click', ()=>setView('perspective'));
   btnMove.addEventListener('click', ()=>setTransformMode('move'));
   btnRotate.addEventListener('click', ()=>setTransformMode('rotate'));
+  btnScale.addEventListener('click', ()=>setTransformMode('scale'));
   btnSymmetry.addEventListener('click', ()=>{
     const i = SYM_ORDER.indexOf(symmetryMode);
     symmetryMode = SYM_ORDER[(i+1) % SYM_ORDER.length];
     btnSymmetry.innerHTML = SYM_ICON[symmetryMode];
     btnSymmetry.title = SYM_LABEL[symmetryMode];
     redrawTopCanvas();
+  });
+  const btnShape = document.getElementById('btn-shape');
+  btnShape.addEventListener('click', ()=>{
+    const i = SHAPE_ORDER.indexOf(basicShape);
+    basicShape = SHAPE_ORDER[(i+1) % SHAPE_ORDER.length];
+    btnShape.innerHTML = SHAPE_ICON[basicShape];
+    btnShape.title = SHAPE_LABEL[basicShape];
+    toast(SHAPE_LABEL[basicShape]);
   });
   btnClearSketch.addEventListener('click', ()=>{
     topStrokes = [];
@@ -1087,7 +1152,11 @@
     let created = 0, skipped = 0;
     for (const s of topStrokes){
       const shape = classify(s.points);
-      if (shape){ spawn(shape); created++; } else { skipped++; }
+      if (shape){
+        const obj = spawn(shape);
+        if (obj && grebbleAutoOn) applyGrebble(obj, grebbleDensity);
+        created++;
+      } else { skipped++; }
     }
     topStrokes = [];
     octx.clearRect(0,0,overlay.width, overlay.height);
@@ -1114,25 +1183,22 @@
   const grebbleSlider = document.getElementById('grebble-slider');
   const grebbleCountEl = document.getElementById('grebble-count');
   btnGrebble.addEventListener('click', ()=>{
-    if (!selected) return;
-    const willShow = !grebblePanel.classList.contains('visible');
-    grebblePanel.classList.toggle('visible', willShow);
-    btnGrebble.classList.toggle('active', willShow);
-    if (willShow){
-      const current = selected.mesh.userData.grebbleCount || 0;
-      const startVal = current || parseInt(grebbleSlider.value, 10) || 18;
-      grebbleSlider.value = startVal;
-      grebbleCountEl.textContent = startVal;
-      if (!current){
-        applyGrebble(selected, startVal);
-        toast('Grebble aplicado');
-      }
+    grebbleAutoOn = !grebbleAutoOn;
+    btnGrebble.classList.toggle('active', grebbleAutoOn);
+    btnGrebble.title = grebbleAutoOn ? 'Grebble: activado' : 'Grebble: desactivado';
+    grebblePanel.classList.toggle('visible', grebbleAutoOn);
+    if (grebbleAutoOn){
+      toast('Grebble activado: se añadirá al convertir');
+      if (selected) applyGrebble(selected, grebbleDensity);
+    } else if (selected){
+      applyGrebble(selected, 0);
     }
   });
   grebbleSlider.addEventListener('input', ()=>{
-    grebbleCountEl.textContent = grebbleSlider.value;
-    if (selected){
-      applyGrebble(selected, parseInt(grebbleSlider.value, 10));
+    grebbleDensity = parseInt(grebbleSlider.value, 10);
+    grebbleCountEl.textContent = grebbleDensity;
+    if (selected && grebbleAutoOn){
+      applyGrebble(selected, grebbleDensity);
     }
   });
   btnImportImage.addEventListener('click', ()=> fileImage.click());
@@ -1208,6 +1274,7 @@
         dragging = true;
         dragStart = {x:e.clientX, y:e.clientY};
         initialRot = hit.mesh.rotation[axisForView(view)];
+        initialScale = hit.mesh.scale.x;
       } else {
         deselect();
       }
@@ -1220,9 +1287,9 @@
     if (activePointers.size >= 2){
       const pts = Array.from(activePointers.values());
       const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      const cx = (pts[0].x+pts[1].x)/2, cy = (pts[0].y+pts[1].y)/2;
 
       if (view === 'perspective'){
-        const cx = (pts[0].x+pts[1].x)/2, cy = (pts[0].y+pts[1].y)/2;
         const ang = Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x);
         if (twoFingerPrev){
           const distRatio = d / (twoFingerPrev.d || d);
@@ -1237,6 +1304,15 @@
           updateCamera();
         }
         twoFingerPrev = {cx, cy, d, ang};
+      } else if (view === 'top' || view === 'side'){
+        // ortho views: pan + zoom only, no rotation
+        if (twoFingerPrev){
+          const distRatio = d / (twoFingerPrev.d || d);
+          camOrtho.zoom = Math.max(0.4, Math.min(3, camOrtho.zoom*distRatio));
+          camOrtho.updateProjectionMatrix();
+          panOrtho(cx - twoFingerPrev.cx, cy - twoFingerPrev.cy);
+        }
+        twoFingerPrev = {cx, cy, d};
       } else if (pinchStartDist && pinchStartScale && selected){
         const factor = Math.max(0.25, Math.min(4.5, d/pinchStartDist));
         selected.mesh.scale.set(
@@ -1285,6 +1361,11 @@
       } else if (transformMode === 'rotate'){
         const dx = e.clientX - dragStart.x;
         selected.mesh.rotation[axisForView(view)] = initialRot + dx*0.012;
+      } else if (transformMode === 'scale'){
+        const dx = e.clientX - dragStart.x;
+        const factor = Math.max(0.25, Math.min(4.5, initialScale * Math.exp(dx*0.006)));
+        selected.mesh.scale.set(factor, factor, factor);
+        applyRest(selected);
       }
     }
   });
