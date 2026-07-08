@@ -1476,6 +1476,16 @@
     .rrcell { width:var(--tile); height:var(--tile); border-radius:8px; border:2px solid #333; transition:background .4s,border-color .4s; position:relative; overflow:hidden; }
     .rrcell::after { content:''; position:absolute; top:0; left:0; right:0; height:40%; background:linear-gradient(to bottom,rgba(255,255,255,.18),transparent); border-radius:8px 8px 50% 50%; pointer-events:none; }
     #rr-shuffle { width:100%; padding:10px; background:#7c3aed; color:#fff; border:none; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer; transition:background .2s,opacity .2s; }
+    #rr-pattern-tools { display:flex; gap:6px; margin-top:8px; }
+    .rr-tool-btn {
+      flex:1; padding:9px; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer;
+      border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:#fff;
+      transition:background .2s,border-color .2s; text-align:center;
+    }
+    .rr-tool-btn:disabled { opacity:.35; cursor:not-allowed; }
+    .rr-tool-btn.active { border-color:rgba(156,90,255,.8); background:rgba(156,90,255,.25); }
+    #rr-manual-hint { text-align:center; font-size:10px; color:rgba(255,255,255,.4); margin-top:6px; display:none; }
+    #rr-grid.rr-manual-active .rrcell { cursor:pointer; }
     #rr-shuffle:hover    { background:#6d28d9; }
     #rr-shuffle:disabled { opacity:.4; cursor:not-allowed; }
 
@@ -1584,7 +1594,13 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       <div id="rr-status-text"></div>
       <div id="rr-players"></div>
       <div id="rr-grid"></div>
+      <div id="rr-manual-hint"></div>
       <button id="rr-shuffle" onclick="rrShuffle()" disabled></button>
+      <div id="rr-pattern-tools">
+        <button id="rr-image-btn" class="rr-tool-btn" onclick="rrImageButtonClick()">📷 Imagen</button>
+        <button id="rr-manual-btn" class="rr-tool-btn" onclick="rrToggleManualMode()">✏️ Manual</button>
+      </div>
+      <input id="rr-image-input" type="file" accept="image/*" style="display:none" onchange="rrHandleImageFile(this.files[0])">
       <div style="margin-top:10px;text-align:center;">
         <a href="licenses.html" style="font-size:11px;color:rgba(255,255,255,.25);text-decoration:none;letter-spacing:.03em;" target="_blank">Licencias de terceros</a>
       </div>
@@ -1651,7 +1667,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
     let rrOpen = false, fbConnected = false;
     window.rrPattern = [];
 
-    function rrToggle() { rrOpen=!rrOpen; document.getElementById('rr-panel').classList.toggle('hidden',!rrOpen); }
+    function rrToggle() { rrOpen=!rrOpen; document.getElementById('rr-panel').classList.toggle('hidden',!rrOpen); if(!rrOpen) window.rrToggleManualMode?.(false); }
     document.addEventListener('click', e => {
       if(rrOpen&&!document.getElementById('rr-widget').contains(e.target)){ rrOpen=false; document.getElementById('rr-panel').classList.add('hidden'); }
     });
@@ -1741,10 +1757,12 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
           grid.innerHTML = '';
           grid.dataset.mode = 'square';
           grid.style.gridTemplateColumns = `repeat(${size}, var(--tile))`;
-          for (let i=0;i<n;i++){ const c=document.createElement('div'); c.className='rrcell'; grid.appendChild(c); }
+          for (let i=0;i<n;i++){ const c=document.createElement('div'); c.className='rrcell'; c.onclick=(()=>{const idx=i;return ()=>rrCellClick(idx);})(); grid.appendChild(c); }
         }
         document.querySelectorAll('#rr-grid .rrcell').forEach((c,i)=>{ c.style.background=RR_COLORS[pattern[i]].bg; c.style.borderColor=RR_COLORS[pattern[i]].border; });
       }
+
+      window.rrSyncPatternTools?.();
 
       // Icono mini: SIEMPRE el patrón real completo (no una muestra), al menos el doble
       // de tamaño que el icono original (mínimo ~72px de lado)
@@ -1836,6 +1854,110 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       if(window.__fbSetPattern) window.__fbSetPattern(p); else rrApplyPattern(p);
     }
     window.rrShuffle=rrShuffle;
+
+    // ── Mosaico desde imagen ──
+    // Paleta fija en el mismo orden que RR_IDS (white,green,yellow,blue,red,orange),
+    // usada siempre para la cuantización, sin importar el modo Pride activo.
+    const RR_PALETTE_RGB = ['#C8C8D8','#1b5e20','#ffeb3b','#0d47a1','#f44336','#ff9800']
+      .map(hex => { const n = parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; });
+
+    function rrNearestColorIndex(r,g,b) {
+      let best=0, bestD=Infinity;
+      for (let i=0;i<RR_PALETTE_RGB.length;i++){
+        const [pr,pg,pb]=RR_PALETTE_RGB[i];
+        const d=(r-pr)**2+(g-pg)**2+(b-pb)**2;
+        if(d<bestD){bestD=d;best=i;}
+      }
+      return best;
+    }
+
+    // Convierte una imagen (HTMLImageElement ya cargada) en un patrón size×size,
+    // recortando al centro (crop cuadrado) y promediando color por celda.
+    function rrImageToPattern(img, size) {
+      const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      const side = Math.min(w,h);
+      const sx = (w-side)/2, sy=(h-side)/2;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      const { data } = ctx.getImageData(0,0,size,size);
+      const pattern = [];
+      for (let i=0;i<size*size;i++){
+        const o=i*4;
+        pattern.push(rrNearestColorIndex(data[o],data[o+1],data[o+2]));
+      }
+      return pattern;
+    }
+    window.rrImageToPattern = rrImageToPattern;
+
+    // ── Herramientas del panel: editar patrón manualmente o desde imagen ──
+    let rrManualMode = false;
+
+    function rrPatternSize() {
+      const info = window.RR_LEVEL_INFO(window.__rrLevel || 2);
+      return info.special === 'cross' ? null : info.patternSize;
+    }
+
+    function rrSyncPatternTools() {
+      const size = rrPatternSize();
+      const imgBtn = document.getElementById('rr-image-btn');
+      const manBtn = document.getElementById('rr-manual-btn');
+      if (imgBtn) imgBtn.disabled = !size;
+      if (manBtn) manBtn.disabled = !size;
+      if (!size && rrManualMode) rrToggleManualMode(false);
+    }
+    window.rrSyncPatternTools = rrSyncPatternTools;
+
+    function rrToggleManualMode(force) {
+      const size = rrPatternSize();
+      if (typeof force !== 'boolean' && !size) return;
+      rrManualMode = typeof force === 'boolean' ? force : !rrManualMode;
+      const btn = document.getElementById('rr-manual-btn');
+      const grid = document.getElementById('rr-grid');
+      const hint = document.getElementById('rr-manual-hint');
+      if (btn) btn.classList.toggle('active', rrManualMode);
+      if (grid) grid.classList.toggle('rr-manual-active', rrManualMode);
+      if (hint) { hint.textContent = rrManualMode ? 'Tocá cada celda para cambiar su color' : ''; hint.style.display = rrManualMode ? 'block' : 'none'; }
+    }
+    window.rrToggleManualMode = rrToggleManualMode;
+
+    function rrCellClick(idx) {
+      if (!rrManualMode) return;
+      const size = rrPatternSize();
+      if (!size) return;
+      const n = size * size;
+      const cur = (window.rrPattern && window.rrPattern.length === n) ? [...window.rrPattern] : new Array(n).fill(0);
+      cur[idx] = (cur[idx] + 1) % RR_COLORS.length;
+      if (window.__fbSetPattern) window.__fbSetPattern(cur); else rrApplyPattern(cur);
+    }
+    window.rrCellClick = rrCellClick;
+
+    function rrImageButtonClick() {
+      if (!rrPatternSize()) return;
+      document.getElementById('rr-image-input')?.click();
+    }
+    window.rrImageButtonClick = rrImageButtonClick;
+
+    function rrHandleImageFile(file) {
+      if (!file) return;
+      const size = rrPatternSize();
+      if (!size) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const pattern = rrImageToPattern(img, size);
+          if (window.__fbSetPattern) window.__fbSetPattern(pattern); else rrApplyPattern(pattern);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('rr-image-input').value = '';
+    }
+    window.rrHandleImageFile = rrHandleImageFile;
   </script>
 
   <!-- ══ React ══ -->
