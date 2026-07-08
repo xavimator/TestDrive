@@ -1309,9 +1309,9 @@
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0;
         -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
-    html, body { height:100%; background:#0a0818; }
-    body { overflow-x:hidden; }
-    #root { min-height:100vh; }
+    html, body { height:100%; background:#0a0818; overflow:hidden; overscroll-behavior:none; }
+    body { position:fixed; inset:0; overflow:hidden; overscroll-behavior:none; }
+    #root { height:100%; overflow:hidden; }
     :root { --tile:clamp(50px,calc((100vw - 64px)/5),62px); }
 
     @keyframes pulse      { 0%,100%{opacity:.2} 50%{opacity:.8} }
@@ -1432,10 +1432,10 @@
       animation:widgetIn .5s cubic-bezier(.34,1.4,.64,1);
     }
     #rr-toggle {
-      display:flex; flex-direction:column; align-items:center; gap:7px;
-      background:rgba(10,8,24,.9); border:1.5px solid rgba(156,90,255,.45); border-radius:14px;
-      padding:10px 12px; cursor:pointer; color:#c89fff;
-      font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+      background:rgba(10,8,24,.9); border:1.5px solid rgba(156,90,255,.45); border-radius:12px;
+      padding:6px 9px; cursor:pointer; color:#c89fff;
+      font-size:9px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
       backdrop-filter:blur(14px); transition:background .2s,border-color .2s;
       user-select:none; position:relative; box-shadow:0 4px 20px rgba(0,0,0,.4);
     }
@@ -1543,10 +1543,10 @@
     @keyframes tutHintIn  { from { opacity:0; transform:translateX(-8px) scale(.85); } to { opacity:1; transform:none; } }
     @keyframes tutHintOut { from { opacity:1; } to { opacity:0; transform:translateX(8px) scale(.85); } }
     .help-btn {
-      width:36px; height:36px; border-radius:50%; flex-shrink:0;
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
       border:1.5px solid rgba(156,90,255,.45);
       background:rgba(10,8,24,.9); color:#c89fff;
-      font-size:19px; font-weight:700; line-height:1;
+      font-size:17px; font-weight:700; line-height:1;
       cursor:pointer; display:flex; align-items:center; justify-content:center;
       backdrop-filter:blur(14px); transition:all .2s;
       box-shadow:0 4px 20px rgba(0,0,0,.4);
@@ -3238,8 +3238,10 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       // y ajusta el tamaño de ficha (--tile) global a este tablero.
       useEffect(() => {
         window.__rrLevel = level;
+        const boardExtra = 24 + 5 * (boardSize - 1); // padding del tablero + gaps entre fichas
+        const chromeReserved = 250 + boardExtra;      // cabecera + etiquetas + pie + margenes
         document.documentElement.style.setProperty('--tile',
-          `clamp(${LV.tileMin}px, calc((100vw - 64px)/${boardSize}), ${LV.tileMax}px)`);
+          `clamp(${LV.tileMin}px, min(calc((100vw - 64px)/${boardSize}), calc((100dvh - ${chromeReserved}px)/${boardSize})), ${LV.tileMax}px)`);
         return () => { document.documentElement.style.setProperty('--tile', 'clamp(50px,calc((100vw - 64px)/5),62px)'); };
       }, [level]);
 
@@ -3633,24 +3635,58 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       return (
         <div
           style={{
-          minHeight:'100vh',
+          height:'100vh', height:'100dvh',
           background:'radial-gradient(ellipse at 30% 20%,#1a1035 0%,#0a0818 60%,#000508 100%)',
-          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-          fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",padding:'20px',position:'relative',overflow:'hidden',
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',
+          fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",padding:'10px 14px',position:'relative',overflow:'hidden',
         }}>
           <Stars/>
 
-          {/* Barra superior: Voz + Trofeo + Ayuda + Salir (izq.) — Pattern widget (der.) — todo en el flujo normal, sin flotar */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px',
-                       width:'100%',maxWidth:'380px',marginBottom:'10px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+          {/* Cabecera única: Invite + nombre + Voz/Trofeo/Ayuda/Salir (izq.) — Pattern widget (der.) — todo en una fila, en el flujo normal */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'6px',
+                       width:'100%',maxWidth:'460px',marginBottom:'8px',flexWrap:'wrap',rowGap:'6px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'5px',minWidth:0}}>
+
+              <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
+                   try {
+                     navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
+                   } catch (e) { /* no soportado o ya registrado: ignorar */ }
+                   if (!window.__mcPushAttempted) {
+                     window.__mcPushAttempted = true;
+                     window.__fbEnablePush?.(getDeviceId());
+                   }
+                   setShowInvite(true);
+                 }}
+                   style={{display:'flex',alignItems:'center',justifyContent:'center',
+                           width:'34px',height:'34px',flexShrink:0,cursor:'pointer',
+                           background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
+                           borderRadius:'9px',padding:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
+                     strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+              </button>
+
+              <div style={{display:'flex',alignItems:'center',gap:'5px',
+                           background:'rgba(255,255,255,.05)',borderRadius:'9px',
+                           padding:'6px 9px',border:'1px solid rgba(255,255,255,.1)',
+                           flexShrink:1,minWidth:0}}>
+                <span style={{fontSize:'12px',flexShrink:0}}>👤</span>
+                <span style={{color:'#fff',fontWeight:600,fontSize:'12px',
+                              whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                              maxWidth:'64px'}}>
+                  {playerName}
+                </span>
+              </div>
+
               {voiceSupported && (
                 <button id="rr-voice-btn" className="help-btn" onClick={voiceOn?stopVoice:startVoice}
                         title={voiceOn?window.T.voiceOn:window.T.voiceOff}
                         style={{border:`1.5px solid ${voiceOn?'rgba(239,68,68,.6)':'rgba(156,90,255,.45)'}`,
                                 background:voiceOn?'rgba(239,68,68,.15)':'rgba(10,8,24,.9)',
                                 animation:voiceOn?'voicePulse 1.2s ease-in-out infinite':'none'}}>
-                  <svg width="17" height="17" viewBox="0 0 475.753212 491.285714">
+                  <svg width="15" height="15" viewBox="0 0 475.753212 491.285714">
                     <g transform="translate(0,491.285714) scale(0.1,-0.1)" fill={voiceOn?'#f87171':'#c89fff'} stroke="none">
                       <path d="M1250 5035 c0 -12 106 -174 150 -230 76 -95 237 -244 336 -312 120 -82 154 -121 154 -176 0 -32 -7 -50 -27 -73 -68 -73 -220 -152 -367 -189 -50 -12 -103 -27 -117 -33 -39 -15 -87 -68 -100 -110 -6 -20 -16 -154 -21 -297 -5 -143 -13 -270 -18 -282 -7 -18 -20 -22 -87 -29 -43 -5 -170 -6 -283 -4 -415 8 -452 7 -490 -14 -90 -48 -161 -127 -192 -216 -27 -74 -30 -121 -14 -200 68 -322 312 -577 689 -716 42 -16 77 -34 77 -40 0 -6 -9 -37 -19 -70 -43 -129 -54 -205 -52 -334 6 -295 7 -273 -27 -342 -36 -74 -99 -141 -162 -173 -88 -44 -139 -50 -417 -50 l-263 0 0 -188 0 -189 298 5 c320 5 369 12 508 69 162 67 308 211 386 378 56 120 79 281 59 416 -15 103 -4 182 49 343 44 137 49 188 24 271 -37 126 -121 199 -279 244 -33 10 -106 40 -163 67 -133 64 -245 168 -292 272 -45 99 -44 99 47 93 212 -15 282 -16 449 -6 222 12 379 39 438 74 85 50 101 112 111 436 8 270 7 267 58 281 137 39 380 186 460 280 90 104 136 255 118 384 -25 180 -92 274 -302 422 -67 48 -149 117 -192 163 l-75 80 -226 0 c-124 0 -226 -2 -226 -5z"/>
                       <path d="M4336 3635 c-55 -19 -86 -45 -108 -87 -36 -69 -34 -95 20 -265 50 -159 77 -267 109 -443 25 -138 25 -613 0 -755 -51 -287 -119 -511 -222 -731 -156 -333 -352 -592 -661 -874 -58 -53 -73 -73 -82 -110 -30 -124 59 -243 182 -243 64 0 99 21 211 125 349 323 616 715 775 1138 25 69 54 152 64 185 10 33 22 71 27 84 6 14 14 45 19 70 5 25 16 78 25 116 21 96 44 248 56 380 12 124 6 520 -10 605 -6 30 -17 98 -26 150 -30 181 -115 483 -161 571 -17 34 -67 72 -113 88 -43 14 -57 13 -105 -4z"/>
@@ -3660,13 +3696,13 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                   </svg>
                 </button>
               )}
-              <button className="help-btn" onClick={()=>setShowScores(true)} style={{fontSize:'17px'}}>🏆</button>
+              <button className="help-btn" onClick={()=>setShowScores(true)} style={{fontSize:'15px'}}>🏆</button>
               <div style={{position:'relative'}}>
                 <button className="help-btn" onClick={openTutorial} title={window.T.helpTitle}>?</button>
                 {showTutHint && (
                   <div style={{
-                    position:'absolute', top:'44px', left:0, zIndex:900,
-                    fontFamily:"'Pacifico', cursive", fontSize:'17px',
+                    position:'absolute', top:'38px', left:0, zIndex:900,
+                    fontFamily:"'Pacifico', cursive", fontSize:'15px',
                     color:'#c89fff', textShadow:'0 0 18px rgba(156,90,255,.9), 0 2px 8px rgba(0,0,0,.8)',
                     pointerEvents:'none', whiteSpace:'nowrap',
                     animation:'tutHintIn 0.3s ease, tutHintOut 0.6s ease 1.6s forwards',
@@ -3674,55 +3710,13 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                 )}
               </div>
               <button className="help-btn green-exit" onClick={handleLeave} title={window.T.exitBtn}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                   <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
                 </svg>
               </button>
             </div>
             <div ref={rrSlotRef} style={{position:'relative',flexShrink:0}}/>
           </div>
-          
-
-          {/* Top row: Invite + nombre — encima del tablero */}
-          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px',
-                       width:'100%',maxWidth:'380px'}}>
-
-            <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
-                 try {
-                   navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
-                 } catch (e) { /* no soportado o ya registrado: ignorar */ }
-                 if (!window.__mcPushAttempted) {
-                   window.__mcPushAttempted = true;
-                   window.__fbEnablePush?.(getDeviceId());
-                 }
-                 setShowInvite(true);
-               }}
-                 style={{display:'flex',alignItems:'center',justifyContent:'center',
-                         width:'40px',height:'40px',flexShrink:0,cursor:'pointer',
-                         background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
-                         borderRadius:'10px',padding:0}}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
-                   strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-            </button>
-
-            <div style={{display:'flex',alignItems:'center',gap:'6px',
-                         background:'rgba(255,255,255,.05)',borderRadius:'10px',
-                         padding:'7px 12px',border:'1px solid rgba(255,255,255,.1)',
-                         flexShrink:1,minWidth:0}}>
-              <span style={{fontSize:'13px',flexShrink:0}}>👤</span>
-              <span style={{color:'#fff',fontWeight:600,fontSize:'13px',
-                            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                            maxWidth:'90px'}}>
-                {playerName}
-              </span>
-            </div>
-
-          </div>
-
-
 
           {/* Board */}
           <div style={{position:'relative'}} ref={boardRef}>
@@ -3855,7 +3849,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
           </div>{/* end board wrapper */}
 
           {/* Botones de acción + título */}
-          <div style={{marginTop:'18px',display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',width:'100%',maxWidth:'380px'}}>
+          <div style={{marginTop:'10px',display:'flex',flexDirection:'column',alignItems:'center',gap:'6px',width:'100%',maxWidth:'380px'}}>
 
             {/* Stats + Nuevo reto — misma fila, mismo alto */}
             <div style={{display:'flex',alignItems:'stretch',gap:'8px',width:'100%'}}>
@@ -3900,7 +3894,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                 </button>
               )}
             </div>
-            <MosaicTitle style={{width:"100%",maxWidth:"420px",marginBottom:"8px"}}/>
+            <MosaicTitle style={{width:"100%",maxWidth:"220px",marginBottom:"2px"}}/>
 
           </div>
 
