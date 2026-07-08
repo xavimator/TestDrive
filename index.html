@@ -3239,7 +3239,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       useEffect(() => {
         window.__rrLevel = level;
         const boardExtra = 24 + 5 * (boardSize - 1); // padding del tablero + gaps entre fichas
-        const chromeReserved = 250 + boardExtra;      // cabecera + etiquetas + pie + margenes
+        const chromeReserved = 290 + boardExtra;      // cabecera + etiquetas + pie + margenes
         document.documentElement.style.setProperty('--tile',
           `clamp(${LV.tileMin}px, min(calc((100vw - 64px)/${boardSize}), calc((100dvh - ${chromeReserved}px)/${boardSize})), ${LV.tileMax}px)`);
         return () => { document.documentElement.style.setProperty('--tile', 'clamp(50px,calc((100vw - 64px)/5),62px)'); };
@@ -3642,44 +3642,10 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
         }}>
           <Stars/>
 
-          {/* Cabecera única: Invite + nombre + Voz/Trofeo/Ayuda/Salir (izq.) — Pattern widget (der.) — todo en una fila, en el flujo normal */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'6px',
-                       width:'100%',maxWidth:'460px',marginBottom:'8px',flexWrap:'wrap',rowGap:'6px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'5px',minWidth:0}}>
-
-              <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
-                   try {
-                     navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
-                   } catch (e) { /* no soportado o ya registrado: ignorar */ }
-                   if (!window.__mcPushAttempted) {
-                     window.__mcPushAttempted = true;
-                     window.__fbEnablePush?.(getDeviceId());
-                   }
-                   setShowInvite(true);
-                 }}
-                   style={{display:'flex',alignItems:'center',justifyContent:'center',
-                           width:'34px',height:'34px',flexShrink:0,cursor:'pointer',
-                           background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
-                           borderRadius:'9px',padding:0}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
-                     strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                </svg>
-              </button>
-
-              <div style={{display:'flex',alignItems:'center',gap:'5px',
-                           background:'rgba(255,255,255,.05)',borderRadius:'9px',
-                           padding:'6px 9px',border:'1px solid rgba(255,255,255,.1)',
-                           flexShrink:1,minWidth:0}}>
-                <span style={{fontSize:'12px',flexShrink:0}}>👤</span>
-                <span style={{color:'#fff',fontWeight:600,fontSize:'12px',
-                              whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                              maxWidth:'64px'}}>
-                  {playerName}
-                </span>
-              </div>
-
+          {/* Fila 1: Voz/Trofeo/Ayuda/Salir (izq.) — Pattern widget (der., donde estaba) */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px',
+                       width:'100%',maxWidth:'380px',marginBottom:'8px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'6px',minWidth:0}}>
               {voiceSupported && (
                 <button id="rr-voice-btn" className="help-btn" onClick={voiceOn?stopVoice:startVoice}
                         title={voiceOn?window.T.voiceOn:window.T.voiceOff}
@@ -3716,6 +3682,45 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
               </button>
             </div>
             <div ref={rrSlotRef} style={{position:'relative',flexShrink:0}}/>
+          </div>
+
+          {/* Fila 2: Invite + nombre — debajo del resto de iconos */}
+          <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px',
+                       width:'100%',maxWidth:'380px'}}>
+
+            <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
+                 try {
+                   navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
+                 } catch (e) { /* no soportado o ya registrado: ignorar */ }
+                 if (!window.__mcPushAttempted) {
+                   window.__mcPushAttempted = true;
+                   window.__fbEnablePush?.(getDeviceId());
+                 }
+                 setShowInvite(true);
+               }}
+                 style={{display:'flex',alignItems:'center',justifyContent:'center',
+                         width:'34px',height:'34px',flexShrink:0,cursor:'pointer',
+                         background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
+                         borderRadius:'9px',padding:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
+                   strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </button>
+
+            <div style={{display:'flex',alignItems:'center',gap:'5px',
+                         background:'rgba(255,255,255,.05)',borderRadius:'9px',
+                         padding:'6px 9px',border:'1px solid rgba(255,255,255,.1)',
+                         flexShrink:1,minWidth:0}}>
+              <span style={{fontSize:'12px',flexShrink:0}}>👤</span>
+              <span style={{color:'#fff',fontWeight:600,fontSize:'12px',
+                            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                            maxWidth:'90px'}}>
+                {playerName}
+              </span>
+            </div>
+
           </div>
 
           {/* Board */}
