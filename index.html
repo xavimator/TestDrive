@@ -822,8 +822,8 @@
         confirmCancel: 'Cancelar',
         confirmYes: '¡Sí, reiniciar!',
         // Widget
-        patternLabel: 'Pattern',
-        shuffleBtn: 'Shuffle',
+        patternLabel: 'Patrón',
+        shuffleBtn: 'Mezclar',
         connecting: 'Conectando…',
         synced: '● Sincronizado en tiempo real',
         noConn: '● Sin conexión',
@@ -1269,7 +1269,7 @@
         confirmBody: (n) => `Ci sono <strong style="color:#c89fff">${n} giocatori</strong> connessi.<br/>Questo azzererà il tempo e il pattern per tutti.`,
         confirmCancel: 'Annulla',
         confirmYes: 'Sì, ricomincia!',
-        patternLabel: 'Pattern',
+        patternLabel: 'Motivo',
         shuffleBtn: 'Mescola',
         connecting: 'Connessione…',
         synced: '● Sincronizzato in tempo reale',
@@ -3642,10 +3642,9 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
         }}>
           <Stars/>
 
-          {/* Fila 1: Voz/Trofeo/Ayuda/Salir (izq.) — Pattern widget (der., donde estaba) */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px',
+          {/* Fila 1: Voz/Trofeo/Ayuda/Salir — arriba de todo */}
+          <div style={{display:'flex',alignItems:'center',gap:'6px',
                        width:'100%',maxWidth:'380px',marginBottom:'8px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'6px',minWidth:0}}>
               {voiceSupported && (
                 <button id="rr-voice-btn" className="help-btn" onClick={voiceOn?stopVoice:startVoice}
                         title={voiceOn?window.T.voiceOn:window.T.voiceOff}
@@ -3680,13 +3679,11 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                   <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
                 </svg>
               </button>
-            </div>
-            <div ref={rrSlotRef} style={{position:'relative',flexShrink:0}}/>
           </div>
 
-          {/* Fila 2: Invite + nombre — debajo del resto de iconos */}
-          <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px',
-                       width:'100%',maxWidth:'380px'}}>
+          {/* Fila 2: Invite + Pattern widget — alineados por arriba */}
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'8px',
+                       width:'100%',maxWidth:'380px',marginBottom:'8px'}}>
 
             <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
                  try {
@@ -3708,6 +3705,13 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
             </button>
+
+            <div ref={rrSlotRef} style={{position:'relative',flexShrink:0}}/>
+          </div>
+
+          {/* Fila 3: nombre del jugador */}
+          <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px',
+                       width:'100%',maxWidth:'380px'}}>
 
             <div style={{display:'flex',alignItems:'center',gap:'5px',
                          background:'rgba(255,255,255,.05)',borderRadius:'9px',
