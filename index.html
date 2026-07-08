@@ -3239,7 +3239,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       useEffect(() => {
         window.__rrLevel = level;
         const boardExtra = 24 + 5 * (boardSize - 1); // padding del tablero + gaps entre fichas
-        const chromeReserved = 290 + boardExtra;      // cabecera + etiquetas + pie + margenes
+        const chromeReserved = 300 + boardExtra;      // cabecera + etiquetas + pie + margenes
         document.documentElement.style.setProperty('--tile',
           `clamp(${LV.tileMin}px, min(calc((100vw - 64px)/${boardSize}), calc((100dvh - ${chromeReserved}px)/${boardSize})), ${LV.tileMax}px)`);
         return () => { document.documentElement.style.setProperty('--tile', 'clamp(50px,calc((100vw - 64px)/5),62px)'); };
@@ -3642,9 +3642,10 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
         }}>
           <Stars/>
 
-          {/* Fila 1: Voz/Trofeo/Ayuda/Salir — arriba de todo */}
-          <div style={{display:'flex',alignItems:'center',gap:'6px',
+          {/* Fila 2: Voz/Trofeo/Invite/Ayuda/Salir (izq., círculos iguales) — Pattern widget (der.) — arriba de todo, alineados por arriba */}
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'8px',
                        width:'100%',maxWidth:'380px',marginBottom:'8px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'6px',minWidth:0}}>
               {voiceSupported && (
                 <button id="rr-voice-btn" className="help-btn" onClick={voiceOn?stopVoice:startVoice}
                         title={voiceOn?window.T.voiceOn:window.T.voiceOff}
@@ -3662,6 +3663,22 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                 </button>
               )}
               <button className="help-btn" onClick={()=>setShowScores(true)} style={{fontSize:'15px'}}>🏆</button>
+              <button id="tut-invite-btn" className="help-btn" title={window.T.inviteTitle} onClick={()=>{
+                   try {
+                     navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
+                   } catch (e) { /* no soportado o ya registrado: ignorar */ }
+                   if (!window.__mcPushAttempted) {
+                     window.__mcPushAttempted = true;
+                     window.__fbEnablePush?.(getDeviceId());
+                   }
+                   setShowInvite(true);
+                 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
+                     strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+              </button>
               <div style={{position:'relative'}}>
                 <button className="help-btn" onClick={openTutorial} title={window.T.helpTitle}>?</button>
                 {showTutHint && (
@@ -3679,38 +3696,15 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                   <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
                 </svg>
               </button>
-          </div>
-
-          {/* Fila 2: Invite + Pattern widget — alineados por arriba */}
-          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'8px',
-                       width:'100%',maxWidth:'380px',marginBottom:'8px'}}>
-
-            <button id="tut-invite-btn" title={window.T.inviteTitle} onClick={()=>{
-                 try {
-                   navigator.registerProtocolHandler?.('web+mosaicchamp', `${location.origin}${location.pathname}?code=%s`);
-                 } catch (e) { /* no soportado o ya registrado: ignorar */ }
-                 if (!window.__mcPushAttempted) {
-                   window.__mcPushAttempted = true;
-                   window.__fbEnablePush?.(getDeviceId());
-                 }
-                 setShowInvite(true);
-               }}
-                 style={{display:'flex',alignItems:'center',justifyContent:'center',
-                         width:'34px',height:'34px',flexShrink:0,cursor:'pointer',
-                         background:'rgba(156,90,255,.12)',border:'1px solid rgba(156,90,255,.3)',
-                         borderRadius:'9px',padding:0}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c89fff"
-                   strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-            </button>
-
+            </div>
             <div ref={rrSlotRef} style={{position:'relative',flexShrink:0}}/>
           </div>
 
-          {/* Fila 3: nombre del jugador */}
-          <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px',
+          {/* Logo — en el hueco entre la fila de iconos/pattern y la fila del nombre */}
+          <MosaicTitle style={{width:'100%',maxWidth:'220px',marginBottom:'8px'}}/>
+
+          {/* Fila 3: nombre del jugador — centrada */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',marginBottom:'8px',
                        width:'100%',maxWidth:'380px'}}>
 
             <div style={{display:'flex',alignItems:'center',gap:'5px',
@@ -3903,7 +3897,7 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
                 </button>
               )}
             </div>
-            <MosaicTitle style={{width:"100%",maxWidth:"220px",marginBottom:"2px"}}/>
+
 
           </div>
 
