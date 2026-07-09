@@ -4,7 +4,7 @@
 //  El registro se hace automáticamente desde index.html
 // ─────────────────────────────────────────────────────────
 
-const CACHE_NAME = 'rubikrace-v7';
+const CACHE_NAME = 'rubikrace-v8';
 
 // Recursos que se precachean en la instalación
 const PRECACHE = [
