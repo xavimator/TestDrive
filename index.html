@@ -1601,7 +1601,9 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       <div id="rr-pattern-tools">
         <button id="rr-image-btn" class="rr-tool-btn" onclick="rrImageButtonClick()" title="Desde imagen">📷</button>
         <button id="rr-manual-btn" class="rr-tool-btn" onclick="rrToggleManualMode()" title="Manual">✏️</button>
+        <button id="rr-validate-btn" class="rr-tool-btn" onclick="rrValidatePattern()" title="Validar patrón (rellena el tablero con tiles suficientes)">✅</button>
       </div>
+      <div id="rr-validate-hint" style="text-align:center;font-size:10px;color:rgba(34,197,94,.6);margin-top:4px;display:none;">Tablero actualizado con colores suficientes</div>
       <input id="rr-image-input" type="file" accept="image/*" style="display:none" onchange="rrHandleImageFile(this.files[0])">
       <div style="margin-top:10px;text-align:center;">
         <a href="licenses.html" style="font-size:11px;color:rgba(255,255,255,.25);text-decoration:none;letter-spacing:.03em;" target="_blank">Licencias de terceros</a>
@@ -1907,11 +1909,29 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       const size = rrPatternSize();
       const imgBtn = document.getElementById('rr-image-btn');
       const manBtn = document.getElementById('rr-manual-btn');
+      const valBtn = document.getElementById('rr-validate-btn');
       if (imgBtn) imgBtn.disabled = !size;
       if (manBtn) manBtn.disabled = !size;
+      if (valBtn) valBtn.disabled = !(window.rrPattern && window.rrPattern.length);
       if (!size && rrManualMode) rrToggleManualMode(false);
     }
     window.rrSyncPatternTools = rrSyncPatternTools;
+
+    // Valida el patrón actual (creado a mano o desde imagen) y avisa al tablero de
+    // juego para que se regenere garantizando tiles suficientes de cada color que
+    // el patrón necesita, de forma que siempre sea posible completarlo.
+    function rrValidatePattern() {
+      if (!window.rrPattern || !window.rrPattern.length) return;
+      window.dispatchEvent(new CustomEvent('rrValidatePattern', { detail: [...window.rrPattern] }));
+      const hint = document.getElementById('rr-validate-hint');
+      if (hint) {
+        hint.style.display = 'block';
+        clearTimeout(window.__rrValidateHintTimer);
+        window.__rrValidateHintTimer = setTimeout(() => { hint.style.display = 'none'; }, 3000);
+      }
+      window.showDiscreteToast?.('✅', 'Tablero actualizado con colores suficientes', '#22c55e');
+    }
+    window.rrValidatePattern = rrValidatePattern;
 
     function rrToggleManualMode(force) {
       const size = rrPatternSize();
@@ -2045,6 +2065,46 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
       return arr;
     }
     function checkMatch(tiles,pat,center){ if(!pat||!center||pat.length<center.length)return false; return center.every((ti,i)=>{const t=tiles[ti];return t&&t.colorId===RR_IDS[pat[i]];}); }
+
+    // Cuenta cuántos tiles de cada color exige un patrón (manual o desde imagen).
+    function rrRequiredCounts(pattern) {
+      const counts = {};
+      (pattern||[]).forEach(p => { const id = RR_IDS[p]; if (id) counts[id] = (counts[id]||0) + 1; });
+      return counts;
+    }
+
+    // Igual que buildSolved, pero garantiza al menos `requiredCounts[colorId]` tiles
+    // de cada color (los necesarios para el patrón actual) antes de repartir el resto
+    // de forma equilibrada entre todos los colores. Así el tablero siempre tiene
+    // material suficiente para completar el patrón creado a mano o desde imagen.
+    function buildSolvedForPattern(boardSize, mask, requiredCounts){
+      const validIdxs = mask ? [...mask] : Array.from({length:boardSize*boardSize},(_,i)=>i);
+      const total = validIdxs.length - 1; // última celda = hueco
+      const counts = {}; COLORS.forEach(c => counts[c.id] = (requiredCounts && requiredCounts[c.id]) || 0);
+      let assigned = Object.values(counts).reduce((a,b)=>a+b, 0);
+      // Si el patrón pidiera más tiles de los que caben en el tablero (caso extremo),
+      // recorta proporcionalmente para que no se rompa el reparto.
+      if (assigned > total) {
+        const scale = total / assigned;
+        let scaled = 0;
+        COLORS.forEach(c => { counts[c.id] = Math.floor(counts[c.id]*scale); scaled += counts[c.id]; });
+        assigned = scaled;
+      }
+      let remaining = Math.max(0, total - assigned);
+      let ci = 0;
+      while (remaining > 0) { counts[COLORS[ci % COLORS.length].id]++; ci++; remaining--; }
+      const pool = [];
+      COLORS.forEach(c => { for (let i=0;i<counts[c.id];i++) pool.push(c.id); });
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+      const t = new Array(boardSize*boardSize);
+      const nums = {};
+      validIdxs.forEach((idx, i) => {
+        if (i < total) { const id = pool[i] || COLORS[0].id; nums[id]=(nums[id]||0)+1; t[idx] = { colorId:id, num:nums[id] }; }
+        else t[idx] = null;
+      });
+      return t;
+    }
+
     // mask (Set opcional): índices válidos del tablero. Si se omite, el tablero es un cuadrado completo boardSize×boardSize.
     function buildSolved(boardSize, mask){
       const validIdxs = mask ? [...mask] : Array.from({length:boardSize*boardSize},(_,i)=>i);
@@ -3543,6 +3603,24 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
         window.addEventListener('rrGlobalReset', onReset);
         return () => window.removeEventListener('rrGlobalReset', onReset);
       }, []);
+
+      // Validar patrón: regenera el tablero garantizando tiles suficientes de cada
+      // color que necesita el patrón recién creado (manual o desde imagen).
+      useEffect(() => {
+        const onValidate = (e) => {
+          const pattern = e.detail || [];
+          const counts = rrRequiredCounts(pattern);
+          setTiles(shuffle(buildSolvedForPattern(boardSize, mask, counts), boardSize, 300, mask));
+          setMoves(0); setFinished(false);
+          setLastMoved(null); finishedRef.current=false; nearWinSentRef.current=false;
+          setUsedHints(false); setHintMove(null); setShowLifesaver(false);
+          lastMoveTimeRef.current = Date.now();
+          window.__fbUpdatePresence?.(SESSION_UID, playerName, false);
+          startCountdown();
+        };
+        window.addEventListener('rrValidatePattern', onValidate);
+        return () => window.removeEventListener('rrValidatePattern', onValidate);
+      }, [boardSize, mask, playerName, startCountdown]);
 
       // Presence change
       useEffect(() => {
