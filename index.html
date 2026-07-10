@@ -3492,7 +3492,15 @@ window.__MOSAIC_TITLE_PRIDE_SVG__='<svg xmlns="http://www.w3.org/2000/svg" viewB
           slot.appendChild(widget);
           widget.style.display = '';
         }
-        return () => { if (widget) widget.style.display = 'none'; };
+        return () => {
+          if (widget) {
+            widget.style.display = 'none';
+            // Importante: devolver el widget a un contenedor estable (body) ANTES de que
+            // React desmonte el slot; si no, el nodo se va con el slot y getElementById
+            // deja de encontrarlo en la próxima partida, y el bloque de patrón no vuelve a salir.
+            document.body.appendChild(widget);
+          }
+        };
       }, []);
 
       // Presence heartbeat
