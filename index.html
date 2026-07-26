@@ -3,604 +3,270 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Examen · Proyectos de Sonido</title>
+<title>Examen · Montaje y Postproducción Audiovisual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root{
+  --bg:#0D1013;
+  --panel:#161A1F;
+  --panel-2:#1D2229;
+  --line: #2A3038;
+  --teal:#20B2A6;
+  --teal-dim: #14766D;
+  --orange:#E8873A;
+  --orange-dim:#B4632228;
+  --text:#ECEAE4;
+  --muted:#8A929D;
+  --red:#E15B5B;
+  --green:#3FC98A;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1100px 600px at 15% -10%, rgba(32,178,166,0.10), transparent 60%),
+    radial-gradient(900px 500px at 105% 10%, rgba(232,135,58,0.09), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px;margin:0 auto;padding:28px 20px 80px;}
 
-  :root{
-    --bg: #14171a;
-    --panel: #1c2024;
-    --panel-2: #23282d;
-    --line: #33393f;
-    --amber: #ffb454;
-    --amber-dim: #8a6a3a;
-    --green: #6fd88a;
-    --red: #ff6b6b;
-    --text: #e8e6e1;
-    --text-dim: #9aa0a6;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:
-      radial-gradient(ellipse at 20% -10%, #23282d 0%, transparent 55%),
-      var(--bg);
-    color:var(--text);
-    font-family:'Space Grotesk', sans-serif;
-    -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-  }
-  .mono{ font-family:'JetBrains Mono', monospace; }
+/* ---- Header / slate ---- */
+.slate{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:22px;
+}
+.slate-chip{
+  font-family:'Space Mono',monospace;
+  font-size:11px;letter-spacing:.12em;
+  color:var(--bg);
+  background:var(--teal);
+  padding:4px 9px;border-radius:3px;
+  font-weight:700;
+}
+.slate-line{flex:1;height:1px;background:linear-gradient(90deg, var(--line), transparent);}
+.timecode{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.05em;}
 
-  .wrap{ max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+h1.title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(38px,7vw,58px);
+  letter-spacing:.01em;
+  line-height:0.95;
+  margin:6px 0 4px;
+  color:var(--text);
+}
+h1.title span{color:var(--orange);}
+.subtitle{color:var(--muted);font-size:15px;margin-bottom:26px;max-width:56ch;line-height:1.5;}
 
-  /* ---- Top VU strip ---- */
-  .vu-strip{ display:flex; gap:3px; margin-bottom:18px; }
-  .vu-strip span{ flex:1; height:5px; background:var(--line); border-radius:1px; }
-  .vu-strip span.on{ background:var(--amber); }
-  .vu-strip span.on.green{ background:var(--green); }
+/* ---- scope dial decorative ---- */
+.scopes{display:flex;gap:14px;margin:0 0 30px;}
+.scope-wheel{
+  width:64px;height:64px;border-radius:50%;
+  background: conic-gradient(from 200deg, var(--teal), var(--panel-2) 30%, var(--panel-2) 65%, var(--orange));
+  position:relative; flex:none;
+  box-shadow: inset 0 0 0 1px var(--line), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+.scope-wheel::after{
+  content:'';position:absolute;inset:26%;border-radius:50%;
+  background:var(--bg); box-shadow: inset 0 0 0 1px var(--line);
+}
+.scope-label{align-self:center;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);line-height:1.5;}
+.scope-label b{color:var(--text);display:block;font-size:13px;}
 
-  header.top{
-    display:flex; justify-content:space-between; align-items:flex-end;
-    margin-bottom: 22px; border-bottom:1px solid var(--line); padding-bottom:14px;
-  }
-  header.top h1{
-    font-size:1.25rem; margin:0; letter-spacing:0.01em; font-weight:700;
-  }
-  header.top h1 span{ color:var(--amber); }
-  header.top .tag{
-    font-family:'JetBrains Mono',monospace; font-size:0.68rem; color:var(--text-dim);
-    text-transform:uppercase; letter-spacing:0.08em;
-  }
+/* ---- cards / panels ---- */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:24px;
+}
+.panel + .panel{margin-top:16px;}
 
-  /* ---- Screens ---- */
-  .screen{ display:none; }
-  .screen.active{ display:block; animation:fadein .25s ease; }
-  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+/* ---- chapter select grid ---- */
+.chgrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:18px;}
+@media(min-width:640px){.chgrid{grid-template-columns:1fr 1fr;}}
+.chcard{
+  display:flex; align-items:center; gap:14px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:14px 16px;
+  cursor:pointer;
+  text-align:left;
+  transition: border-color .15s, transform .15s, background .15s;
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  width:100%;
+}
+.chcard:hover{border-color:var(--teal); background:#1F262D; transform:translateY(-1px);}
+.chcard:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+.chnum{
+  font-family:'Space Mono',monospace;
+  font-size:20px; font-weight:700; color:var(--orange);
+  min-width:34px;
+}
+.chinfo{flex:1; min-width:0;}
+.chinfo .ttl{font-size:14px;font-weight:600;line-height:1.3;}
+.chinfo .meta{font-size:11.5px;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace;}
+.chdone{color:var(--teal);font-family:'Space Mono',monospace;font-size:12px;font-weight:700;}
 
-  .intro-card{
-    background:var(--panel); border:1px solid var(--line); border-radius:10px;
-    padding:22px 20px;
-  }
-  .intro-card p{ color:var(--text-dim); line-height:1.55; font-size:0.92rem; }
-  .intro-card p.lead{ color:var(--text); font-size:0.98rem; }
+.startall{
+  margin-top:18px; width:100%;
+  background:var(--orange); color:#1A1005; border:none;
+  font-family:'Inter',sans-serif; font-weight:700; font-size:15px;
+  padding:14px 18px; border-radius:8px; cursor:pointer;
+  transition: filter .15s, transform .15s;
+}
+.startall:hover{filter:brightness(1.08); transform:translateY(-1px);}
 
-  .module-list{ display:flex; flex-direction:column; gap:10px; margin:18px 0; }
-  .module-row{
-    display:flex; align-items:center; gap:12px;
-    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
-    padding:12px 14px; cursor:pointer; user-select:none;
-    transition:border-color .15s ease, background .15s ease;
-  }
-  .module-row:hover{ border-color:var(--amber-dim); }
-  .module-row.checked{ border-color:var(--amber); background:#2a2219; }
-  .module-row input{ display:none; }
-  .module-row .box{
-    width:16px; height:16px; border:1.5px solid var(--text-dim); border-radius:3px;
-    flex-shrink:0; position:relative;
-  }
-  .module-row.checked .box{ border-color:var(--amber); background:var(--amber); }
-  .module-row.checked .box::after{
-    content:''; position:absolute; left:4px; top:1px; width:4px; height:8px;
-    border:solid #14171a; border-width:0 2px 2px 0; transform:rotate(40deg);
-  }
-  .module-row .m-code{ font-family:'JetBrains Mono',monospace; font-size:0.68rem; color:var(--amber); display:block; }
-  .module-row .m-title{ font-size:0.86rem; color:var(--text); }
-  .module-row .m-count{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--text-dim); }
+/* ---- timeline / progress ---- */
+.timeline{
+  position:relative; height:8px; border-radius:4px;
+  background:var(--panel-2); overflow:hidden; margin:6px 0 4px;
+  border:1px solid var(--line);
+}
+.timeline-fill{
+  position:absolute; inset:0 auto 0 0; width:0%;
+  background:linear-gradient(90deg, var(--teal), var(--orange));
+  transition:width .3s ease;
+}
+.hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.hud-left{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);}
+.hud-left b{color:var(--text);}
+.scorepill{
+  font-family:'Space Mono',monospace;font-size:12px;
+  background:var(--panel-2); border:1px solid var(--line);
+  padding:4px 10px;border-radius:20px; color:var(--teal); font-weight:700;
+}
+.backlink{
+  background:none;border:none;color:var(--muted);
+  font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;
+  padding:6px 0; margin-bottom:14px; display:inline-flex; gap:6px; align-items:center;
+}
+.backlink:hover{color:var(--text);}
 
-  button.primary{
-    width:100%; padding:14px; border-radius:8px; border:none;
-    background:var(--amber); color:#1a1204; font-weight:700; font-size:0.95rem;
-    cursor:pointer; letter-spacing:0.01em;
-    transition:filter .15s ease, transform .1s ease;
-    font-family:'Space Grotesk',sans-serif;
-  }
-  button.primary:hover{ filter:brightness(1.08); }
-  button.primary:active{ transform:scale(0.99); }
-  button.primary:disabled{ background:var(--line); color:var(--text-dim); cursor:not-allowed; }
+/* ---- question ---- */
+.qeyebrow{
+  font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.1em;
+  color:var(--orange); margin-bottom:10px; text-transform:uppercase;
+}
+.qtext{font-size:19px; line-height:1.45; font-weight:600; margin-bottom:22px;}
+.opts{display:flex;flex-direction:column;gap:10px;}
+.opt{
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+  padding:13px 15px; cursor:pointer; text-align:left;
+  font-family:'Inter',sans-serif; font-size:14.5px; color:var(--text);
+  transition: border-color .12s, background .12s;
+  width:100%;
+}
+.opt:hover:not(.locked){border-color:var(--teal);}
+.opt:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+.opt .letter{
+  font-family:'Space Mono',monospace; font-weight:700; font-size:12px;
+  color:var(--muted); min-width:20px; padding-top:1px;
+}
+.opt.correct{border-color:var(--green); background:#123027;}
+.opt.correct .letter{color:var(--green);}
+.opt.wrong{border-color:var(--red); background:#301616;}
+.opt.wrong .letter{color:var(--red);}
+.opt.dim{opacity:.55;}
 
-  button.ghost{
-    width:100%; padding:12px; border-radius:8px; margin-top:10px;
-    background:transparent; border:1px solid var(--line); color:var(--text-dim);
-    font-family:'Space Grotesk',sans-serif; font-size:0.85rem; cursor:pointer;
-  }
-  button.ghost:hover{ border-color:var(--text-dim); color:var(--text); }
+.feedback{
+  margin-top:18px; padding:14px 16px; border-radius:8px;
+  border:1px solid var(--line); background:var(--panel-2);
+  font-size:14px; line-height:1.55; color:var(--muted);
+  display:none;
+}
+.feedback.show{display:block;}
+.feedback .tag{
+  font-family:'Space Mono',monospace; font-weight:700; font-size:12px;
+  letter-spacing:.05em; margin-bottom:6px; display:block;
+}
+.feedback.ok .tag{color:var(--green);}
+.feedback.bad .tag{color:var(--red);}
+.feedback b{color:var(--text);}
 
-  /* ---- Quiz screen ---- */
-  .progress-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-  .progress-row .mono{ font-size:0.72rem; color:var(--text-dim); }
-  .progress-bar{ height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin-bottom:22px; }
-  .progress-bar > div{ height:100%; background:var(--amber); transition:width .3s ease; }
+.navrow{display:flex; justify-content:flex-end; margin-top:20px;}
+.nextbtn{
+  background:var(--teal); color:#04211D; border:none;
+  font-family:'Inter',sans-serif; font-weight:700; font-size:14.5px;
+  padding:11px 22px; border-radius:8px; cursor:pointer;
+  opacity:0; pointer-events:none; transition:opacity .2s, filter .15s;
+}
+.nextbtn.show{opacity:1; pointer-events:auto;}
+.nextbtn:hover{filter:brightness(1.08);}
 
-  .q-tag{
-    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:0.66rem;
-    color:var(--amber); border:1px solid var(--amber-dim); border-radius:20px;
-    padding:3px 10px; margin-bottom:14px; letter-spacing:0.04em;
-  }
-  .q-text{ font-size:1.08rem; line-height:1.45; margin:0 0 20px; font-weight:600; }
+/* ---- results ---- */
+.result-badge{
+  font-family:'Bebas Neue',sans-serif; font-size:64px; color:var(--orange);
+  line-height:1;
+}
+.result-sub{color:var(--muted); font-size:14px; margin-top:2px;}
+.breakdown{margin-top:22px; display:flex; flex-direction:column; gap:8px;}
+.brow{
+  display:flex; align-items:center; gap:12px;
+  font-family:'Space Mono',monospace; font-size:12.5px;
+}
+.brow .blabel{min-width:150px; color:var(--muted); flex:none;}
+.btrack{flex:1; height:7px; border-radius:4px; background:var(--panel-2); border:1px solid var(--line); overflow:hidden;}
+.bfill{height:100%; background:linear-gradient(90deg,var(--teal),var(--orange));}
+.bscore{min-width:44px; text-align:right; color:var(--text);}
 
-  .options{ display:flex; flex-direction:column; gap:9px; }
-  .opt{
-    text-align:left; padding:13px 14px; border-radius:8px;
-    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
-    font-family:'Space Grotesk',sans-serif; font-size:0.88rem; cursor:pointer; line-height:1.4;
-    display:flex; gap:10px; align-items:flex-start;
-    transition:border-color .12s ease, background .12s ease;
-  }
-  .opt:hover:not(.locked){ border-color:var(--amber-dim); }
-  .opt .letter{
-    font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--text-dim);
-    border:1px solid var(--line); border-radius:4px; width:20px; height:20px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
-  }
-  .opt.correct{ border-color:var(--green); background:#16241a; }
-  .opt.correct .letter{ border-color:var(--green); color:var(--green); }
-  .opt.wrong{ border-color:var(--red); background:#271717; }
-  .opt.wrong .letter{ border-color:var(--red); color:var(--red); }
-  .opt.locked{ cursor:default; }
-  .opt.dim{ opacity:0.45; }
+.resultbtns{display:flex; gap:10px; margin-top:24px; flex-wrap:wrap;}
+.resultbtns button{
+  font-family:'Inter',sans-serif; font-weight:700; font-size:14px;
+  padding:11px 18px; border-radius:8px; cursor:pointer; border:1px solid var(--line);
+}
+.btn-primary{background:var(--orange); color:#1A1005; border:none;}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-secondary{background:transparent; color:var(--text);}
+.btn-secondary:hover{border-color:var(--teal);}
 
-  .explain{
-    margin-top:16px; padding:13px 14px; border-radius:8px;
-    background:var(--panel); border:1px solid var(--line);
-    font-size:0.83rem; color:var(--text-dim); line-height:1.5; display:none;
-  }
-  .explain.show{ display:block; animation:fadein .2s ease; }
-  .explain b{ color:var(--text); }
-
-  .nav-row{ margin-top:20px; }
-
-  /* ---- Results ---- */
-  .result-hero{ text-align:center; padding:26px 10px 10px; }
-  .result-hero .big{ font-family:'JetBrains Mono',monospace; font-size:3rem; font-weight:700; color:var(--amber); }
-  .result-hero .of{ color:var(--text-dim); font-size:0.9rem; margin-top:-6px; }
-  .result-hero .msg{ margin-top:10px; font-size:0.95rem; }
-
-  .breakdown{ display:flex; flex-direction:column; gap:8px; margin:20px 0; }
-  .b-row{ display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
-  .b-row .b-label{ font-size:0.8rem; flex:1; }
-  .b-row .b-bar{ flex:1.4; height:6px; background:var(--line); border-radius:3px; overflow:hidden; }
-  .b-row .b-bar > div{ height:100%; background:var(--green); }
-  .b-row .b-score{ font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--text-dim); width:44px; text-align:right; }
-
-  .review-item{ border-bottom:1px solid var(--line); padding:14px 0; }
-  .review-item:last-child{ border-bottom:none; }
-  .review-item .rq{ font-size:0.88rem; margin-bottom:8px; }
-  .review-item .ra{ font-size:0.8rem; color:var(--text-dim); }
-  .review-item .ra.ok{ color:var(--green); }
-  .review-item .ra.bad{ color:var(--red); }
-  .review-item .rex{ font-size:0.78rem; color:var(--text-dim); margin-top:6px; line-height:1.5; }
-
-  footer.credit{ text-align:center; margin-top:30px; font-size:0.68rem; color:#565c62; font-family:'JetBrains Mono',monospace; }
+footer.credit{
+  text-align:center; color:var(--muted); font-size:11.5px;
+  font-family:'Space Mono',monospace; margin-top:40px; letter-spacing:.03em;
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <div class="vu-strip mono" id="vuStrip"></div>
-  <header class="top">
-    <h1>Examen<span>·</span>Proyectos de Sonido</h1>
-    <div class="tag">UC1408·1409·1410·1411_3</div>
-  </header>
-
-  <!-- INTRO -->
-  <div class="screen active" id="screen-intro">
-    <div class="intro-card">
-      <p class="lead">Test de autoevaluación técnica basado en las 4 unidades de competencia del certificado de <b>Sonido para audiovisuales y espectáculos</b>, más preguntas de cultura técnica general de audio y producción discográfica.</p>
-      <p>Elige qué bloques quieres repasar. Cada pregunta tiene una única respuesta correcta y una explicación al responder.</p>
-    </div>
-
-    <div class="module-list" id="moduleList"></div>
-
-    <button class="primary" id="startBtn">Empezar examen</button>
-  </div>
-
-  <!-- QUIZ -->
-  <div class="screen" id="screen-quiz">
-    <div class="progress-row">
-      <span class="mono" id="progLabel">Pregunta 1/1</span>
-      <span class="mono" id="scoreLabel">Aciertos: 0</span>
-    </div>
-    <div class="progress-bar"><div id="progFill" style="width:0%"></div></div>
-
-    <span class="q-tag" id="qTag">UC1408_3</span>
-    <p class="q-text" id="qText">—</p>
-    <div class="options" id="optsWrap"></div>
-    <div class="explain" id="explainBox"></div>
-
-    <div class="nav-row">
-      <button class="primary" id="nextBtn" disabled>Responde para continuar</button>
-    </div>
-  </div>
-
-  <!-- RESULTS -->
-  <div class="screen" id="screen-results">
-    <div class="result-hero">
-      <div class="big" id="resBig">0%</div>
-      <div class="of mono" id="resOf">0 / 0 correctas</div>
-      <div class="msg" id="resMsg"></div>
-    </div>
-
-    <div class="breakdown" id="breakdown"></div>
-
-    <button class="primary" id="reviewBtn">Ver repaso de fallos</button>
-    <button class="ghost" id="restartBtn">Volver a empezar</button>
-
-    <div id="reviewList" style="margin-top:22px; display:none;"></div>
-  </div>
-
-  <footer class="credit">GENERADO A PARTIR DE UC1408_3 · UC1409_3 · UC1410_3 · UC1411_3 + INVESTIGACIÓN TÉCNICA ADICIONAL</footer>
-</div>
-
+<div class="wrap" id="app"></div>
 <script>
-/* ===================== BANCO DE PREGUNTAS ===================== */
-const MODULES = [
-  { code:"UC1408_3", title:"Definir y planificar proyectos de sonido" },
-  { code:"UC1409_3", title:"Instalación y mantenimiento del sistema de sonido" },
-  { code:"UC1410_3", title:"Ajuste de equipos y captación del sonido" },
-  { code:"UC1411_3", title:"Postproducción de proyectos de sonido" },
-  { code:"GENERAL",  title:"Cultura técnica de audio y producción discográfica" },
-];
+const CH_TITLES = {
+  1:"Introducción al montaje audiovisual",
+  2:"Planificación del montaje audiovisual",
+  3:"Recepción del material, gestión de datos e ingesta",
+  4:"Organización del material y sincronización",
+  5:"El montaje Offline: construcción narrativa",
+  6:"Efectos Visuales (VFX) y preparación",
+  7:"Conformado (Online Editing) y Digital Intermediate",
+  8:"Corrección de color y etalonaje profesional",
+  9:"Postproducción de sonido",
+  10:"Control de Calidad (QC) y Máster de Distribución"
+};
 
-const QUESTIONS = [
-// ---------------- UC1408_3 ----------------
-{m:"UC1408_3", q:"¿Qué es el «rider técnico» de un espectáculo?", opts:[
-  "El documento que detalla los requerimientos técnicos (backline, sonido, iluminación) que exige el artista para su actuación",
-  "El contrato económico entre la productora y el local",
-  "El listado de canciones que interpretará el artista",
-  "El seguro de responsabilidad civil del evento"
-], correct:0, ex:"El rider técnico recoge las necesidades de equipamiento y condiciones técnicas exigidas por el artista o compañía, punto de partida para el prediseño del sistema de sonido."},
+const QUESTIONS = 
+[{"ch":1,"q":"¿Qué es, según el manual, el montaje audiovisual?","opts":["El proceso de organizar y combinar fragmentos aislados para construir una narración con sentido dramático, emocional y visual","El proceso de grabar varias tomas de una misma escena","La técnica de iluminar correctamente un plano","El proceso de escribir el guion literario"],"correct":0,"why":"El montaje transforma fragmentos independientes en una narración continua con sentido dramático, emocional y visual."},{"ch":1,"q":"Según el manual, ¿cuántas veces se dice que se escribe una película?","opts":["Una sola vez, durante el guion","Dos veces: guion y rodaje","Tres veces: guion, rodaje y montaje","Cuatro veces, incluyendo la distribución"],"correct":2,"why":"Se dice que una película se escribe durante el guion, durante el rodaje y durante el montaje."},{"ch":1,"q":"¿Cuál de las siguientes NO es una de las funciones del montaje descritas en el capítulo 1?","opts":["Función narrativa","Función emocional","Función estética","Función publicitaria"],"correct":3,"why":"El manual describe las funciones narrativa, emocional, estética y expresiva; la 'función publicitaria' no aparece."},{"ch":1,"q":"La función narrativa del montaje se caracteriza principalmente porque:","opts":["Puede modificar completamente el orden temporal de los acontecimientos","Determina únicamente la resolución de imagen","Se ocupa solo de la corrección de color","Sustituye al guion técnico"],"correct":0,"why":"El montaje organiza los acontecimientos y puede alterar completamente el orden temporal (flashbacks, flashforwards, etc.)."},{"ch":1,"q":"Según el ejemplo del manual, un mismo plano de 10 segundos transmite calma, mientras que reducido a 2 segundos transmite:","opts":["Sensación de urgencia","Sensación de nostalgia","Sensación de humor","Ninguna diferencia perceptible"],"correct":0,"why":"Ese es el ejemplo de la función emocional: la duración del plano puede cambiar la sensación de calma a urgencia."},{"ch":1,"q":"¿Cuál de estos es un ejemplo de estilo visual mencionado en la función estética del montaje?","opts":["Montaje invisible","Montaje sonoro","Montaje de checksum","Montaje de metadatos"],"correct":0,"why":"Entre los ejemplos citados están montaje clásico, videoclip, documental, experimental, invisible e hiperactivo."},{"ch":1,"q":"El ejemplo del niño que sonríe y el perro que corre, interpretado por el espectador como relacionado aunque se grabaran en días distintos, ilustra:","opts":["La función expresiva del montaje","La regla de los 180 grados","El proceso de checksum","El control de calidad"],"correct":0,"why":"Ese ejemplo ilustra la función expresiva: el montaje puede transmitir ideas que nunca fueron filmadas juntas."},{"ch":1,"q":"Durante los primeros años del cine, los hermanos Lumière:","opts":["Utilizaban un único plano fijo sin ningún corte","Inventaron el montaje paralelo","Fueron los primeros en usar el chroma key","Desarrollaron la regla de los 180 grados"],"correct":0,"why":"Los Lumière colocaban la cámara frente a una escena y registraban toda la acción en un único plano fijo, sin cortes."},{"ch":1,"q":"¿Qué director demostró con 'Asalto y robo de un tren' (1903) que una narración podía construirse uniendo escenas de lugares y momentos diferentes?","opts":["Edwin S. Porter","D. W. Griffith","Lev Kuleshov","Serguéi Eisenstein"],"correct":0,"why":"Edwin S. Porter fue uno de los primeros en usar varios planos para construir una historia en esa película."},{"ch":1,"q":"¿Qué cineasta introdujo los primeros planos, planos generales, el montaje paralelo y la continuidad espacial?","opts":["D. W. Griffith","Edwin S. Porter","Lev Kuleshov","Serguéi Eisenstein"],"correct":0,"why":"D. W. Griffith perfeccionó el lenguaje cinematográfico introduciendo estos elementos."},{"ch":1,"q":"En el experimento de Lev Kuleshov, la misma fotografía de un actor se alternaba con un plato de sopa, un ataúd y una niña jugando. ¿Qué demostró este experimento?","opts":["Que el significado nace de la unión entre dos imágenes, no del propio plano","Que el sonido es más importante que la imagen","Que el raccord de mirada es innecesario","Que el eje de acción debe respetarse siempre"],"correct":0,"why":"El rostro del actor nunca cambiaba; el significado (hambre, tristeza, alegría) nacía únicamente de la combinación de imágenes: el Efecto Kuleshov."},{"ch":1,"q":"¿Cómo se llama el fenómeno descrito en la pregunta anterior?","opts":["Efecto Kuleshov","Efecto Griffith","Montaje de atracciones","Raccord narrativo"],"correct":0,"why":"Este fenómeno recibe el nombre de Efecto Kuleshov."},{"ch":1,"q":"Serguéi Eisenstein defendía que el verdadero significado del montaje se encuentra en:","opts":["El choque entre dos planos diferentes","La duración exacta de cada plano","El uso de la claqueta","La calidad del sonido directo"],"correct":0,"why":"Eisenstein llamó a esta teoría 'montaje de atracciones': el significado nace del choque entre dos planos."},{"ch":1,"q":"La escalinata de Odesa, secuencia estudiada en todas las escuelas de cine, pertenece a la película:","opts":["El acorazado Potemkin","Asalto y robo de un tren","Nacimiento de una nación","Metrópolis"],"correct":0,"why":"La escalinata de Odesa es una secuencia célebre de El acorazado Potemkin, de Eisenstein."},{"ch":1,"q":"Según el manual, el montaje es el equivalente audiovisual de:","opts":["La gramática de un idioma","La banda sonora de una película","El guion literario","La iluminación del rodaje"],"correct":0,"why":"El manual compara el montaje con la gramática: los planos serían las palabras y sus relaciones, las reglas gramaticales."},{"ch":1,"q":"¿Cuál de estas ideas describe correctamente el trabajo real de un montador según el capítulo 1?","opts":["Su trabajo consiste únicamente en eliminar los errores del rodaje","Debe tomar cientos o miles de decisiones, como elegir interpretaciones, mantener el raccord y controlar el ritmo","Solo se dedica a la corrección de color","No colabora con el director"],"correct":1,"why":"El manual aclara que existe la idea equivocada de que el editor solo elimina errores; en realidad toma numerosas decisiones creativas y técnicas."},{"ch":1,"q":"Además del montaje narrativo, ¿en qué tareas de postproducción suele participar hoy el editor?","opts":["Integración de VFX, montaje multicámara, grafismo y preparación para color y sonido","Únicamente en el rodaje de las escenas","Solo en la contratación de actores","Solo en la promoción del filme"],"correct":0,"why":"El manual indica que el editor moderno también participa en VFX, multicámara, grafismo, preparación para color y sonido, conformado y QC."},{"ch":1,"q":"En el flujo profesional de postproducción descrito en el capítulo 1, ¿qué etapa sigue inmediatamente después del Rodaje?","opts":["DIT","Picture Lock","Corrección de Color","Máster"],"correct":0,"why":"El flujo descrito es: Guion técnico → Rodaje → DIT → Recepción del material → ... hasta Distribución."},{"ch":1,"q":"¿Qué unidades de competencia se mencionan como base del flujo descrito en el capítulo 1?","opts":["UC0947, UC0948, UC0949 y UC0919","UC1001, UC1002 y UC1003","ISO9001 y ISO14001","UC0001 y UC0002"],"correct":0,"why":"El manual señala que el flujo descrito abarca las competencias UC0947, UC0948, UC0949 y UC0919."},{"ch":1,"q":"Según el capítulo 1, el editor moderno necesita conocimientos técnicos en, entre otros:","opts":["Códecs de vídeo, formatos de audio, espacios de color y gestión de metadatos","Solo interpretación actoral","Solo dirección de fotografía","Solo composición musical"],"correct":0,"why":"El manual lista códecs, formatos de audio, espacios de color, metadatos, timecode, almacenamiento, proxies, HDR, VFX e intercambio de archivos, entre otros."},{"ch":2,"q":"Según el capítulo 2, ¿cuándo comienza realmente el trabajo del departamento de montaje en una producción profesional?","opts":["Mucho antes de importar el primer archivo de vídeo, incluso durante el rodaje","Solo después de finalizar todo el rodaje","Solo tras la corrección de color","Solo cuando lo solicita el distribuidor"],"correct":0,"why":"El montaje profesional comienza mucho antes de importar el primer archivo, mientras el equipo aún está rodando."},{"ch":2,"q":"¿Cuáles son las cuatro preguntas fundamentales a las que responde la planificación, según el manual?","opts":["Qué historia contar, con qué medios técnicos, quién realiza cada proceso y cómo llegará al máster final","Cuánto cuesta, cuánto dura, quién dirige y quién produce","Qué cámara usar, qué lente usar, qué micrófono usar y qué luz usar","Qué actores contratar, qué localización usar, qué vestuario usar y qué maquillaje usar"],"correct":0,"why":"La planificación responde a: qué historia, con qué medios, quién realiza cada proceso y cómo se llega al máster final."},{"ch":2,"q":"El guion literario se diferencia del guion técnico porque:","opts":["El guion literario describe la historia sin información técnica de cámara; el técnico ya incluye tipo de plano, movimiento y duración","El guion literario incluye el timecode de cada toma","El guion técnico no incluye diálogos","Son exactamente el mismo documento"],"correct":0,"why":"El guion literario no aporta información técnica; el guion técnico traduce la historia a decisiones como tipo de plano, movimiento de cámara, duración, sonido, etc."},{"ch":2,"q":"La escaleta es el documento que:","opts":["Resume la estructura completa del programa o película","Detalla los ajustes de cámara de cada toma","Registra los checksums de los archivos","Contiene los diálogos exactos de cada escena"],"correct":0,"why":"La escaleta resume la estructura completa: introducción, presentación, conflicto, desarrollo, clímax y final."},{"ch":2,"q":"¿Para qué resulta especialmente útil el storyboard al montador?","opts":["Para prever continuidad, dirección de miradas, eje de acción y posibles transiciones","Para calcular el presupuesto de VFX","Para definir la frecuencia de muestreo del audio","Para elegir el software de montaje"],"correct":0,"why":"El storyboard, como representación gráfica del guion, permite al montador anticipar continuidad, miradas, eje de acción y transiciones."},{"ch":2,"q":"El parte de script, elaborado durante el rodaje, incluye principalmente:","opts":["Tomas buenas, tomas malas, incidencias y observaciones del director","Los ajustes de ISO y objetivo de cada cámara","La lista de efectos visuales necesarios","El presupuesto final de la producción"],"correct":0,"why":"La script supervisa la continuidad y documenta tomas buenas, malas, incidencias y observaciones del director."},{"ch":2,"q":"El parte de sonido incluye datos como:","opts":["Nombre de archivo WAV, escena, toma, frecuencia de muestreo y profundidad de bits","El storyboard de cada escena","La lista de VFX pendientes","El presupuesto de postproducción"],"correct":0,"why":"El parte de sonido documenta el archivo WAV, escena, toma, frecuencia de muestreo, profundidad de bits y observaciones del técnico."},{"ch":2,"q":"¿Quiénes suelen participar en la reunión de postproducción previa al inicio del montaje?","opts":["Director, productor, supervisor de postproducción, montador, supervisor de VFX, colorista y responsable de sonido","Únicamente el montador y el productor","Solo el equipo de cámara","Solo el distribuidor"],"correct":0,"why":"El manual enumera estos siete perfiles como participantes habituales en la reunión de postproducción."},{"ch":2,"q":"El pipeline, según el capítulo 2, se define como:","opts":["El recorrido que seguirá el proyecto desde el rodaje hasta el máster","El listado de actores confirmados","La lista de efectos de sonido disponibles","El presupuesto asignado a VFX"],"correct":0,"why":"El pipeline es el recorrido completo del proyecto: rodaje, descarga, backup, proxy, montaje, VFX, online, color, sonido, QC, máster y distribución."},{"ch":2,"q":"En el ejemplo del capítulo 2, la película se rueda en ARRIRAW 4.5K pero se edita en:","opts":["ProRes Proxy HD","REDCODE RAW 8K","DCP 2K","Betacam SP"],"correct":0,"why":"El formato de grabación puede diferir del de edición: se rueda en ARRIRAW 4.5K y se edita en ProRes Proxy HD, reenlazando después al original."},{"ch":2,"q":"¿Qué software se describe como el estándar tradicional para cine, televisión y grandes series, destacando por su estabilidad y trabajo colaborativo?","opts":["Avid Media Composer","Adobe Premiere Pro","DaVinci Resolve","Final Cut Pro"],"correct":0,"why":"Avid Media Composer es descrito como el estándar tradicional para cine, televisión y grandes series."},{"ch":2,"q":"¿Qué ventaja principal se atribuye a Adobe Premiere Pro?","opts":["Su integración con After Effects, Photoshop y Audition","Ser exclusivamente un software de corrección de color","Incluir Fusion y Fairlight de forma nativa","Ser el único compatible con formatos RAW"],"correct":0,"why":"El manual destaca la integración de Premiere Pro con After Effects, Photoshop y Audition."},{"ch":2,"q":"DaVinci Resolve, según el manual, era inicialmente un software:","opts":["Exclusivo de corrección de color","Exclusivo de edición de sonido","Exclusivo de motion graphics","Exclusivo de gestión de metadatos"],"correct":0,"why":"El manual indica que Resolve era inicialmente un software exclusivo de corrección de color y ahora incorpora montaje, color, Fusion y Fairlight."},{"ch":2,"q":"¿Qué sistema de almacenamiento es descrito como ideal para pequeños estudios, con un único ordenador conectado directamente al disco?","opts":["DAS (Direct Attached Storage)","NAS (Network Attached Storage)","SAN (Storage Area Network)","LTO"],"correct":0,"why":"El DAS es un único ordenador conectado directamente al disco, ideal para pequeños estudios."},{"ch":2,"q":"¿Qué sistema de almacenamiento permite que numerosos editores trabajen simultáneamente con archivos de muy alta resolución en grandes estudios?","opts":["SAN (Storage Area Network)","DAS (Direct Attached Storage)","Un disco duro externo USB","Una tarjeta SDXC"],"correct":0,"why":"El SAN se utiliza en grandes estudios y permite trabajo simultáneo de muchos editores con archivos de alta resolución."},{"ch":2,"q":"En la planificación de los efectos visuales durante esta fase se identifican planos que necesitarán, entre otros procesos:","opts":["Chroma key, rotoscopia, tracking y CGI","Corrección de color primaria únicamente","Solo ajuste de niveles de audio","Solo generación de subtítulos"],"correct":0,"why":"El manual menciona chroma key, rotoscopia, tracking, composición, CGI y motion graphics como procesos a identificar."},{"ch":2,"q":"¿Cuáles son ejemplos de formatos finales de entrega de sonido mencionados en la planificación del sonido?","opts":["Stereo, 5.1, 7.1 y Dolby Atmos","MP3, WMA y OGG","WAV, MOV y MP4","H.264, H.265 y ProRes"],"correct":0,"why":"El manual cita Stereo, 5.1, 7.1 y Dolby Atmos como posibles formatos finales de entrega de sonido."},{"ch":2,"q":"¿Cuál es una de las responsabilidades principales del Assistant Editor según el capítulo 2?","opts":["Verificar el material recibido, organizar los medios, crear proxies y sincronizar imagen y sonido","Escribir el guion literario","Dirigir a los actores durante el rodaje","Aprobar el presupuesto general de la producción"],"correct":0,"why":"El Assistant Editor se encarga de verificar el material, organizar medios, crear proxies, sincronizar, gestionar intercambios y preparar el conformado, entre otras tareas."},{"ch":2,"q":"Una mala planificación, según el capítulo 2, puede provocar problemas como:","opts":["Horas perdidas buscando planos, archivos incompatibles y pérdida de sincronía","Una mejora automática en la calidad de imagen","Una reducción del presupuesto total","Ninguno, ya que la planificación no afecta al montaje"],"correct":0,"why":"El manual enumera estos problemas como consecuencia directa de una mala planificación."},{"ch":2,"q":"¿Qué carpeta del ejemplo de organización del proyecto (2.8) correspondería normalmente a los archivos exportados finales?","opts":["08_EXPORT","01_CAMERA","05_GFX","10_ARCHIVE"],"correct":0,"why":"En la estructura de ejemplo, 08_EXPORT corresponde a las exportaciones, mientras que 10_ARCHIVE es para el archivado."},{"ch":3,"q":"¿Qué figura profesional actúa como enlace entre el rodaje y la postproducción, descargando tarjetas y generando proxies?","opts":["El DIT (Digital Imaging Technician)","El Assistant Editor","El colorista","El mezclador de sonido"],"correct":0,"why":"El DIT es descrito como la figura que enlaza el rodaje con la postproducción, descargando tarjetas, verificando copias y generando proxies, entre otras tareas."},{"ch":3,"q":"¿Cuál de estos soportes NO se menciona entre los soportes actuales de recepción del material?","opts":["CFexpress","RED Mini-Mag","Codex Drive","Casete VHS"],"correct":3,"why":"El manual cita CFexpress, CFast, SDXC, RED Mini-Mag, Codex Drive, SSD, NVMe y RAID; el VHS no aparece entre los soportes actuales."},{"ch":3,"q":"¿Qué documento técnico, entre otros, acompaña al material recibido según el capítulo 3?","opts":["El CDL (Color Decision List)","El contrato de los actores","La factura de producción","El plan de rodaje del director de casting"],"correct":0,"why":"Entre la documentación que acompaña al material se citan guion técnico, storyboard, escaleta, partes de script y cámara, LUT y CDL, entre otros."},{"ch":3,"q":"Según la regla 3-2-1 de copias de seguridad, se deben mantener:","opts":["Tres copias, en dos soportes distintos, con una copia fuera del estudio","Dos copias en el mismo disco duro","Una única copia protegida con contraseña","Cuatro copias en la nube exclusivamente"],"correct":0,"why":"La regla 3-2-1 establece tres copias, dos soportes distintos y una copia fuera del estudio."},{"ch":3,"q":"¿Qué algoritmo NO se menciona entre los utilizados para verificar checksum en el capítulo 3?","opts":["MD5","SHA-256","xxHash","AES-256"],"correct":3,"why":"El manual cita MD5, SHA-1, SHA-256, xxHash y CRC32; AES-256 es un algoritmo de cifrado, no de checksum."},{"ch":3,"q":"¿Qué significa que el checksum del archivo original y el de la copia coincidan?","opts":["Que la copia es idéntica y perfecta","Que el archivo está dañado","Que faltan fotogramas","Que el timecode es incorrecto"],"correct":0,"why":"Si ambas huellas digitales (checksums) coinciden, la copia es idéntica al original."},{"ch":3,"q":"¿Cuál de estos programas se menciona como habitual para la verificación mediante checksum?","opts":["ShotPut Pro","Pro Tools","Nuke","After Effects"],"correct":0,"why":"El manual menciona Hedge, ShotPut Pro, Silverstack, YoYotta y Resolve Clone Tool como programas habituales para checksum."},{"ch":3,"q":"Durante la verificación técnica de imagen se comprueban problemas como:","opts":["Frames perdidos, pixels muertos y sobreexposición","Errores tipográficos en los créditos","El nivel de LUFS de la mezcla final","El formato de entrega DCP"],"correct":0,"why":"El manual lista frames perdidos, archivos incompletos, pixels muertos, sobre/subexposición, rolling shutter, desenfoques, vibraciones y artefactos digitales."},{"ch":3,"q":"El Timecode, tal como se explica en el capítulo 3, identifica:","opts":["Cada fotograma mediante hora, minuto, segundo y fotograma","Únicamente la fecha de grabación","El nombre del director de fotografía","El nivel de exposición del plano"],"correct":0,"why":"El ejemplo 01:15:32:18 representa hora, minuto, segundo y fotograma."},{"ch":3,"q":"Gracias al Timecode es posible, entre otras cosas:","opts":["Sincronizar audio y realizar el conformado","Eliminar el ruido de fondo automáticamente","Generar automáticamente los subtítulos","Calcular el presupuesto de VFX"],"correct":0,"why":"El manual indica que el Timecode permite sincronizar audio, localizar planos, realizar el conformado e intercambiar proyectos."},{"ch":3,"q":"¿Cuál de las siguientes NO es una de las tres formas de ingesta descritas en el capítulo 3?","opts":["Import","Link","Transcode","Render"],"correct":3,"why":"Las tres formas descritas son Import, Link y Transcode; Render no se menciona como forma de ingesta."},{"ch":3,"q":"En la ingesta por 'Link', el software:","opts":["Crea simplemente un enlace, y el archivo permanece donde estaba","Copia físicamente el archivo dentro del proyecto","Genera un nuevo archivo optimizado","Elimina el archivo original"],"correct":0,"why":"En el modo Link, el software solo crea un enlace; el archivo original permanece en su ubicación."},{"ch":3,"q":"Un Proxy es, según el manual:","opts":["Una copia ligera del archivo original, suficiente para tomar decisiones narrativas","El archivo original sin comprimir","Un tipo de checksum","Un formato de subtítulos"],"correct":0,"why":"El proxy es una copia ligera (por ejemplo, ProRes Proxy 1920x1080) que sustituye temporalmente al original pesado durante el montaje."},{"ch":3,"q":"En el ejemplo del capítulo 3, un archivo original REDCODE RAW de 600 GB se convierte en un proxy ProRes Proxy de:","opts":["35 GB","600 GB","5 GB","1 TB"],"correct":0,"why":"El ejemplo indica que el proxy en 1920x1080 ProRes Proxy ocupa 35 GB frente a los 600 GB del original."},{"ch":3,"q":"Durante la ingesta, si el espacio de color no se interpreta correctamente al pasar de LogC a Rec709 mediante una LUT, la imagen puede aparecer:","opts":["Muy lavada, con poco contraste o con colores incorrectos","Con exceso de nitidez","Con canales de audio invertidos","Con el timecode duplicado"],"correct":0,"why":"Si el espacio de color no se gestiona correctamente, la imagen puede verse lavada, con poco contraste o colores incorrectos."},{"ch":3,"q":"El formato habitual de audio durante la ingesta, según el capítulo 3, es:","opts":["WAV, 48 kHz, 24 bits, PCM","MP3, 44.1 kHz, 16 bits","AAC, 48 kHz, 32 bits","FLAC, 96 kHz, 8 bits"],"correct":0,"why":"El manual indica que el formato habitual de audio en la ingesta es WAV, 48 kHz, 24 bits, PCM."},{"ch":3,"q":"¿Qué elemento organizativo, además de carpetas y etiquetas, se menciona para organizar los medios importados en 3.14?","opts":["Bins, colores y marcadores","Checksums duplicados","LUT creativas","Códigos KDM"],"correct":0,"why":"El manual cita bins, carpetas, etiquetas, colores y marcadores como elementos de organización de los medios."},{"ch":3,"q":"¿Cuál de estas incidencias debe registrarse según el apartado 3.15 del capítulo 3?","opts":["Timecode incorrecto o clip corrupto","El color favorito del director","El nombre del catering del rodaje","El horario de comida del equipo"],"correct":0,"why":"El manual lista incidencias técnicas como timecode incorrecto, clip corrupto, audio saturado, tarjeta faltante, etc."},{"ch":3,"q":"Al finalizar la fase descrita en el capítulo 3, el proyecto está listo para pasar a:","opts":["La sincronización, catalogación y preparación del material para el montaje narrativo","El estreno en cines","La distribución en streaming","El archivado final en LTO"],"correct":0,"why":"El resumen del capítulo indica que tras esta fase el proyecto está listo para la siguiente etapa: sincronización y preparación para el montaje."},{"ch":3,"q":"Según el manual, ¿por qué nunca se trabaja directamente con las tarjetas de cámara en una producción profesional?","opts":["Porque antes de editar todo el material debe verificarse, copiarse, catalogarse y protegerse","Porque las tarjetas de cámara no son compatibles con ningún software","Porque las tarjetas de cámara no permiten grabar sonido","Porque las tarjetas de cámara solo se pueden usar una vez"],"correct":0,"why":"El manual explica que en una producción profesional nunca se trabaja directamente con las tarjetas; el material debe verificarse, copiarse, catalogarse y protegerse antes."},{"ch":4,"q":"Cuando aparece el mensaje 'Media Offline' en el software de edición, normalmente significa que:","opts":["Los archivos originales han sido movidos sin avisar al software","El proyecto se ha exportado correctamente","El checksum ha fallado durante la copia","Se ha activado el modo proxy automáticamente"],"correct":0,"why":"El proyecto solo sabe dónde están los archivos; si se mueven sin avisar al software, aparece el mensaje Media Offline."},{"ch":4,"q":"Un Bin, según el capítulo 4, es:","opts":["Una carpeta virtual dentro del proyecto que organiza los clips sin contenerlos físicamente","Un tipo de archivo de vídeo comprimido","Un algoritmo de checksum","Un formato de intercambio como AAF o XML"],"correct":0,"why":"El Bin no contiene los archivos físicamente, únicamente los organiza dentro del proyecto."},{"ch":4,"q":"En la estructura profesional de Bins propuesta (4.4), ¿qué carpeta correspondería a los archivos de audio sincronizado?","opts":["03 Sync","01 Footage","07 VFX","09 Delivery"],"correct":0,"why":"En la estructura de ejemplo, '03 Sync' corresponde al material sincronizado, mientras que '01 Footage' contiene cámara A y B."},{"ch":4,"q":"¿Qué elemento del capítulo 4 permite realizar búsquedas muy precisas, como 'Escena 12, Cámara B, Objetivo 85 mm, Tomas buenas'?","opts":["Los metadatos","El checksum","El AAF","El chroma key"],"correct":0,"why":"Los metadatos asociados a cada clip (escena, cámara, objetivo, etc.) permiten realizar búsquedas precisas."},{"ch":4,"q":"Los marcadores (Markers) permiten:","opts":["Señalar puntos importantes dentro de un clip, con color, comentario, nombre y duración","Sustituir automáticamente los proxies por los originales","Calcular el checksum de un archivo","Generar automáticamente subtítulos"],"correct":0,"why":"Los marcadores señalan puntos importantes y pueden incluir color, comentario, nombre y duración."},{"ch":4,"q":"Un Subclip se crea normalmente cuando:","opts":["Un archivo original contiene varias acciones (ensayo, toma 1, toma 2...) y conviene dividirlo en referencias independientes","El archivo original está corrupto y debe repararse","Se necesita cambiar el espacio de color del clip","Se quiere eliminar el audio de un clip"],"correct":0,"why":"Los subclips permiten trabajar con partes concretas de un archivo largo sin modificar el original, que permanece intacto."},{"ch":4,"q":"En un punto de entrada y salida (In/Out), 'In' se define como:","opts":["El primer fotograma útil del plano","El último fotograma útil del plano","El fotograma central del plano","El punto donde se aplica un fundido"],"correct":0,"why":"'In' es el primer fotograma útil y 'Out' el último fotograma útil del plano seleccionado."},{"ch":4,"q":"Los Handles (o coleo) son:","opts":["Fotogramas adicionales antes y después del plano seleccionado, para permitir ajustes posteriores","Los efectos de transición entre dos planos","Los metadatos técnicos de la cámara","El nombre técnico de los subclips"],"correct":0,"why":"Los handles son fotogramas extra delante y detrás del punto útil que permiten alargar el plano sin volver al original."},{"ch":4,"q":"Para seleccionar la mejor toma entre varias, el montador consulta, entre otros elementos:","opts":["El parte de script y las notas del director","Únicamente el checksum del archivo","El informe de QC final","El certificado de color"],"correct":0,"why":"El montador consulta el parte de script, notas del director, calidad interpretativa, calidad técnica y continuidad."},{"ch":4,"q":"¿Cuál de los siguientes NO es uno de los cuatro métodos de sincronización de imagen y sonido descritos en el capítulo 4?","opts":["Claqueta","Timecode","Forma de onda (Waveform)","Corrección de color"],"correct":3,"why":"Los cuatro métodos descritos son claqueta, timecode, forma de onda y Tentacle Sync; la corrección de color no es un método de sincronización."},{"ch":4,"q":"El método de sincronización basado en 'Tentacle Sync' consiste en:","opts":["Pequeños dispositivos que generan el mismo código de tiempo para cámaras y grabadoras","Comparar visualmente el movimiento de labios con el audio","Golpear una claqueta frente a la cámara","Analizar automáticamente el nombre de archivo"],"correct":0,"why":"Tentacle Sync utiliza pequeños dispositivos que generan un mismo código de tiempo compartido entre cámaras y grabadoras."},{"ch":4,"q":"Las secuencias multicámara son especialmente habituales en:","opts":["Conciertos, programas de televisión, entrevistas y deportes","Únicamente en cine de animación","Únicamente en publicidad de radio","Únicamente en documentales de naturaleza"],"correct":0,"why":"El manual cita conciertos, programas de televisión, entrevistas y deportes como usos habituales de multicámara."},{"ch":4,"q":"Los 'takes de ADR' preparados por el Assistant Editor incluyen:","opts":["Vídeo de referencia, código de tiempo, duración y texto del diálogo","Solo el nombre del actor","Solo la partitura musical","Solo el informe de QC"],"correct":0,"why":"Cada take de ADR incluye vídeo de referencia, código de tiempo, duración y el texto del diálogo a redoblar."},{"ch":4,"q":"El material descartado durante la clasificación de tomas:","opts":["Nunca debe eliminarse, se archiva en carpetas específicas","Se elimina inmediatamente para ahorrar espacio","Se envía directamente a VFX","Se convierte automáticamente en proxy"],"correct":0,"why":"El manual indica que el material descartado nunca debe eliminarse; se archiva en carpetas como 'Fuera de foco', 'Errores', 'Ensayos', etc."},{"ch":4,"q":"Antes de entregar el proyecto al editor, entre las buenas prácticas del capítulo 4 se recomienda comprobar que:","opts":["Todos los clips enlazan correctamente y no existen archivos offline","El máster ya está exportado en DCP","La mezcla de sonido en Dolby Atmos está finalizada","El etalonaje ya está aprobado"],"correct":0,"why":"Entre las buenas prácticas se listan: clips enlazados, sin offline, nombres coherentes, bins ordenados, proxies vinculados, sincronía perfecta, etc."},{"ch":4,"q":"¿Qué documento resume la información técnica del rodaje, como cámara, clip, fps, formato, objetivo, ISO y filtros?","opts":["El parte de cámara","El parte de script","La escaleta","El storyboard"],"correct":0,"why":"El parte de cámara recoge toda la información técnica del rodaje, como en el ejemplo de Cámara A, Clip A003C012, 25fps, ARRIRAW, etc. (relación con capítulo 2/4)."},{"ch":4,"q":"Según el capítulo 4, ¿qué ocurre cuando termina la ingesta y aún no se ha organizado el material?","opts":["El editor se encontraría con cientos o miles de clips sin ningún tipo de organización","El proyecto queda automáticamente conformado","Se genera automáticamente el máster","Se activa el control de calidad final"],"correct":0,"why":"Justo después de la ingesta, sin organización, el editor tendría cientos de clips con nombres poco descriptivos como A001_C001.mov."},{"ch":4,"q":"¿Qué contiene normalmente el 'proyecto' de edición, sin almacenar habitualmente los propios vídeos?","opts":["Referencias a los clips, secuencias, efectos, títulos, configuraciones y metadatos","Los archivos de vídeo originales completos","Solo el guion literario","Solo la lista de reparto"],"correct":0,"why":"El manual aclara que el proyecto normalmente no almacena los vídeos, solo referencias a ellos junto con secuencias, efectos y metadatos."},{"ch":4,"q":"La clasificación por cámaras dentro de una misma escena permite posteriormente:","opts":["Sincronizarlas en una secuencia multicámara","Generar automáticamente el checksum","Eliminar automáticamente los descartes","Cambiar el framerate del proyecto"],"correct":0,"why":"Cuando una escena se ha grabado con varias cámaras clasificadas por separado, posteriormente pueden sincronizarse en una secuencia multicámara."},{"ch":4,"q":"El capítulo 4 concluye indicando que, tras esta fase de organización, comienza:","opts":["El trabajo del editor propiamente dicho, con el montaje offline","Directamente el control de calidad final","La entrega del máster de distribución","El archivado en LTO"],"correct":0,"why":"El resumen indica que a partir de este punto comienza el trabajo del editor, tratado en el Capítulo 5: el montaje offline."},{"ch":5,"q":"¿Qué significa realmente 'montaje Offline', según aclara el capítulo 5?","opts":["Montar utilizando copias optimizadas (proxies) en lugar de los originales de máxima calidad","Montar sin conexión a internet","Montar exclusivamente en formato analógico","Montar sin utilizar ningún software profesional"],"correct":0,"why":"El manual aclara que muchos estudiantes creen erróneamente que 'offline' significa sin internet; en realidad se refiere a montar con proxies en vez de los originales."},{"ch":5,"q":"Durante el montaje offline, ¿qué aspectos NO importan todavía según el capítulo 5?","opts":["La corrección de color, los efectos finales y el sonido definitivo","La mejor toma y el ritmo narrativo","Dónde debe empezar y terminar el plano","Qué información necesita el espectador"],"correct":0,"why":"El manual indica que durante el offline aún no importan la corrección de color, los efectos finales ni el sonido definitivo."},{"ch":5,"q":"El primer montaje completo de una película, que sigue el orden del guion pero aún dura demasiado y tiene errores, se llama:","opts":["Assembly Cut","Picture Lock","Director's Cut","Producer's Cut"],"correct":0,"why":"El Assembly Cut es el primer montaje, que coloca todas las escenas en el orden del guion, sin pulir aún."},{"ch":5,"q":"¿Cuál de estos NO es uno de los criterios habituales para seleccionar tomas según el capítulo 5?","opts":["Calidad interpretativa","Calidad técnica","Continuidad","Frecuencia de muestreo del audio"],"correct":3,"why":"Los criterios citados son calidad interpretativa, calidad técnica, continuidad e intención del director; la frecuencia de muestreo no es un criterio narrativo."},{"ch":5,"q":"¿Qué tipo de plano se describe como el que 'dirige la atención hacia un detalle psicológico'?","opts":["Primerísimo Primer Plano","Gran Plano General","Plano Americano","Plano Detalle"],"correct":0,"why":"El Primerísimo Primer Plano dirige la atención hacia un detalle psicológico del personaje, según el manual."},{"ch":5,"q":"¿Qué tipo de plano muestra la interacción entre personajes, encuadrando aproximadamente de la cabeza a la rodilla?","opts":["Plano Americano","Gran Plano General","Plano Detalle","Primer Plano"],"correct":0,"why":"El manual describe el Plano Americano como el que muestra la interacción entre personajes."},{"ch":5,"q":"Según el ejemplo del capítulo 5, un mismo plano de 12 segundos transmite calma y reflexión, mientras que reducido a 2 segundos transmite:","opts":["Urgencia, acción y tensión","Nostalgia y melancolía","Humor y ligereza","Ninguna diferencia"],"correct":0,"why":"El manual reutiliza este contraste (versión A de 12s frente a versión B de 2s) para ilustrar cómo la duración modifica la emoción."},{"ch":5,"q":"¿De qué depende el ritmo de una película además de la velocidad de los cortes?","opts":["Del movimiento interno del plano, el diálogo, la música y la duración de los silencios","Únicamente de la resolución de imagen","Únicamente del formato de entrega","Únicamente del espacio de color utilizado"],"correct":0,"why":"El manual explica que el ritmo depende también del movimiento interno, el diálogo, la música, la interpretación, la cámara y los silencios."},{"ch":5,"q":"El raccord es:","opts":["La continuidad entre dos planos consecutivos","El formato de exportación final del máster","El proceso de sincronización de sonido mediante claqueta","La técnica de eliminar el fondo verde"],"correct":0,"why":"El raccord se define como la continuidad entre dos planos consecutivos."},{"ch":5,"q":"Si un personaje comienza a levantarse en un plano y en el siguiente ya aparece de pie sin continuar el movimiento, se ha producido un fallo de:","opts":["Raccord de movimiento","Raccord de vestuario","Raccord de iluminación","Raccord de sonido"],"correct":0,"why":"El raccord de movimiento exige que la acción continúe exactamente entre planos consecutivos."},{"ch":5,"q":"El eje de acción, también llamado regla de los 180°, establece que:","opts":["La cámara debe permanecer siempre en el mismo lado de un eje imaginario entre personajes","Los planos deben durar siempre 180 segundos","El sonido debe grabarse siempre a 180 grados de ángulo","El montaje debe tener siempre 180 cortes por escena"],"correct":0,"why":"Existe un eje imaginario entre los personajes y la cámara debe mantenerse en el mismo lado para no confundir al espectador."},{"ch":5,"q":"¿Qué ocurre si la cámara cruza el eje de acción sin justificación narrativa?","opts":["El espectador pierde la orientación espacial","El sonido se desincroniza automáticamente","El proxy deja de funcionar","El checksum del archivo cambia"],"correct":0,"why":"Cruzar el eje de acción provoca que el espectador pierda la orientación espacial de la escena."},{"ch":5,"q":"¿Qué tipo de montaje presenta dos acciones que ocurren simultáneamente hasta converger, como policía y ladrón?","opts":["Montaje paralelo","Montaje acelerado","Montaje lento","Montaje intelectual"],"correct":0,"why":"El montaje paralelo alterna dos acciones simultáneas hasta que ambas historias convergen."},{"ch":5,"q":"El montaje intelectual, desarrollado por Eisenstein, se caracteriza porque:","opts":["El significado nace de la relación entre dos imágenes, sin necesidad de diálogo","Utiliza siempre planos muy cortos y acelerados","Se basa exclusivamente en fundidos encadenados","Requiere obligatoriamente sonido directo"],"correct":0,"why":"En el montaje intelectual, la yuxtaposición de imágenes (como un niño jugando y un soldado marchando) crea una idea nueva."},{"ch":5,"q":"¿Cuál de estas transiciones suele indicar el final de una secuencia?","opts":["Fundido a negro","Corte directo","Cortinilla","Desenfoque"],"correct":0,"why":"El fundido a negro suele emplearse para señalar el final de una secuencia."},{"ch":5,"q":"Durante el montaje offline, ¿qué tipo de sonido se utiliza para ayudar al director a valorar el ritmo antes de la mezcla definitiva?","opts":["Música temporal (temp music) y efectos provisionales","La mezcla final en Dolby Atmos","Únicamente silencio total","El máster de audio ya aprobado"],"correct":0,"why":"El manual explica que se usan música temporal, efectos provisionales, ambientes de referencia y diálogos sincronizados como sonido provisional."},{"ch":5,"q":"Ordena conceptualmente: ¿cuál de estas versiones del montaje suele aparecer ANTES en el proceso descrito en 5.13?","opts":["Assembly Cut","Director's Cut","Producer's Cut","Picture Lock"],"correct":0,"why":"El orden descrito es Assembly Cut → Editor's Cut → Director's Cut → Producer's Cut → Picture Lock."},{"ch":5,"q":"El Picture Lock es el momento en el que:","opts":["El director aprueba definitivamente la estructura y ya no se modifican duraciones ni orden de los planos","Se genera automáticamente el máster de distribución","Se eliminan todos los proxies del proyecto","Comienza el rodaje de las escenas adicionales"],"correct":0,"why":"El Picture Lock es la aprobación final de la estructura; a partir de ahí no se cambian duraciones, escenas ni el orden del montaje."},{"ch":5,"q":"¿Qué consecuencia tiene modificar un solo fotograma después del Picture Lock, según el manual?","opts":["Habrá que rehacer color, VFX, subtítulos, mezcla y conformado","No tiene ninguna consecuencia relevante","Solo afecta al departamento de sonido","Solo afecta a la duración total del proyecto"],"correct":0,"why":"El manual advierte que cambiar un fotograma tras el Picture Lock obliga a rehacer color, VFX, subtítulos, mezcla y conformado."},{"ch":5,"q":"Según las buenas prácticas del editor (5.15), el mejor montaje es aquel:","opts":["Cuyos cortes pasan desapercibidos para el espectador","Que contiene el mayor número posible de efectos","Que utiliza siempre el eje de acción de forma cruzada","Que dura el máximo tiempo posible"],"correct":0,"why":"El manual concluye que el mejor montaje es aquel cuyos cortes pasan desapercibidos para el espectador."},{"ch":6,"q":"¿En qué consiste principalmente el trabajo del editor respecto a los VFX, según el capítulo 6?","opts":["Identificar qué planos los necesitan, prepararlos, coordinarlos con VFX e integrarlos al volver","Crear personalmente todos los efectos visuales","Sustituir completamente al compositor","Renderizar toda la película en formato EXR"],"correct":0,"why":"El editor no crea los efectos; identifica los planos necesarios, los prepara, coordina con VFX y reintegra los resultados."},{"ch":6,"q":"¿Cuál es la diferencia principal entre SFX y VFX según el manual?","opts":["Los SFX se realizan durante el rodaje; los VFX se realizan después, de forma digital","Los SFX son siempre digitales y los VFX siempre físicos","No existe ninguna diferencia entre ambos","Los VFX solo se usan en publicidad"],"correct":0,"why":"Special Effects (SFX) se hacen durante el rodaje (explosiones reales, lluvia, maquillaje); Visual Effects (VFX) se generan después digitalmente."},{"ch":6,"q":"¿Cuál de estos es un ejemplo de SFX (Special Effects) según el capítulo 6?","opts":["Maquillaje prostético","Ciudades digitales","Chroma","Multitudes generadas por ordenador"],"correct":0,"why":"El maquillaje prostético se realiza físicamente durante el rodaje, por lo que es un SFX, no un VFX."},{"ch":6,"q":"El flujo de trabajo entre montaje y VFX comienza, según el capítulo 6, una vez alcanzado:","opts":["El Picture Lock","El Assembly Cut","El QC final","El máster mezzanine"],"correct":0,"why":"El editor prepara los planos VFX una vez alcanzado el Picture Lock, cuando la estructura narrativa ya está aprobada."},{"ch":6,"q":"El documento donde el editor lista todos los planos que requieren intervención de VFX se llama:","opts":["VFX Pull List","Parte de script","Checklist de QC","EDL"],"correct":0,"why":"La 'lista de planos VFX' o VFX Pull List recoge cada plano, su descripción y el departamento responsable."},{"ch":6,"q":"Al exportar los planos para VFX, además del plano útil se incluyen normalmente:","opts":["Handles (fotogramas adicionales antes y después)","Subtítulos definitivos","La mezcla final de sonido","El certificado de color del máster"],"correct":0,"why":"Se incluyen handles, por ejemplo +12 fotogramas delante y detrás, para dar margen de ajuste al compositor."},{"ch":6,"q":"¿Cuál es el formato de intercambio de VFX considerado estándar profesional, con 16/32 bits flotantes, HDR y canal alfa?","opts":["OpenEXR (.exr)","MP3","H.264","JPEG"],"correct":0,"why":"OpenEXR es descrito como el estándar profesional para VFX, con alta profundidad de bits, HDR, canal alfa y múltiples capas."},{"ch":6,"q":"El formato DPX se describe en el manual como:","opts":["Un formato tradicional de la industria cinematográfica, usado en escaneado y laboratorios digitales","Un formato exclusivo para redes sociales","Un códec de audio sin pérdidas","Un formato de subtítulos"],"correct":0,"why":"DPX es el formato tradicional de la industria del cine, muy utilizado en escaneado de película y laboratorios digitales."},{"ch":6,"q":"¿Cuál es una ventaja de exportar una secuencia de imágenes (por ejemplo, .exr numerados) en lugar de un único vídeo para VFX?","opts":["Si un fotograma falla, solo hay que volver a renderizar ese fotograma, no todo el vídeo","Ocupa mucho menos espacio en disco siempre","Elimina la necesidad de handles","Sustituye automáticamente al checksum"],"correct":0,"why":"El manual destaca que con secuencias de imágenes, un fallo puntual solo obliga a rerenderizar ese fotograma, aportando mayor seguridad."},{"ch":6,"q":"El canal Alfa almacena información sobre:","opts":["La transparencia de cada píxel","La saturación del color","El nivel de audio del plano","La resolución final del máster"],"correct":0,"why":"El canal alfa indica si un píxel es opaco, parcialmente transparente o totalmente transparente, y permite integrar objetos 3D sobre imágenes reales."},{"ch":6,"q":"El Chroma Key consiste en:","opts":["Filmar un sujeto delante de un fondo uniforme (habitualmente verde o azul) para eliminarlo digitalmente después","Dibujar máscaras manualmente fotograma a fotograma","Reconstruir el movimiento de la cámara en 3D","Capturar los movimientos de un actor mediante sensores"],"correct":0,"why":"El chroma consiste en filmar frente a un fondo uniforme, normalmente verde o azul, para eliminarlo posteriormente mediante 'key'."},{"ch":6,"q":"¿Qué factores afectan a la calidad de un chroma según el capítulo 6?","opts":["Iluminación uniforme, fondo sin arrugas, separación actor-pantalla y ausencia de sombras","Únicamente el color exacto del fondo verde","Únicamente la resolución de la cámara","Únicamente el software de composición utilizado"],"correct":0,"why":"El manual señala estos cuatro factores como determinantes de la calidad de un chroma key."},{"ch":6,"q":"La rotoscopia se define como:","opts":["Dibujar máscaras manualmente fotograma a fotograma cuando no existe chroma","Sustituir automáticamente el fondo verde por otro fondo","Un tipo de checksum utilizado en VFX","Un formato de exportación de audio"],"correct":0,"why":"La rotoscopia consiste en recortar manualmente el objeto, dibujando una máscara en cada fotograma, cuando no hay chroma."},{"ch":6,"q":"El Tracking 3D, también llamado Matchmoving, se utiliza para:","opts":["Reconstruir completamente el movimiento de la cámara e integrar objetos 3D con perspectiva correcta","Sincronizar el audio con la imagen","Detectar el checksum de un archivo","Generar subtítulos automáticamente"],"correct":0,"why":"El matchmoving (tracking 3D) reconstruye el movimiento de cámara para poder añadir objetos tridimensionales con la perspectiva correcta."},{"ch":6,"q":"El Motion Capture consiste en:","opts":["Transferir los movimientos de un actor con marcadores a un personaje digital","Filmar frente a un fondo verde","Dibujar manualmente cada fotograma","Sincronizar cámara y grabadora mediante timecode"],"correct":0,"why":"En Motion Capture, un actor con un traje de marcadores es capturado y sus movimientos se transfieren a un esqueleto y personaje digital."},{"ch":6,"q":"La composición digital (compositing) consiste en:","opts":["Combinar varias capas (imagen real, render 3D, humo, partículas, sombras...) en una única imagen final","Filmar la escena varias veces con distintas cámaras","Aplicar únicamente corrección de color primaria","Sincronizar el sonido con la imagen"],"correct":0,"why":"El compositing combina múltiples capas para obtener el plano final, y suele realizarse en Nuke, Fusion o After Effects."},{"ch":6,"q":"¿Qué software se menciona como el más utilizado para composición digital en el capítulo 6?","opts":["Nuke","Pro Tools","Avid Media Composer","DaVinci Fairlight"],"correct":0,"why":"El manual indica que Nuke es el software más utilizado para composición digital, junto con Fusion y After Effects."},{"ch":6,"q":"Cuando un plano VFX regresa terminado, entre las comprobaciones del editor se incluye:","opts":["Verificar la resolución, el espacio de color, el canal alfa y la sincronía","Aprobar directamente el máster de distribución","Generar el DCP final","Eliminar automáticamente las versiones anteriores"],"correct":0,"why":"El manual describe estos pasos de reintegración: verificar resolución, espacio de color, canal alfa, sustituir el plano temporal y comprobar la sincronía."},{"ch":6,"q":"¿Por qué es importante el control de versiones en los planos VFX (por ejemplo, SHOT_012_v001, v002...)?","opts":["Porque nunca se sustituyen archivos sin conservar las versiones anteriores, permitiendo volver atrás","Porque cada versión reduce automáticamente el peso del archivo","Porque el checksum cambia con cada versión","Porque el timecode debe reiniciarse en cada versión"],"correct":0,"why":"Mantener versiones anteriores permite volver atrás si aparece algún problema con la versión más reciente."},{"ch":6,"q":"Antes de enviar un plano a VFX, entre las buenas prácticas del capítulo 6 se recomienda comprobar que:","opts":["El montaje está bloqueado (Picture Lock) y se incluyen handles suficientes","El máster ya ha superado el QC final","El proyecto ya está archivado en LTO","La mezcla de sonido está finalizada en Atmos"],"correct":0,"why":"Entre las buenas prácticas se incluye comprobar que el montaje está en Picture Lock y que se incluyen handles suficientes, entre otros puntos."},{"ch":7,"q":"El objetivo principal del conformado (Online Editing) es:","opts":["Reconstruir exactamente el montaje aprobado sustituyendo los proxies por los archivos originales de cámara","Crear nuevos efectos visuales no previstos","Grabar nuevas tomas para sustituir las descartadas","Generar la mezcla final de sonido"],"correct":0,"why":"El conformado reconstruye el Picture Lock con los archivos originales, sin modificar ritmo, duraciones ni orden."},{"ch":7,"q":"Durante el conformado, ¿qué cambia respecto al montaje offline?","opts":["Únicamente la calidad del material, no el montaje en sí","El orden de las escenas","El ritmo narrativo de la película","Las duraciones de los planos"],"correct":0,"why":"El manual aclara que el montaje no cambia; lo único que cambia es la calidad del material (de proxy a original)."},{"ch":7,"q":"El proceso mediante el cual el software busca automáticamente el archivo original correspondiente a cada proxy se llama:","opts":["Relink","Transcode","Rendering","Matching"],"correct":0,"why":"El Relink es el paso más importante del conformado: el software localiza el original que corresponde a cada proxy."},{"ch":7,"q":"¿Qué puede provocar que el Relink falle según el capítulo 7?","opts":["Que se hayan modificado los nombres de los archivos originales durante la producción","Que el proyecto se haya guardado varias veces","Que se use más de un monitor de referencia","Que el framerate sea de 24 fps"],"correct":0,"why":"Si el nombre de los archivos cambia respecto al original, el relink puede fallar; por eso nunca deben modificarse los nombres."},{"ch":7,"q":"¿Qué formato de intercambio es descrito como el estándar de la industria para intercambiar proyectos complejos, usado entre Avid, Pro Tools y Resolve?","opts":["AAF (Advanced Authoring Format)","XML","EDL","MXF"],"correct":0,"why":"El AAF puede contener referencias a vídeo, audio, efectos y metadatos, y es el estándar para proyectos complejos entre Avid, Pro Tools y Resolve."},{"ch":7,"q":"¿Qué formato de intercambio es el más antiguo, contiene únicamente información esencial y no admite muchos efectos modernos?","opts":["EDL (Edit Decision List)","AAF","XML","IMF"],"correct":0,"why":"El EDL es el formato más antiguo, con información esencial (in/out de clips) y compatibilidad muy amplia pero limitada en efectos."},{"ch":7,"q":"El formato XML, muy utilizado entre Premiere, Final Cut y Resolve, se caracteriza porque:","opts":["Contiene duración, transiciones, velocidad y nombres, pero no el vídeo en sí","Contiene el vídeo comprimido en su interior","Es exclusivo de DaVinci Resolve","Sustituye completamente al AAF en todos los casos"],"correct":0,"why":"El XML contiene información de edición (duraciones, transiciones, nombres, posiciones) pero no contiene el vídeo."},{"ch":7,"q":"¿Qué elementos suelen conservarse al pasar del montaje offline al online, según el capítulo 7?","opts":["Cortes, fundidos y cambios de velocidad sencillos","Todos los plugins de terceros sin excepción","Los títulos definitivos automáticamente","El sonido definitivo mezclado"],"correct":0,"why":"El manual indica que se conservan cortes, fundidos y cambios de velocidad sencillos, mientras que títulos, grafismos y plugins pueden necesitar rehacerse."},{"ch":7,"q":"El Digital Intermediate (DI) incluye procesos como:","opts":["Conformado, corrección de color, integración de VFX y preparación para distribución","Únicamente la grabación de las tomas adicionales","Únicamente el diseño de sonido","Únicamente la generación de subtítulos"],"correct":0,"why":"El DI es el proceso de acabado definitivo que incluye conformado, color, VFX y preparación para distribución."},{"ch":7,"q":"Según la tabla de resoluciones del capítulo 7, ¿qué resolución corresponde al 'Cine 2K'?","opts":["2048 × 1080","1920 × 1080","3840 × 2160","8192 × 4320"],"correct":0,"why":"El manual asigna 2048×1080 al Cine 2K, mientras que 1920×1080 es televisión HD y 3840×2160 es UHD."},{"ch":7,"q":"¿Por qué puede convenir rodar en 6K u 8K aunque la entrega final sea en 4K?","opts":["Para poder reencuadrar, estabilizar y hacer zoom sin perder calidad","Porque reduce automáticamente el tamaño del archivo","Porque es obligatorio por ley en todas las producciones","Porque mejora automáticamente la sincronía de audio"],"correct":0,"why":"El manual explica que grabar en mayor resolución que la de entrega permite reencuadrar, estabilizar y hacer zoom sin pérdida de calidad."},{"ch":7,"q":"Durante el conformado, la profundidad de color habitual pasa de 8 bits (offline) a valores como:","opts":["10, 12 o 16 bits","4 u 8 bits únicamente","1 o 2 bits","24 o 48 bits"],"correct":0,"why":"El manual indica que durante el conformado es habitual usar 10, 12 o 16 bits para mayor margen de etalonaje y menos banding."},{"ch":7,"q":"¿Qué formato de aspecto (aspect ratio) se asocia en el capítulo 7 al 'cine panorámico'?","opts":["2.39:1","1.33:1","1.78:1 (16:9)","9:16"],"correct":0,"why":"La tabla del capítulo asigna 2.39:1 al cine panorámico, 1.78:1 a HD/UHD y 9:16 a redes sociales."},{"ch":7,"q":"¿Qué framerate se asocia habitualmente al 'Streaming' en la tabla del capítulo 7?","opts":["30 fps","23.976 fps","25 fps","50 fps"],"correct":0,"why":"La tabla asigna 30 fps al streaming, 23.976 al cine digital, 25 a Europa y 50 al broadcast."},{"ch":7,"q":"Antes de enviar el proyecto al colorista, en la preparación para el color (7.14) se eliminan elementos como:","opts":["LUT provisionales, gráficos de referencia y música temporal","Los archivos originales de cámara","El AAF de sonido","Las copias de seguridad del proyecto"],"correct":0,"why":"El manual indica que se eliminan elementos temporales (LUT provisionales, gráficos de referencia, música temporal, notas del editor) antes de entregar al colorista."},{"ch":7,"q":"El AAF generado en paralelo para el departamento de sonido (7.15) contiene:","opts":["Diálogos, música, efectos y automatizaciones básicas","Únicamente el vídeo final renderizado","Únicamente los créditos finales","Únicamente los metadatos de cámara"],"correct":0,"why":"El AAF de sonido incluye diálogos, música, efectos y automatizaciones básicas para continuar el trabajo en Pro Tools o Fairlight."},{"ch":7,"q":"Entre la lista de comprobación final del Online (7.16) se incluye verificar que:","opts":["Todos los proxies han sido sustituidos y no existen archivos Offline","El máster ya está distribuido en todas las plataformas","El chroma key ha sido eliminado del proyecto","El Foley ya se ha grabado por completo"],"correct":0,"why":"La lista de comprobación incluye comprobar que todos los proxies fueron sustituidos, no hay offline, el color coincide y la duración coincide con el Picture Lock."},{"ch":7,"q":"Según las buenas prácticas del capítulo 7, tras el Picture Lock se recomienda:","opts":["No modificar el montaje y mantener intactos los nombres de los archivos","Cambiar libremente el orden de las escenas si mejora el ritmo","Sustituir todos los originales por proxies definitivos","Eliminar las versiones anteriores del proyecto para ahorrar espacio"],"correct":0,"why":"El manual recomienda no modificar el montaje tras el Picture Lock y mantener intactos los nombres de archivo para no romper el relink."},{"ch":7,"q":"¿Qué consecuencia puede tener un error de un solo fotograma en esta fase, según el manual?","opts":["Puede obligar a repetir horas de trabajo en color, sonido y VFX","Ninguna, ya que se corrige automáticamente en el QC","Solo afecta a la duración total del máster","Solo afecta a los subtítulos"],"correct":0,"why":"El manual advierte que un error de un solo fotograma puede obligar a repetir horas de trabajo en color, sonido y efectos visuales."},{"ch":7,"q":"El conformado constituye, según la introducción del capítulo 7:","opts":["El puente entre el montaje narrativo y el acabado final del proyecto","El primer paso del rodaje","La fase final de distribución en streaming","El proceso de selección de tomas durante el offline"],"correct":0,"why":"El manual describe el conformado como el puente entre el montaje narrativo (offline) y el acabado final del proyecto."},{"ch":8,"q":"¿Cuál es la diferencia principal entre corrección de color y etalonaje según el capítulo 8?","opts":["La corrección de color iguala técnicamente los planos; el etalonaje crea un aspecto artístico","Son exactamente el mismo proceso sin ninguna diferencia","La corrección de color es un proceso creativo y el etalonaje técnico","El etalonaje se realiza siempre antes del conformado"],"correct":0,"why":"El manual distingue: corrección de color (técnica, iguala exposición y balance) y etalonaje/color grading (creativo, crea un look)."},{"ch":8,"q":"¿Cuál de estos objetivos corresponde a la corrección de color (Color Correction) y no al etalonaje?","opts":["Igualar la exposición y corregir dominantes de color entre planos","Crear un ambiente frío o cálido","Aplicar un aspecto vintage","Lograr una estética de cine negro"],"correct":0,"why":"Igualar exposición y corregir dominantes son ejemplos de corrección de color, un proceso técnico, no creativo."},{"ch":8,"q":"Según el flujo de trabajo del colorista (8.2), la corrección primaria se realiza:","opts":["Antes de la corrección secundaria y de los Power Windows","Después del Look final","Después del render para sonido y máster","Antes de la gestión del color"],"correct":0,"why":"El orden descrito es: conformado, comprobación, gestión del color, corrección primaria, corrección secundaria, Power Windows, tracking, look final, render."},{"ch":8,"q":"¿Qué característica NO se menciona entre las de los monitores de referencia profesionales (8.3)?","opts":["10 bits reales y cobertura DCI-P3","Ser un televisor doméstico convencional","Uniformidad de brillo","Calibración periódica"],"correct":1,"why":"El manual advierte precisamente que un error frecuente es corregir el color en un monitor doméstico, no calibrado como los profesionales."},{"ch":8,"q":"¿Qué espacio de color es descrito como el estándar de la televisión HD, muy utilizado para YouTube y contenido web?","opts":["Rec.709","DCI-P3","Rec.2020","ACES"],"correct":0,"why":"Rec.709 es el estándar de televisión HD, usado en TV, YouTube y contenido web."},{"ch":8,"q":"El sistema ACES (Academy Color Encoding System) se utiliza principalmente para:","opts":["Unificar cámaras diferentes y facilitar el intercambio entre departamentos en grandes producciones","Comprimir el audio a formatos con pérdidas","Sustituir completamente al Rec.709 en televisión","Generar automáticamente subtítulos"],"correct":0,"why":"ACES unifica cámaras diferentes, facilita el intercambio entre departamentos y conserva el máximo rango dinámico."},{"ch":8,"q":"Una imagen grabada en perfil Log (como ARRI Log C) se caracteriza visualmente por parecer:","opts":["Gris, lavada y poco saturada, pero con mucha información para el etalonaje","Extremadamente contrastada y saturada","Idéntica a la imagen final sin necesidad de corrección","En blanco y negro"],"correct":0,"why":"Las imágenes Log parecen grises y lavadas, pero contienen mucha información útil para el etalonaje posterior."},{"ch":8,"q":"Una LUT (Look-Up Table) es:","opts":["Una tabla matemática que transforma unos valores de color en otros","Un tipo de checksum utilizado durante la ingesta","Un formato de exportación de audio","Un dispositivo físico de sincronización de cámaras"],"correct":0,"why":"La LUT transforma matemáticamente valores de color, por ejemplo de Log C a Rec709."},{"ch":8,"q":"¿Cuál es la diferencia entre una LUT técnica y una LUT creativa?","opts":["La técnica convierte un espacio de color en otro; la creativa aplica un estilo visual","La técnica es siempre más rápida de aplicar","La creativa solo funciona en blanco y negro","No existe ninguna diferencia entre ambas"],"correct":0,"why":"La LUT técnica convierte espacios de color (Log→Rec709); la LUT creativa aplica un estilo (cine clásico, Kodak, bleach bypass, etc.)."},{"ch":8,"q":"En la corrección primaria, ¿qué herramienta controla específicamente las sombras?","opts":["Lift","Gamma","Gain","Offset"],"correct":0,"why":"Lift controla las sombras, Gamma los tonos medios y Gain las altas luces."},{"ch":8,"q":"¿Qué herramienta de corrección primaria controla las altas luces?","opts":["Gain","Lift","Gamma","Offset"],"correct":0,"why":"Gain controla específicamente las altas luces de la imagen."},{"ch":8,"q":"El Waveform, herramienta de análisis de imagen, representa principalmente:","opts":["La luminancia, de 0 IRE (negro) a 100 IRE (blanco)","La saturación y dirección del color","La frecuencia de muestreo del audio","El espacio de color exacto de cada píxel"],"correct":0,"why":"El Waveform representa la luminancia, permitiendo controlar la exposición con precisión."},{"ch":8,"q":"¿Qué herramienta de análisis muestra la saturación y dirección del color, siendo útil para comprobar tonos de piel?","opts":["Vectorscopio","Waveform","Histograma","Parade RGB"],"correct":0,"why":"El Vectorscopio muestra saturación y dirección del color, e incluye la Skin Tone Line para comprobar tonos de piel naturales."},{"ch":8,"q":"El Parade RGB permite detectar una dominante de color observando:","opts":["La distribución de los canales rojo, verde y azul por separado","El nivel de audio de cada canal","El framerate exacto del clip","El checksum del archivo"],"correct":0,"why":"El Parade muestra los tres canales por separado; si uno está desplazado, aparece una dominante de color (por ejemplo, más azul = imagen fría)."},{"ch":8,"q":"A diferencia de la corrección primaria, la corrección secundaria:","opts":["Solo modifica una parte concreta de la imagen, como el cielo o un objeto","Afecta siempre a toda la imagen por igual","Solo puede aplicarse en blanco y negro","Sustituye completamente al etalonaje"],"correct":0,"why":"La corrección secundaria modifica solo una parte de la imagen (el cielo, la piel, un objeto), usando Qualifiers."},{"ch":8,"q":"En la selección de color mediante HSL, ¿qué significa la 'H'?","opts":["Hue (tono)","Highlight (luz alta)","Handle (coleo)","Histogram (histograma)"],"correct":0,"why":"HSL corresponde a Hue (tono), Saturation (saturación) y Luminance (luminancia)."},{"ch":8,"q":"Las Power Windows permiten:","opts":["Aplicar correcciones únicamente en una zona concreta de la imagen, como iluminar una cara","Sustituir automáticamente el fondo verde por otro fondo","Generar automáticamente subtítulos multilenguaje","Calcular el checksum de cada plano"],"correct":0,"why":"Las Power Windows aplican correcciones localizadas, por ejemplo iluminar una cara u oscurecer el fondo."},{"ch":8,"q":"¿Para qué sirve el Tracking dentro de la corrección de color (8.15)?","opts":["Para que una máscara (Power Window) siga automáticamente el movimiento del personaje","Para sincronizar el audio con la imagen","Para calcular el checksum del archivo","Para generar el DCP final"],"correct":0,"why":"El tracking en color permite que la máscara siga automáticamente el movimiento, evitando animarla manualmente fotograma a fotograma."},{"ch":8,"q":"¿Cuál de estos formatos NO se menciona entre los estándares de HDR en el capítulo 8?","opts":["HDR10","Dolby Vision","HLG","Rec.601"],"correct":3,"why":"El manual menciona HDR10, HDR10+, HLG y Dolby Vision; Rec.601 es un estándar antiguo de definición estándar no mencionado aquí."},{"ch":8,"q":"Antes de generar el render final del color, entre las buenas prácticas del capítulo 8 se recomienda:","opts":["Conservar una copia sin etalonar y exportar siempre con el espacio de color correcto","Confiar únicamente en la vista sin usar scopes","Corregir primero la estética y después la técnica","Aplicar la máxima saturación posible en todos los planos"],"correct":0,"why":"El manual recomienda conservar una copia sin etalonar, usar scopes, corregir primero lo técnico y luego lo estético, y exportar con el espacio de color correcto."},{"ch":9,"q":"Según la introducción del capítulo 9, el sonido representa aproximadamente qué porcentaje de la experiencia cinematográfica:","opts":["El 50%","El 10%","El 90%","El 25%"],"correct":0,"why":"El manual afirma que el sonido representa aproximadamente el 50% de la experiencia cinematográfica."},{"ch":9,"q":"La mezcla de sonido, según el flujo del capítulo 9, no comienza hasta que:","opts":["El montaje está completamente bloqueado (Picture Lock)","Se ha generado el DCP final","Se ha completado el archivado en LTO","El máster ya se ha distribuido"],"correct":0,"why":"El manual indica expresamente que la mezcla de sonido no comienza hasta que el Picture Lock está aprobado."},{"ch":9,"q":"¿Cuáles son los cuatro grandes componentes de una banda sonora según el capítulo 9?","opts":["Diálogos, ambientes, efectos sonoros (SFX) y música","Diálogos, subtítulos, créditos y música","ADR, Foley, ruido y silencio","Voz, imagen, color y VFX"],"correct":0,"why":"El manual divide la banda sonora en diálogos, ambientes (ambience), efectos sonoros (SFX) y música."},{"ch":9,"q":"¿Qué son los 'ambientes' (ambience) dentro de una banda sonora?","opts":["Sonidos del entorno como viento, tráfico o lluvia que dan credibilidad a la escena","Los diálogos grabados durante el rodaje","La música compuesta originalmente para la escena","Los efectos sonoros de acciones concretas como disparos o pasos"],"correct":0,"why":"Los ambientes son sonidos del entorno (viento, tráfico, lluvia, pájaros, oficina) que aunque pasen desapercibidos dan credibilidad a la escena."},{"ch":9,"q":"La música que los propios personajes escuchan dentro de la ficción se denomina:","opts":["Diegética","Extradiegética","ADR","Foley"],"correct":0,"why":"La música diegética es la que oyen los propios personajes; la extradiegética solo la oye el espectador."},{"ch":9,"q":"¿Qué significa ADR en postproducción de sonido?","opts":["Automated Dialogue Replacement (redoblaje de diálogos)","Advanced Digital Rendering","Audio Data Recovery","Automated Distribution Reel"],"correct":0,"why":"ADR es Automated Dialogue Replacement: el actor vuelve al estudio a repetir un diálogo que no puede utilizarse del rodaje original."},{"ch":9,"q":"¿Cuáles son causas frecuentes que obligan a realizar ADR según el manual?","opts":["Tráfico, viento, aviones y errores de interpretación","Un exceso de definición de imagen","Un error en el checksum del archivo","Un cambio en el espacio de color"],"correct":0,"why":"El manual cita tráfico, viento, aviones, errores de interpretación y cambios en el guion como causas habituales de ADR."},{"ch":9,"q":"¿Qué grado de precisión se exige en la sincronización del ADR?","opts":["Extrema; un desfase de apenas dos o tres fotogramas puede ser perceptible","Ninguna precisión especial, basta con aproximar","Solo debe coincidir el minuto exacto","Solo importa la sincronía en escenas sin diálogo"],"correct":0,"why":"El manual advierte que un pequeño desfase de dos o tres fotogramas puede notarse en la sincronización del ADR."},{"ch":9,"q":"El Foley consiste en:","opts":["Recrear manualmente sonidos cotidianos que no quedaron registrados durante el rodaje","Redoblar los diálogos de un actor en estudio","Diseñar sonidos que no existen en la realidad, como naves espaciales","Medir la sonoridad media de la mezcla en LUFS"],"correct":0,"why":"El Foley recrea sonidos cotidianos (pasos, ropa, llaves, golpes) sincronizándolos mientras se ve la película en tiempo real."},{"ch":9,"q":"El diseño sonoro (Sound Design) se ocupa especialmente de crear:","opts":["Sonidos que no existen en la realidad, como naves espaciales o criaturas fantásticas","Únicamente los diálogos originales del rodaje","Únicamente la música original de la película","Únicamente los ambientes grabados en localización"],"correct":0,"why":"El diseñador de sonido crea sonidos inexistentes en la realidad o que requieren tratamiento especial, como naves, criaturas o interfaces futuristas."},{"ch":9,"q":"¿Cuál de estos formatos de audio es descrito como el que NUNCA debe usarse para el máster, solo para previsualizaciones?","opts":["MP3","WAV","AIFF","FLAC"],"correct":0,"why":"El MP3, al ser un formato con pérdidas, solo se usa para previsualizaciones o distribución web, nunca para el máster."},{"ch":9,"q":"¿Cuál es la frecuencia de muestreo estándar en cine y vídeo según el capítulo 9?","opts":["48 kHz","44,1 kHz","96 kHz","192 kHz"],"correct":0,"why":"El manual señala 48 kHz como el estándar en audiovisual, frente a los 44,1 kHz del CD Audio."},{"ch":9,"q":"¿Qué profundidad de bits utilizan actualmente la mayoría de rodajes profesionales?","opts":["24 bits","8 bits","12 bits","32 bits enteros"],"correct":0,"why":"El manual indica que la mayoría de rodajes profesionales utilizan 24 bits, aunque también se mencionan 16 y 32 bits flotantes."},{"ch":9,"q":"¿Qué ocurre si el nivel de audio supera 0 dBFS?","opts":["Aparece clipping, una distorsión irreversible","El sonido mejora automáticamente su claridad","Se activa automáticamente la compresión","El timecode se desincroniza"],"correct":0,"why":"Superar 0 dBFS produce clipping, una distorsión irreversible del audio digital."},{"ch":9,"q":"LUFS es una unidad que mide:","opts":["La sonoridad media percibida (Loudness Units Full Scale)","La frecuencia de muestreo del audio","La profundidad de bits del archivo","El espacio de color del vídeo"],"correct":0,"why":"LUFS mide la sonoridad media, un parámetro usado por plataformas como YouTube, Spotify o Netflix con objetivos concretos."},{"ch":9,"q":"Según los valores orientativos del capítulo 9, ¿cuál es aproximadamente el objetivo de LUFS para televisión europea?","opts":["-23 LUFS","-14 LUFS","-9 LUFS","0 LUFS"],"correct":0,"why":"El manual indica -23 LUFS para televisión europea, frente a -14 LUFS de YouTube y Spotify."},{"ch":9,"q":"¿Qué canal corresponde específicamente al subwoofer en un sistema de sonido 5.1?","opts":["LFE","C (Centro)","Ls (Izquierdo trasero)","R (Derecho)"],"correct":0,"why":"El sistema 5.1 incluye L, C, R, Ls, Rs y LFE, siendo LFE el canal correspondiente al subwoofer."},{"ch":9,"q":"Dolby Atmos se diferencia de los sistemas de canales tradicionales porque:","opts":["Trabaja con objetos sonoros que pueden situarse en cualquier punto del espacio tridimensional","Solo admite mezcla en mono","Elimina la necesidad de altavoces traseros","Es exclusivo para dispositivos móviles"],"correct":0,"why":"Dolby Atmos trabaja con objetos sonoros en lugar de canales fijos, permitiendo posicionar el sonido en un espacio 3D."},{"ch":9,"q":"¿Qué software se describe como integrado dentro de DaVinci Resolve para postproducción de sonido?","opts":["Fairlight","Pro Tools","Nuendo","Logic Pro"],"correct":0,"why":"Fairlight está integrado en DaVinci Resolve, permitiendo realizar la postproducción de sonido sin salir del proyecto."},{"ch":9,"q":"Al exportar el máster de audio, ¿qué son los 'Stems' según el capítulo 9?","opts":["Pistas independientes de diálogos, música y efectos","Un formato comprimido exclusivo para streaming","El nombre técnico del canal LFE","Un tipo de micrófono utilizado en el rodaje"],"correct":0,"why":"El manual menciona los Stems independientes (diálogos, música y efectos) entre los archivos generados al finalizar la mezcla."},{"ch":10,"q":"El objetivo principal del Control de Calidad (QC) es:","opts":["Garantizar que el archivo final cumple los requisitos técnicos y no contiene errores antes de su distribución","Sustituir la corrección de color por un proceso automático","Generar automáticamente los subtítulos","Reducir el peso del archivo final al máximo"],"correct":0,"why":"El QC garantiza que el archivo final cumple todos los requisitos técnicos y no tiene errores que afecten a su reproducción o distribución."},{"ch":10,"q":"El máster, según el capítulo 10, debe contener:","opts":["Imagen final, color definitivo, VFX aprobados, sonido mezclado, títulos y créditos","Únicamente el vídeo sin sonido","Únicamente los archivos RAW originales sin procesar","Únicamente los proxies utilizados durante el offline"],"correct":0,"why":"El máster es la versión definitiva y debe incluir imagen final, color, VFX aprobados, sonido mezclado, títulos, créditos y subtítulos si procede."},{"ch":10,"q":"Si es necesario modificar el máster ya aprobado, ¿qué se hace según el manual?","opts":["Se genera una nueva versión con un nuevo número de revisión","Se modifica directamente el máster original","Se elimina el máster anterior sin dejar rastro","Se solicita una nueva ingesta completa del rodaje"],"correct":0,"why":"El manual indica que nunca se modifica el máster aprobado; en su lugar se genera una nueva versión con nuevo número de revisión."},{"ch":10,"q":"¿Cuáles son los dos tipos principales de QC mencionados en el capítulo 10, además del QC Editorial en grandes estudios?","opts":["QC Visual y QC de Audio","QC de Guion y QC de Casting","QC de Presupuesto y QC de Marketing","QC de Rodaje y QC de Postproducción"],"correct":0,"why":"El manual distingue QC Visual (imagen) y QC de Audio (sonido), además del QC Editorial en grandes estudios."},{"ch":10,"q":"Un fotograma aislado que aparece accidentalmente entre dos planos, produciendo un destello percibido por el espectador, se denomina:","opts":["Flash Frame","Dead Pixel","Banding","Macroblocking"],"correct":0,"why":"El Flash Frame es un fotograma incorrecto que aparece brevemente entre dos planos y puede percibirse como un destello."},{"ch":10,"q":"El banding aparece cuando:","opts":["Un degradado suave se convierte en bandas visibles","Un fotograma queda completamente negro","El audio se satura por encima de 0 dBFS","Los subtítulos se desincronizan"],"correct":0,"why":"El banding convierte un degradado suave en bandas visibles, causado por baja profundidad de bits o compresión excesiva."},{"ch":10,"q":"¿Cuáles son causas frecuentes de banding según el capítulo 10?","opts":["Baja profundidad de bits, compresión excesiva y exportación incorrecta","Exceso de resolución de la cámara","Uso de un espacio de color ACES","Grabación en formato RAW sin comprimir"],"correct":0,"why":"El manual señala baja profundidad de bits, compresión excesiva y exportación incorrecta como causas del banding."},{"ch":10,"q":"Los 'dead pixels' o píxeles muertos son:","opts":["Puntos que permanecen permanentemente negros, blancos o de un color fijo","Fotogramas duplicados en el montaje","Errores de sincronía entre audio e imagen","Bandas visibles en un degradado"],"correct":0,"why":"Los píxeles muertos son puntos fijos (negro, blanco o de un color) que suelen detectarse durante el QC en cámaras de alta resolución."},{"ch":10,"q":"El 'macroblocking' es un ejemplo de:","opts":["Artefacto de compresión producido por códecs con pérdidas","Un tipo de transición entre planos","Un formato de entrega para streaming","Una herramienta de corrección secundaria de color"],"correct":0,"why":"El macroblocking (junto con el ruido de mosquito) es un artefacto típico de códecs con pérdidas."},{"ch":10,"q":"¿Qué desfase de sincronía entre imagen y sonido suele resultar perceptible según el capítulo 10?","opts":["Un desfase superior a dos o tres fotogramas","Un desfase de más de un minuto","Un desfase de exactamente 24 fotogramas","Ningún desfase es perceptible si el audio es de calidad"],"correct":0,"why":"El manual indica que un desfase superior a dos o tres fotogramas suele resultar perceptible para el espectador."},{"ch":10,"q":"Durante la verificación de subtítulos en el QC se revisa, entre otros aspectos:","opts":["Sincronía, ortografía, duración y posición","Únicamente el idioma utilizado","Únicamente el tamaño del archivo de vídeo","Únicamente el nombre del traductor"],"correct":0,"why":"El manual lista sincronía, ortografía, duración, posición, caracteres especiales y saltos de línea entre los aspectos revisados."},{"ch":10,"q":"El máster mezzanine se define como:","opts":["Un archivo de máxima calidad que sirve de origen para todas las conversiones posteriores","La primera versión del montaje offline","El archivo comprimido final para redes sociales","El proxy utilizado durante la edición"],"correct":0,"why":"El máster mezzanine es un archivo de máxima calidad usado como origen para generar todas las versiones de entrega posteriores."},{"ch":10,"q":"¿Cuál de estos formatos se describe como muy utilizado en publicidad y televisión, con 10 o 12 bits y canal alfa opcional?","opts":["Apple ProRes 4444","MP3","H.264","AAC"],"correct":0,"why":"Apple ProRes 4444 se describe con estas características: 10/12 bits, muy alta calidad y canal alfa opcional."},{"ch":10,"q":"El formato MXF OP1a se describe como el estándar exigido habitualmente por:","opts":["Muchas cadenas de televisión europeas","Las plataformas de redes sociales exclusivamente","Los cines digitales exclusivamente","Los estudios de grabación musical"],"correct":0,"why":"El manual indica que muchas cadenas europeas exigen entregas en MXF OP1a."},{"ch":10,"q":"¿Qué ventaja principal ofrece el formato IMF (Interoperable Master Format) para plataformas de streaming?","opts":["Permite gestionar múltiples idiomas y versiones de forma eficiente con un único paquete","Es el único formato compatible con proyección en salas de cine","Elimina la necesidad de un máster mezzanine","No requiere ningún proceso de QC previo"],"correct":0,"why":"El IMF permite generar múltiples versiones e idiomas de forma eficiente a partir de un único paquete con pistas independientes."},{"ch":10,"q":"El DCP (Digital Cinema Package), utilizado para proyectar en salas digitales, está compuesto por:","opts":["Secuencias JPEG 2000, audio PCM sin compresión y archivos XML de control","Únicamente un archivo MP4 comprimido","Únicamente pistas de audio en MP3","Únicamente metadatos sin imagen ni sonido"],"correct":0,"why":"El DCP se compone de secuencias JPEG 2000, audio PCM sin compresión y archivos XML de control, contenidos en MXF."},{"ch":10,"q":"¿Para qué sirve el cifrado KDM (Key Delivery Message) en un DCP?","opts":["Para controlar en qué salas y durante cuánto tiempo puede reproducirse la película","Para comprimir el audio a formatos con pérdidas","Para generar automáticamente los subtítulos","Para sincronizar el timecode entre cámaras"],"correct":0,"why":"El KDM cifra el DCP para controlar el acceso: en qué salas y durante cuánto tiempo puede proyectarse."},{"ch":10,"q":"¿Qué relación de aspecto se asocia habitualmente con Instagram Stories y TikTok según la tabla del capítulo 10?","opts":["9:16","16:9","1:1","4:3"],"correct":0,"why":"La tabla de formatos para redes sociales asigna 9:16 a Instagram Stories y TikTok, mientras que YouTube usa 16:9 e Instagram Feed 1:1."},{"ch":10,"q":"El sistema LTO (Linear Tape-Open), utilizado en archivado profesional, destaca por:","opts":["Gran capacidad, larga vida útil y bajo coste por terabyte","Ser el sistema más rápido para edición en tiempo real","Permitir la reproducción directa en cines digitales","Sustituir completamente al almacenamiento en la nube"],"correct":0,"why":"El manual describe el LTO como el estándar de archivado a largo plazo por su gran capacidad, larga vida útil y bajo coste por terabyte."},{"ch":10,"q":"Según el manual, el almacenamiento en la nube en el archivado profesional:","opts":["Suele complementar al archivado físico, no sustituirlo","Sustituye completamente al LTO en todos los casos","No se utiliza nunca en producciones profesionales","Es obligatorio por ley para todas las producciones"],"correct":0,"why":"El manual aclara que la nube no suele sustituir al archivado físico, sino complementarlo, especialmente para colaboración remota y backups."}]
+;
 
-{m:"UC1408_3", q:"Antes de diseñar un sistema de sonido para un recinto, ¿qué herramienta NO se usaría para evaluar la acústica del espacio?", opts:[
-  "Sonómetro",
-  "Analizador de espectro",
-  "Software de medición acústica",
-  "Medidor de humedad relativa"
-], correct:3, ex:"Sonómetro, analizador de espectro y software específico son las herramientas típicas para evaluar la acústica; la humedad no es una medida acústica relevante en este contexto."},
-
-{m:"UC1408_3", q:"¿Qué es el «guion técnico de sonido»?", opts:[
-  "El documento que traduce el guion o escaleta del programa en indicaciones técnicas concretas para el equipo de sonido",
-  "La partitura original de la banda sonora",
-  "El plano de planta del recinto",
-  "El presupuesto cerrado del proyecto"
-], correct:0, ex:"Se elabora a partir del análisis del guion o escaleta y de las indicaciones de dirección/realización, y de él derivan los documentos y archivos sonoros necesarios."},
-
-{m:"UC1408_3", q:"En los planos técnicos de un proyecto de sonorización, ¿qué se utiliza para representar equipos y cableados de forma clara para todo el equipo técnico?", opts:[
-  "Simbología estandarizada del sector",
-  "Fotografías del recinto",
-  "Descripciones únicamente en texto libre",
-  "Códigos de colores sin estandarizar"
-], correct:0, ex:"Los planos de planta y alzado se elaboran con simbología estandarizada en el sector profesional para que cualquier técnico los interprete igual."},
-
-{m:"UC1408_3", q:"La «memoria de producción» de un proyecto de sonido recoge, entre otros, aspectos de:", opts:[
-  "Instalación, captación, mezcla, reproducción, postproducción y emisión",
-  "Solo el catering del equipo técnico",
-  "Únicamente la lista de invitados",
-  "Solo la parte legal de derechos de autor"
-], correct:0, ex:"La memoria resume las características formales y técnicas del proyecto en todas sus fases: instalación, captación, mezcla, reproducción, postproducción y emisión."},
-
-{m:"UC1408_3", q:"¿A qué se refiere el término «rigging» en el contexto de un proyecto de sonido en directo?", opts:[
-  "A los puntos de suspensión y anclaje para colgar equipos en altura",
-  "A la ecualización de un altavoz",
-  "Al proceso de masterización",
-  "A la mezcla de monitores"
-], correct:0, ex:"El rigging comprende los elementos de suspensión (puntos de anclaje, cadenas, motores) necesarios para instalar equipos de forma segura en altura."},
-
-{m:"UC1408_3", q:"Cuando cambia el presupuesto o los condicionantes técnicos afectan al resultado sonoro, ¿a quién se deben proponer las soluciones alternativas de modificación del proyecto?", opts:[
-  "Al equipo de producción y dirección/realización, o al cliente",
-  "Únicamente al proveedor de equipos",
-  "A ningún interlocutor, se decide de forma unilateral",
-  "Solo al departamento de marketing"
-], correct:0, ex:"Las modificaciones que afectan al desarrollo presupuestario, técnico o artístico deben proponerse a producción, dirección/realización o al cliente, según el caso."},
-
-{m:"UC1408_3", q:"¿Qué factor NO forma parte habitual de los criterios para seleccionar equipos técnicos a comprar, construir o alquilar?", opts:[
-  "El presupuesto y el plazo establecido",
-  "Las condiciones de contratación",
-  "Las peculiaridades del proyecto",
-  "El color corporativo de la productora"
-], correct:3, ex:"La selección de equipamiento se basa en presupuesto, plazo, condiciones de contratación y adecuación técnica al proyecto, no en criterios estéticos ajenos al sonido."},
-
-// ---------------- UC1409_3 ----------------
-{m:"UC1409_3", q:"En un sistema de sonorización en directo, ¿qué significa la sigla PA?", opts:[
-  "Public Address (sonorización general dirigida al público)",
-  "Post Audio",
-  "Power Amplifier únicamente",
-  "Personal Access"
-], correct:0, ex:"PA (Public Address) hace referencia al sistema principal de refuerzo sonoro dirigido al público, diferenciado de los monitores en escenario."},
-
-{m:"UC1409_3", q:"¿Por qué se recomienda mantener separadas las líneas de tensión eléctrica y las líneas de señal de audio/vídeo?", opts:[
-  "Para evitar interferencias y ruidos inducidos por acoplamiento electromagnético",
-  "Por motivos únicamente estéticos del cableado",
-  "Porque lo exige el color del cable",
-  "No hay ninguna razón técnica, es solo tradición"
-], correct:0, ex:"El cruce o cercanía prolongada entre cables de potencia y de señal puede inducir ruido (zumbido, interferencias) en las líneas de audio."},
-
-{m:"UC1409_3", q:"¿Qué finalidad tiene el aislamiento galvánico en una conexión de audio?", opts:[
-  "Evitar bucles de masa y diferencias de potencial entre equipos, reduciendo ruidos e interferencias",
-  "Aumentar la potencia de salida del amplificador",
-  "Mejorar la respuesta en graves del altavoz",
-  "Sustituir la necesidad de balanceo de la señal"
-], correct:0, ex:"El aislamiento galvánico (habitualmente mediante transformador) rompe la conexión eléctrica directa entre masas de distintos equipos, evitando bucles de tierra."},
-
-{m:"UC1409_3", q:"¿Qué ventaja principal ofrece una señal de audio balanceada frente a una no balanceada?", opts:[
-  "Mayor inmunidad al ruido e interferencias, especialmente en cables largos",
-  "Menor coste del cableado",
-  "Mayor rango dinámico del micrófono",
-  "Elimina la necesidad de fuente de alimentación fantasma"
-], correct:0, ex:"El balanceo (dos conductores en fase opuesta más malla) cancela el ruido captado por inducción, siendo clave en tiradas largas de cable."},
-
-{m:"UC1409_3", q:"El proceso de calibración de un sistema de sonido durante la instalación se realiza principalmente:", opts:[
-  "De acuerdo a las especificaciones técnicas establecidas para el equipo y el proyecto",
-  "A oído, sin ningún criterio técnico",
-  "Solo una vez finalizado el evento",
-  "Únicamente por el fabricante del equipo"
-], correct:0, ex:"La calibración se ajusta según especificaciones técnicas del proyecto y de los equipos, no de forma arbitraria."},
-
-{m:"UC1409_3", q:"¿Cuál es el objetivo del mantenimiento preventivo de los equipos de sonido?", opts:[
-  "Anticiparse a posibles averías y prolongar la vida útil del equipo mediante revisiones periódicas",
-  "Reparar una avería ya detectada",
-  "Sustituir siempre el equipo por uno nuevo",
-  "Aumentar la potencia del sistema"
-], correct:0, ex:"El preventivo actúa antes de que ocurra el fallo (revisión, limpieza, comprobación), mientras que el correctivo repara la avería ya producida."},
-
-{m:"UC1409_3", q:"¿Qué documento se genera tras el montaje para dejar constancia de los cambios y adaptaciones realizados respecto al proyecto original?", opts:[
-  "La documentación técnica actualizada de la instalación",
-  "El contrato del artista",
-  "El rider de camerinos",
-  "El plan de medios de la productora"
-], correct:0, ex:"Las modificaciones realizadas durante el montaje se documentan para incorporarlas posteriormente a la documentación del proyecto."},
-
-{m:"UC1409_3", q:"¿Qué elemento se usa para dirigir señales de audio a distintos destinos (registro, transmisión, monitorización) dentro de una instalación?", opts:[
-  "Splitters o matrices de interconexión",
-  "Ecualizador gráfico",
-  "Compresor de dinámica",
-  "Reverb de sala"
-], correct:0, ex:"Splitters y matrices permiten repartir y enrutar una misma señal de entrada hacia varios destinos (mezclador, grabador, transmisión) simultáneamente."},
-
-// ---------------- UC1410_3 ----------------
-{m:"UC1410_3", q:"En España, ¿en qué rango general de frecuencias se sitúa la banda UHF preferente usada por micrófonos inalámbricos profesionales tras la liberación del dividendo digital?", opts:[
-  "Aproximadamente entre 470 y 694 MHz",
-  "Entre 2,4 y 2,5 GHz exclusivamente",
-  "Entre 20 y 200 kHz",
-  "Entre 1 y 3 Hz"
-], correct:0, ex:"Tras las sucesivas liberaciones del dividendo digital, el uso profesional en España se concentra sobre todo en la franja UHF por debajo de 694 MHz, complementada puntualmente con VHF o 2,4 GHz."},
-
-{m:"UC1410_3", q:"¿Para qué sirve monitorizar el espectro de radiofrecuencia antes de programar los canales de microfonía inalámbrica?", opts:[
-  "Para identificar los rangos de frecuencia menos saturados y evitar interferencias",
-  "Para medir el nivel de presión sonora del recinto",
-  "Para calcular la reverberación de la sala",
-  "Para ajustar el balance de graves y agudos"
-], correct:0, ex:"El escaneo de espectro permite elegir frecuencias libres de ocupación (TDT, otros sistemas inalámbricos) antes de asignarlas a los transmisores."},
-
-{m:"UC1410_3", q:"¿Por qué se ajusta la sensibilidad de audio (gain) de un transmisor de petaca?", opts:[
-  "Para que los sonidos fuertes captados por la cápsula no saturen la entrada del previo del transmisor",
-  "Para aumentar el alcance de radiofrecuencia",
-  "Para cambiar el canal de transmisión",
-  "Para sincronizar el timecode"
-], correct:0, ex:"Un ajuste de sensibilidad inadecuado provoca distorsión por saturación cuando la fuente sonora es intensa, o señal débil y ruidosa si es demasiado baja."},
-
-{m:"UC1410_3", q:"¿Qué patrón polar de micrófono capta sonido principalmente por un solo frente y rechaza el sonido lateral y trasero?", opts:[
-  "Cardioide",
-  "Omnidireccional",
-  "Figura de ocho",
-  "Hipercardioide invertido"
-], correct:0, ex:"El cardioide es el patrón más habitual en directo, con máxima sensibilidad frontal y fuerte rechazo trasero, útil para reducir realimentación."},
-
-{m:"UC1410_3", q:"¿Qué proceso se utiliza para corregir la respuesta de un recinto y evitar realimentaciones (feedback) en un sistema de PA?", opts:[
-  "Ecualización y ajuste de las señales de PA o monitores",
-  "Aumentar el nivel de ganancia de todos los canales",
-  "Desconectar los micrófonos ambientales",
-  "Aplicar únicamente compresión de pista máster"
-], correct:0, ex:"La ecualización selectiva ajustada a la respuesta acústica del recinto es la herramienta principal para mejorar definición y evitar realimentaciones."},
-
-{m:"UC1410_3", q:"¿Qué tipo de procesador se usa específicamente para controlar el rango dinámico de una señal de audio (limitar picos o igualar niveles)?", opts:[
-  "Compresor / limitador",
-  "Reverb de plate",
-  "Delay estéreo",
-  "Filtro paso-alto únicamente"
-], correct:0, ex:"Los procesadores de dinámica (compresores, limitadores, expansores, puertas de ruido) actúan sobre el margen dinámico de la señal."},
-
-{m:"UC1410_3", q:"En grabación digital de audio, ¿qué determina principalmente el rango de frecuencias que se puede capturar?", opts:[
-  "La frecuencia de muestreo (sample rate)",
-  "La profundidad de bits (bit depth) exclusivamente",
-  "El tipo de conector utilizado",
-  "El color del cable de micrófono"
-], correct:0, ex:"Según el teorema de Nyquist, la frecuencia de muestreo debe ser al menos el doble de la frecuencia más alta a capturar (44,1/48/96 kHz son estándares habituales); la profundidad de bits afecta principalmente al rango dinámico y ruido de cuantificación."},
-
-{m:"UC1410_3", q:"¿Qué es el «raccord» sonoro en una grabación audiovisual?", opts:[
-  "La continuidad perceptiva del sonido entre distintas tomas de una misma fuente sonora",
-  "El sistema de intercomunicación entre técnicos",
-  "El proceso de masterización final",
-  "El tipo de micrófono usado en exteriores"
-], correct:0, ex:"El raccord asegura que el ambiente, el timbre y el nivel se perciban como continuos al montar tomas grabadas en momentos o condiciones distintas."},
-
-{m:"UC1410_3", q:"¿Por qué es importante disponer de un sistema de grabación de copias de seguridad («back up») en directo?", opts:[
-  "Para garantizar que la grabación quede asegurada en todo momento ante fallos técnicos",
-  "Para reducir el ruido de fondo del recinto",
-  "Para aumentar el volumen general de la mezcla",
-  "Para cambiar automáticamente de frecuencia de RF"
-], correct:0, ex:"El backup evita la pérdida total de la grabación si el sistema principal falla durante un evento irrepetible."},
-
-// ---------------- UC1411_3 ----------------
-{m:"UC1411_3", q:"¿Qué son OMF y AAF en el contexto de la postproducción de sonido?", opts:[
-  "Formatos de intercambio de proyectos y materiales entre plataformas de edición/grabación",
-  "Protocolos de transmisión de radiofrecuencia",
-  "Tipos de micrófono de condensador",
-  "Formatos de compresión de vídeo exclusivamente"
-], correct:0, ex:"Open Media Framework (OMF) y Advanced Authoring Format (AAF) permiten exportar pistas de audio, ediciones y metadatos entre sistemas de edición de vídeo y estaciones de audio (DAW)."},
-
-{m:"UC1411_3", q:"¿Qué es la «banda internacional» (M&E) en una producción audiovisual?", opts:[
-  "Una banda sonora sin diálogos, con solo músicas y efectos, para poder doblar a otros idiomas",
-  "La banda sonora original con todos los diálogos incluidos",
-  "El archivo de solo diálogos en versión original",
-  "La pista de referencia del director"
-], correct:0, ex:"La banda M&E (Music & Effects) separa diálogos del resto, permitiendo doblar el proyecto a otro idioma manteniendo música y efectos originales."},
-
-{m:"UC1411_3", q:"¿Qué finalidad tiene el proceso de masterización dentro de la postproducción de sonido?", opts:[
-  "Adaptar la mezcla final a los distintos soportes y medios de distribución respetando su estructura dinámica y tonal",
-  "Grabar los diálogos originales del rodaje",
-  "Sincronizar el sonido directo con la imagen",
-  "Seleccionar los micrófonos a utilizar en grabación"
-], correct:0, ex:"La masterización adapta la mezcla ya cerrada a cada formato/medio final (cine, streaming, broadcast, vinilo, etc.), cuidando dinámica y tonalidad."},
-
-{m:"UC1411_3", q:"En el montaje de banda sonora, ¿qué ayuda a sincronizar la banda de sonido directo con la imagen?", opts:[
-  "Los partes de grabación, códigos de tiempo (timecode) o EDL",
-  "El presupuesto del proyecto",
-  "El rider técnico del artista",
-  "El listado de proveedores de equipos"
-], correct:0, ex:"El timecode y las EDL (Edit Decision List) permiten alinear con precisión el audio grabado en set con el montaje de imagen."},
-
-{m:"UC1411_3", q:"¿Qué proceso consiste en volver a grabar diálogos en estudio de forma sincronizada con la imagen cuando el sonido directo no es aprovechable?", opts:[
-  "ADR (Automatic/Additional Dialogue Replacement, doblaje de re-grabación)",
-  "Foley",
-  "Mastering",
-  "Rigging"
-], correct:0, ex:"El ADR permite sustituir diálogos defectuosos del rodaje por una regrabación en estudio sincronizada con la imagen, técnica habitual en cine y TV."},
-
-{m:"UC1411_3", q:"¿Qué es el «foley» en postproducción de sonido?", opts:[
-  "La grabación de efectos sonoros sincronizados (pasos, roces, objetos) que recrean la acción en pantalla",
-  "El proceso de ecualización de diálogos",
-  "El formato de exportación de proyectos entre DAWs",
-  "El ajuste de niveles en la mezcla final"
-], correct:0, ex:"El foley recrea en estudio, de forma sincronizada, sonidos cotidianos (pasos, telas, objetos) que no se capturaron limpiamente en rodaje."},
-
-{m:"UC1411_3", q:"Antes de la mezcla final, ¿qué son las «premezclas» (stems) de un proyecto audiovisual?", opts:[
-  "Agrupaciones parciales de pistas por categoría (diálogos, músicas, ambientes, efectos) antes de unirlas en la mezcla definitiva",
-  "Los primeros borradores del guion técnico",
-  "Copias de seguridad del proyecto sin editar",
-  "El archivo final ya masterizado"
-], correct:0, ex:"Las premezclas o «stems» agrupan pistas afines (diálogos, música, efectos, ambientes) para facilitar el control y la entrega en la mezcla final."},
-
-{m:"UC1411_3", q:"¿Qué parámetros deben configurarse al preparar un sistema de edición digital antes de comenzar la postproducción?", opts:[
-  "Frecuencia de muestreo, bits de cuantificación, número de pistas e imagen estéreo o multicanal, entre otros",
-  "Solo el color de la interfaz del software",
-  "Únicamente el idioma del sistema operativo",
-  "Solo el modelo de altavoces de referencia"
-], correct:0, ex:"La configuración técnica del proyecto (sample rate, bit depth, pistas, formato estéreo/multicanal, fps) debe fijarse antes de empezar para mantener coherencia."},
-
-// ---------------- GENERAL (cultura técnica ampliada) ----------------
-{m:"GENERAL", q:"¿Qué es Dante en el ámbito del audio profesional?", opts:[
-  "Un protocolo de transporte de audio digital en red (sobre Ethernet/IP) desarrollado por Audinate",
-  "Un formato de archivo de audio comprimido",
-  "Un tipo de micrófono de condensador",
-  "Un plugin de reverberación algorítmica"
-], correct:0, ex:"Dante permite transportar múltiples canales de audio (y control) sin compresión sobre redes Ethernet estándar, muy extendido en directo e instalaciones."},
-
-{m:"GENERAL", q:"¿Qué estándar de red de audio abierto, interoperable entre fabricantes, está basado en IP y suele mencionarse junto a Dante?", opts:[
-  "AES67",
-  "MIDI 2.0",
-  "SDI",
-  "Bluetooth LE Audio"
-], correct:0, ex:"AES67 es un estándar de interoperabilidad de audio sobre IP que permite la comunicación entre distintas redes de audio (Dante, Ravenna, Q-LAN, etc.)."},
-
-{m:"GENERAL", q:"¿Qué es la fase de tensión phantom power (alimentación fantasma) estándar en audio profesional?", opts:[
-  "48 voltios enviados por el cable balanceado XLR para alimentar micrófonos de condensador",
-  "24 voltios enviados por USB",
-  "5 voltios sobre cable jack",
-  "Corriente alterna de 230V directamente al micrófono"
-], correct:0, ex:"Los 48V phantom (P48) se envían por los pines 2 y 3 del XLR para alimentar la cápsula y electrónica de micrófonos de condensador."},
-
-{m:"GENERAL", q:"En un conector XLR balanceado de micrófono, ¿qué función tiene típicamente el pin 1?", opts:[
-  "Masa / blindaje (ground/shield)",
-  "Señal en fase (hot)",
-  "Señal en contrafase (cold)",
-  "Alimentación phantom exclusivamente"
-], correct:0, ex:"El estándar XLR de 3 pines asigna pin 1 a masa/blindaje, pin 2 a señal caliente (+) y pin 3 a señal fría (−)."},
-
-{m:"GENERAL", q:"¿Qué mide el LUFS (Loudness Units Full Scale), tan usado hoy en masterización para streaming y broadcast?", opts:[
-  "La sonoridad percibida integrada de una señal de audio, no solo su pico de amplitud",
-  "La distorsión armónica total",
-  "La respuesta en frecuencia de un altavoz",
-  "El tiempo de reverberación de una sala"
-], correct:0, ex:"LUFS mide sonoridad percibida (basada en el estándar EBU R128 / ITU-R BS.1770); plataformas como Spotify normalizan en torno a -14 LUFS y broadcast europeo en -23 LUFS."},
-
-{m:"GENERAL", q:"¿Qué es un limitador de «brickwall» en un procesador de masterización?", opts:[
-  "Un limitador con ratio muy alto (prácticamente infinito) que impide que la señal supere un techo de nivel fijado",
-  "Un ecualizador paramétrico de alta precisión",
-  "Un tipo de micrófono de cinta",
-  "Un formato de archivo de audio sin pérdidas"
-], correct:0, ex:"El brickwall limiter actúa con una ratio extrema para evitar que ningún pico sobrepase el techo (ceiling) definido, típico en el último eslabón de la cadena de mastering."},
-
-{m:"GENERAL", q:"¿Cuál es la velocidad de fotogramas estándar en cine para sincronizar con sonido en muchos flujos de trabajo europeos de postproducción?", opts:[
-  "25 fps (o 24 fps según el estándar y formato)",
-  "60 fps siempre",
-  "10 fps",
-  "1000 fps"
-], correct:0, ex:"24 fps es el estándar histórico de cine y 25 fps el habitual en flujos de TV/PAL europeos; ambos aparecen como referencia en la configuración de proyectos de postproducción de sonido."},
-
-{m:"GENERAL", q:"En una producción discográfica, ¿en qué orden se sitúan habitualmente las etapas del proceso?", opts:[
-  "Grabación → edición/mezcla → masterización",
-  "Masterización → grabación → mezcla",
-  "Mezcla → grabación → edición",
-  "No existe un orden habitual, es indiferente"
-], correct:0, ex:"El flujo típico es: captar/grabar las pistas, después mezclarlas ajustando niveles, EQ y efectos, y finalmente masterizar el resultado para su distribución."},
-
-{m:"GENERAL", q:"¿Qué diferencia principal hay entre un micrófono dinámico y uno de condensador?", opts:[
-  "El de condensador necesita alimentación externa (phantom power) y suele ser más sensible y de mayor respuesta en agudos; el dinámico no requiere alimentación y es más robusto",
-  "El dinámico siempre suena mejor en estudio",
-  "El de condensador nunca se usa en directo",
-  "No hay ninguna diferencia técnica relevante"
-], correct:0, ex:"Los condensadores usan una cápsula capacitiva que necesita alimentación (phantom o batería) y suelen ofrecer más detalle y sensibilidad; los dinámicos son pasivos, robustos y habituales en directo o fuentes de alto SPL."},
-
-{m:"GENERAL", q:"¿Qué es el efecto Larsen (feedback acústico) en un sistema de sonorización?", opts:[
-  "Un bucle de realimentación entre altavoz y micrófono que produce un pitido sostenido y creciente",
-  "Un tipo de compresión de dinámica",
-  "Un formato de archivo de audio",
-  "Una técnica de ecualización de graves"
-], correct:0, ex:"Ocurre cuando el sonido de un altavoz vuelve a entrar por un micrófono cercano y se realimenta en bucle, generando un pitido característico; se corrige con EQ, distancia o reducción de ganancia."},
-];
-
-/* ===================== ESTADO ===================== */
-let selectedModules = new Set(MODULES.map(m=>m.code));
-let quiz = [];
-let idx = 0;
-let score = 0;
-let answered = false;
-let wrongLog = [];
-
-/* ===================== UI: VU strip decorativo ===================== */
-const vuStrip = document.getElementById('vuStrip');
-for(let i=0;i<28;i++){
-  const s = document.createElement('span');
-  if(i < 18) s.classList.add('on');
-  if(i >= 18 && i < 24) { s.classList.add('on'); s.classList.add('green'); }
-  vuStrip.appendChild(s);
-}
-
-/* ===================== INTRO ===================== */
-const moduleList = document.getElementById('moduleList');
-function countFor(code){ return QUESTIONS.filter(q=>q.m===code).length; }
-
-MODULES.forEach(m=>{
-  const row = document.createElement('label');
-  row.className = 'module-row checked';
-  row.innerHTML = `
-    <input type="checkbox" checked data-code="${m.code}">
-    <span class="box"></span>
-    <span>
-      <span class="m-code">${m.code}</span>
-      <span class="m-title">${m.title}</span>
-    </span>
-    <span class="m-count">${countFor(m.code)} preg.</span>
-  `;
-  row.querySelector('input').addEventListener('change', e=>{
-    if(e.target.checked){ selectedModules.add(m.code); row.classList.add('checked'); }
-    else{ selectedModules.delete(m.code); row.classList.remove('checked'); }
-    updateStartBtn();
-  });
-  moduleList.appendChild(row);
-});
-
-function updateStartBtn(){
-  document.getElementById('startBtn').disabled = selectedModules.size === 0;
-}
-
-document.getElementById('startBtn').addEventListener('click', ()=>{
-  quiz = shuffle(QUESTIONS.filter(q=>selectedModules.has(q.m)));
-  idx = 0; score = 0; wrongLog = [];
-  showScreen('quiz');
-  renderQuestion();
-});
+// ---- persistence (in-memory only per session, plus storage API if available) ----
+const STORAGE_KEY = 'montaje_quiz_progress_v1';
+let state = {
+  view: 'home',       // home | quiz | results
+  chapters: [],        // list of chapter numbers in current run
+  chIndex: 0,           // index into state.chapters for current question set
+  pool: [],             // shuffled question list for current run
+  qIndex: 0,
+  answered: false,
+  selected: null,
+  score: 0,
+  perChapter: {},       // {chNum: {correct, total}}
+  best: {}              // best % per chapter, loaded from storage
+};
 
 function shuffle(arr){
   const a = arr.slice();
@@ -611,147 +277,234 @@ function shuffle(arr){
   return a;
 }
 
-/* ===================== QUIZ ===================== */
-function renderQuestion(){
-  answered = false;
-  const q = quiz[idx];
-  document.getElementById('progLabel').textContent = `Pregunta ${idx+1}/${quiz.length}`;
-  document.getElementById('scoreLabel').textContent = `Aciertos: ${score}`;
-  document.getElementById('progFill').style.width = `${(idx/quiz.length)*100}%`;
-  document.getElementById('qTag').textContent = q.m;
-  document.getElementById('qText').textContent = q.q;
-
-  const optsWrap = document.getElementById('optsWrap');
-  optsWrap.innerHTML = '';
-  const letters = ['A','B','C','D'];
-
-  // shuffle options but remember correct text
-  const correctText = q.opts[q.correct];
-  const shuffledOpts = shuffle(q.opts.map((t,i)=>({t,orig:i})));
-
-  shuffledOpts.forEach((opt, i)=>{
-    const btn = document.createElement('button');
-    btn.className = 'opt';
-    btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt.t}</span>`;
-    btn.addEventListener('click', ()=>{
-      if(answered) return;
-      answered = true;
-      const isCorrect = opt.t === correctText;
-      if(isCorrect) score++;
-      else wrongLog.push({q: q.q, correct: correctText, chosen: opt.t, ex: q.ex, m: q.m});
-
-      [...optsWrap.children].forEach(b=>b.classList.add('locked'));
-      [...optsWrap.children].forEach(b=>{
-        const txt = b.querySelector('span:last-child').textContent;
-        if(txt === correctText) b.classList.add('correct');
-        else if(b === btn) b.classList.add('wrong');
-        else b.classList.add('dim');
-      });
-
-      const exBox = document.getElementById('explainBox');
-      exBox.innerHTML = `<b>${isCorrect ? '✓ Correcto.' : '✕ Incorrecto.'}</b> ${q.ex}`;
-      exBox.classList.add('show');
-
-      document.getElementById('scoreLabel').textContent = `Aciertos: ${score}`;
-      const nextBtn = document.getElementById('nextBtn');
-      nextBtn.disabled = false;
-      nextBtn.textContent = idx === quiz.length-1 ? 'Ver resultados' : 'Siguiente pregunta →';
-    });
-    optsWrap.appendChild(btn);
-  });
-
-  document.getElementById('explainBox').classList.remove('show');
-  document.getElementById('explainBox').innerHTML = '';
-  const nextBtn = document.getElementById('nextBtn');
-  nextBtn.disabled = true;
-  nextBtn.textContent = 'Responde para continuar';
+function shuffleOptions(q){
+  // returns {q, opts, correctIdx, why} with options shuffled, correct index remapped
+  const idxs = shuffle([0,1,2,3]);
+  const opts = idxs.map(i=>q.opts[i]);
+  const correct = idxs.indexOf(q.correct);
+  return {ch:q.ch, q:q.q, opts, correct, why:q.why};
 }
 
-document.getElementById('nextBtn').addEventListener('click', ()=>{
-  if(!answered) return;
-  if(idx === quiz.length-1){
-    showResults();
+async function loadBest(){
+  try{
+    const r = await window.storage.get('best-scores', false);
+    if(r && r.value){ state.best = JSON.parse(r.value); }
+  }catch(e){ state.best = {}; }
+}
+async function saveBest(){
+  try{
+    await window.storage.set('best-scores', JSON.stringify(state.best), false);
+  }catch(e){ /* ignore */ }
+}
+
+function startRun(chapterNums){
+  state.chapters = chapterNums;
+  const raw = QUESTIONS.filter(q => chapterNums.includes(q.ch));
+  state.pool = shuffle(raw).map(shuffleOptions);
+  state.qIndex = 0;
+  state.answered = false;
+  state.selected = null;
+  state.score = 0;
+  state.perChapter = {};
+  chapterNums.forEach(c => state.perChapter[c] = {correct:0,total:0});
+  state.view = 'quiz';
+  render();
+}
+
+function answer(idx){
+  if(state.answered) return;
+  state.answered = true;
+  state.selected = idx;
+  const cur = state.pool[state.qIndex];
+  const isCorrect = idx === cur.correct;
+  if(isCorrect) state.score++;
+  state.perChapter[cur.ch].total++;
+  if(isCorrect) state.perChapter[cur.ch].correct++;
+  render();
+}
+
+async function nextQuestion(){
+  if(state.qIndex < state.pool.length - 1){
+    state.qIndex++;
+    state.answered = false;
+    state.selected = null;
+    render();
   } else {
-    idx++;
-    renderQuestion();
+    // compute per-chapter % and store best
+    state.chapters.forEach(c => {
+      const pc = state.perChapter[c];
+      const pct = pc.total ? Math.round((pc.correct/pc.total)*100) : 0;
+      if(!state.best[c] || pct > state.best[c]) state.best[c] = pct;
+    });
+    await saveBest();
+    state.view = 'results';
+    render();
   }
-});
-
-/* ===================== RESULTADOS ===================== */
-function showResults(){
-  showScreen('results');
-  const pct = Math.round((score/quiz.length)*100);
-  document.getElementById('resBig').textContent = `${pct}%`;
-  document.getElementById('resOf').textContent = `${score} / ${quiz.length} correctas`;
-
-  let msg = '';
-  if(pct >= 90) msg = 'Excelente dominio del temario. Nivel 4: podrías formar a otro técnico.';
-  else if(pct >= 70) msg = 'Buen nivel. Repasa los bloques con más fallos para consolidar.';
-  else if(pct >= 50) msg = 'Vas bien encaminado, pero conviene repasar varios bloques.';
-  else msg = 'Toca repasar a fondo el temario antes del examen real.';
-  document.getElementById('resMsg').textContent = msg;
-
-  const breakdown = document.getElementById('breakdown');
-  breakdown.innerHTML = '';
-  MODULES.forEach(m=>{
-    const mQs = quiz.filter(q=>q.m===m.code);
-    if(mQs.length===0) return;
-    const mWrong = wrongLog.filter(w=>w.m===m.code).length;
-    const mCorrect = mQs.length - mWrong;
-    const pctM = Math.round((mCorrect/mQs.length)*100);
-    const row = document.createElement('div');
-    row.className = 'b-row';
-    row.innerHTML = `
-      <span class="b-label">${m.code}</span>
-      <span class="b-bar"><div style="width:${pctM}%"></div></span>
-      <span class="b-score mono">${mCorrect}/${mQs.length}</span>
-    `;
-    breakdown.appendChild(row);
-  });
-
-  document.getElementById('reviewList').style.display = 'none';
-  document.getElementById('reviewList').innerHTML = '';
-  document.getElementById('reviewBtn').textContent = 'Ver repaso de fallos';
 }
 
-document.getElementById('reviewBtn').addEventListener('click', ()=>{
-  const list = document.getElementById('reviewList');
-  const showing = list.style.display !== 'none';
-  if(showing){
-    list.style.display = 'none';
-    document.getElementById('reviewBtn').textContent = 'Ver repaso de fallos';
-    return;
-  }
-  list.innerHTML = '';
-  if(wrongLog.length===0){
-    list.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem;">¡Sin fallos! No hay nada que repasar.</p>`;
-  } else {
-    wrongLog.forEach(w=>{
-      const item = document.createElement('div');
-      item.className = 'review-item';
-      item.innerHTML = `
-        <div class="q-tag" style="margin-bottom:8px;">${w.m}</div>
-        <div class="rq">${w.q}</div>
-        <div class="ra bad">Tu respuesta: ${w.chosen}</div>
-        <div class="ra ok">Correcta: ${w.correct}</div>
-        <div class="rex">${w.ex}</div>
-      `;
-      list.appendChild(item);
+function goHome(){
+  state.view = 'home';
+  render();
+}
+
+function letter(i){ return ['A','B','C','D'][i]; }
+
+function renderHome(){
+  const app = document.getElementById('app');
+  const chNums = Object.keys(CH_TITLES).map(Number);
+  let cards = chNums.map(n => {
+    const best = state.best[n];
+    const badge = best !== undefined
+      ? `<span class="chdone">${best}%</span>`
+      : `<span class="chdone" style="color:var(--muted)">—</span>`;
+    return `
+    <button class="chcard" data-single="${n}">
+      <span class="chnum">${String(n).padStart(2,'0')}</span>
+      <span class="chinfo">
+        <span class="ttl">${CH_TITLES[n]}</span>
+        <span class="meta">20 preguntas</span>
+      </span>
+      ${badge}
+    </button>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="slate">
+      <span class="slate-chip">TAKE 01</span>
+      <span class="slate-line"></span>
+      <span class="timecode">200 PREGUNTAS · 10 CAPÍTULOS</span>
+    </div>
+    <h1 class="title">Examen de<br><span>Montaje &amp; Postproducción</span></h1>
+    <p class="subtitle">Repasa el manual profesional de montaje audiovisual, capítulo a capítulo. Elige un capítulo para practicar o encadénalos todos en una sesión completa.</p>
+
+    <div class="scopes">
+      <div class="scope-wheel" aria-hidden="true"></div>
+      <div class="scope-label"><b>Lift · Gamma · Gain</b>Cada pregunta, como un plano, se corrige y se aprueba antes de pasar al siguiente.</div>
+    </div>
+
+    <div class="panel">
+      <div class="hud" style="margin-bottom:0;">
+        <div class="hud-left">Elige un <b>capítulo</b> para repasar</div>
+      </div>
+      <div class="chgrid">${cards}</div>
+      <button class="startall" id="startAllBtn">Examen completo · los 10 capítulos (200 preguntas)</button>
+    </div>
+    <footer class="credit">MANUAL PROFESIONAL DE MONTAJE Y POSTPRODUCCIÓN AUDIOVISUAL</footer>
+  `;
+
+  app.querySelectorAll('[data-single]').forEach(btn => {
+    btn.addEventListener('click', () => startRun([Number(btn.dataset.single)]));
+  });
+  document.getElementById('startAllBtn').addEventListener('click', () => {
+    startRun(Object.keys(CH_TITLES).map(Number));
+  });
+}
+
+function renderQuiz(){
+  const app = document.getElementById('app');
+  const cur = state.pool[state.qIndex];
+  const total = state.pool.length;
+  const pct = Math.round(((state.qIndex)/total)*100);
+  const isMulti = state.chapters.length > 1;
+
+  const optsHtml = cur.opts.map((opt,i) => {
+    let cls = 'opt';
+    if(state.answered){
+      cls += ' locked';
+      if(i === cur.correct) cls += ' correct';
+      else if(i === state.selected) cls += ' wrong';
+      else cls += ' dim';
+    }
+    return `<button class="${cls}" data-idx="${i}" ${state.answered?'disabled':''}>
+      <span class="letter">${letter(i)}</span><span>${opt}</span>
+    </button>`;
+  }).join('');
+
+  const isCorrect = state.answered && state.selected === cur.correct;
+  const feedbackHtml = state.answered ? `
+    <div class="feedback show ${isCorrect?'ok':'bad'}">
+      <span class="tag">${isCorrect? '✓ CORRECTO' : '✗ INCORRECTO'}</span>
+      ${cur.why}
+    </div>
+  ` : '';
+
+  app.innerHTML = `
+    <button class="backlink" id="backBtn">← Volver a capítulos</button>
+    <div class="hud">
+      <div class="hud-left">${isMulti? 'Examen completo' : 'Cap. '+cur.ch+' · '+CH_TITLES[cur.ch]} &nbsp; <b>${state.qIndex+1} / ${total}</b></div>
+      <div class="scorepill">${state.score} ✓</div>
+    </div>
+    <div class="timeline"><div class="timeline-fill" style="width:${pct}%"></div></div>
+
+    <div class="panel" style="margin-top:18px;">
+      <div class="qeyebrow">Cap. ${cur.ch} · TC ${String(state.qIndex+1).padStart(3,'0')}</div>
+      <div class="qtext">${cur.q}</div>
+      <div class="opts">${optsHtml}</div>
+      ${feedbackHtml}
+      <div class="navrow">
+        <button class="nextbtn ${state.answered?'show':''}" id="nextBtn">${state.qIndex < total-1 ? 'Siguiente pregunta →' : 'Ver resultados →'}</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', goHome);
+  if(!state.answered){
+    app.querySelectorAll('.opt').forEach(btn=>{
+      btn.addEventListener('click', ()=> answer(Number(btn.dataset.idx)));
     });
   }
-  list.style.display = 'block';
-  document.getElementById('reviewBtn').textContent = 'Ocultar repaso';
-});
-
-document.getElementById('restartBtn').addEventListener('click', ()=>{
-  showScreen('intro');
-});
-
-function showScreen(name){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(`screen-${name}`).classList.add('active');
-  window.scrollTo({top:0, behavior:'smooth'});
+  const nb = document.getElementById('nextBtn');
+  if(nb) nb.addEventListener('click', nextQuestion);
 }
+
+function renderResults(){
+  const app = document.getElementById('app');
+  const total = state.pool.length;
+  const pct = Math.round((state.score/total)*100);
+  let msg = 'Sigue repasando.';
+  if(pct >= 90) msg = 'Nivel de montador profesional.';
+  else if(pct >= 75) msg = 'Muy buen dominio del temario.';
+  else if(pct >= 50) msg = 'Vas por buen camino, repasa los fallos.';
+
+  const rows = state.chapters.map(c=>{
+    const pc = state.perChapter[c];
+    const p = pc.total ? Math.round((pc.correct/pc.total)*100) : 0;
+    return `<div class="brow">
+      <span class="blabel">Cap. ${c}</span>
+      <span class="btrack"><span class="bfill" style="width:${p}%"></span></span>
+      <span class="bscore">${pc.correct}/${pc.total}</span>
+    </div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <button class="backlink" id="backBtn">← Volver a capítulos</button>
+    <div class="panel">
+      <div class="qeyebrow">Resultado final</div>
+      <div class="result-badge">${state.score} / ${total}</div>
+      <div class="result-sub">${pct}% de aciertos · ${msg}</div>
+      <div class="breakdown">${rows}</div>
+      <div class="resultbtns">
+        <button class="btn-primary" id="retryBtn">Repetir este examen</button>
+        <button class="btn-secondary" id="homeBtn">Elegir otro capítulo</button>
+      </div>
+    </div>
+    <footer class="credit">MANUAL PROFESIONAL DE MONTAJE Y POSTPRODUCCIÓN AUDIOVISUAL</footer>
+  `;
+  document.getElementById('backBtn').addEventListener('click', goHome);
+  document.getElementById('homeBtn').addEventListener('click', goHome);
+  document.getElementById('retryBtn').addEventListener('click', ()=> startRun(state.chapters));
+}
+
+function render(){
+  if(state.view === 'home') renderHome();
+  else if(state.view === 'quiz') renderQuiz();
+  else renderResults();
+}
+
+(async function init(){
+  await loadBest();
+  render();
+})();
 </script>
 </body>
 </html>
