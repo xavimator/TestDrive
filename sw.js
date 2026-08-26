@@ -4,7 +4,8 @@
 //  El registro se hace automáticamente desde index.html
 // ─────────────────────────────────────────────────────────
 
-const CACHE_NAME = 'mosaicchamp-v143';
+const CACHE_NAME = 'mosaicchamp-v193'; // ← v193: máscara veneciana real sobre el corazón volador (San Valentín)
+
 
 // Recursos que se precachean en la instalación
 // NOTA: rutas relativas (sin "/" inicial) para funcionar tanto si la app
@@ -24,6 +25,9 @@ const PRECACHE = [
 
   // Google Fonts — solo el CSS; los ficheros de fuente los gestiona el browser
   'https://fonts.googleapis.com/css2?family=Pacifico&display=swap',
+
+  // EmailJS (envío de emails de recuperación de contraseña desde el cliente)
+  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
 ];
 
 // Dominios que van siempre a red (Firebase, tiempo real)
@@ -88,7 +92,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. CDNs (React, Babel, Fonts) → Cache-first, fallback a red
+  // 3. CDNs (React, Babel, Fonts, EmailJS) → Cache-first, fallback a red
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
